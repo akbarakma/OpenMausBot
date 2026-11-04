@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
-import { bundledFile, PERSONAL_PAGES } from "./personal-ui.mjs";
+import { bundledFile, PERSONAL_APP_NAME, PERSONAL_PAGES, personalWindowUi } from "./personal-ui.mjs";
 
 const origin = "https://bots.example";
 const html = [{ name: "Content-Type", value: "text/html" }];
@@ -51,4 +51,10 @@ test("The bundle's pages match the server's static pages", () => {
   const pages = /const PAGES[^=]*=\s*(\{[^}]*\})/.exec(source)?.[1];
   assert.ok(pages, "server/static-files.ts no longer declares PAGES");
   assert.deepEqual(JSON.parse(pages.replace(/\s/g, "")), PERSONAL_PAGES);
+});
+
+test("Only the packaged Personal app serves its bundle", () => {
+  const contents = { get debugger() { throw new Error("The official app must not intercept requests"); } };
+  assert.equal(personalWindowUi({ isPackaged: true, getName: () => "OpenMausBot" }, contents, () => origin, () => {}), null);
+  assert.equal(personalWindowUi({ isPackaged: false, getName: () => PERSONAL_APP_NAME }, contents, () => origin, () => {}), null);
 });

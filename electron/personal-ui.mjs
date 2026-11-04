@@ -80,3 +80,9 @@ export async function attachPersonalUi(contents, { dir, origin, log }) {
     log(`personal ui: interception unavailable, showing the server's UI (${error?.message ?? error})`);
   }
 }
+
+/** Null outside the packaged Personal app, so the official app keeps showing the server's UI. */
+export function personalWindowUi(app, contents, origin, log) {
+  if (!app.isPackaged || app.getName() !== PERSONAL_APP_NAME) return null;
+  return attachPersonalUi(contents, { dir: path.join(process.resourcesPath, "ui"), origin, log });
+}

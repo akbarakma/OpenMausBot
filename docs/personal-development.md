@@ -152,7 +152,7 @@ For example, when `v0.1.141` is released:
 3. Merge the upstream tag: `git fetch upstream --tags && git merge v0.1.141`.
    Merge tags, not upstream `main`, so the UI matches the server exactly.
 4. Resolve conflicts. The only Personal hook in upstream code is in
-   `electron/main.mjs`: the `attachPersonalUi` call in `createWindow`, and the
+   `electron/main.mjs`: the `personalWindowUi` call in `createWindow`, and the
    remote branch that waits for it before loading the server's origin.
 5. Run the checks above, then `corepack pnpm package:personal --install`.
 
