@@ -110,6 +110,7 @@ import { createHomeWindow, installHomeWindowIpc } from "./home-window.mjs";
 import { createTeamProfileSeeds } from "./team-profile-seed.mjs";
 import { createHomePlaces } from "./home-places.mjs"; import { createAccountLeave, installAccounts } from "./accounts-main.mjs"; import { createAddedCloudNotice, installCloudRail, railPlaces } from "./cloud-rail.mjs"; import { homeLook, otherOwnClouds, withoutOldCloudHome } from "./cloud-list.mjs"; import { installPlaceLook } from "./place-look.mjs"; import { CHROME_RAIL_PATH, createChromeRail } from "./chrome-rail.mjs";
 import { createWindowStateFile } from "./window-state-file.mjs";
+import { attachPersonalUi, PERSONAL_APP_NAME } from "./personal-ui.mjs";
 import { createEnvironmentsFile } from "./environments-file.mjs";
 import { createOrgLibrary } from "./org-library.mjs";
 import { createCompanyBackups } from "./company-backups.mjs";
@@ -2033,6 +2034,9 @@ function createWindow({ deferNavigation = false } = {}) {
     },
   });
   mainWindow = win; hiddenStart = false; chromeRail.attach(win);
+  const personalUi = app.isPackaged && app.getName() === PERSONAL_APP_NAME
+    ? attachPersonalUi(win.webContents, { dir: path.join(process.resourcesPath, "ui"), origin: () => activeRemote(environmentsState)?.origin ?? null, log: slog })
+    : null;
   win.on("show", () => desktopTray?.windowShown(win));
   win.on("focus", () => { if (cloudAccount?.checkoutPending()) void cloudAccount.refresh().catch(() => {}); });
   win.on("close", (event) => {
@@ -2245,7 +2249,7 @@ function createWindow({ deferNavigation = false } = {}) {
   if (desktopRemoteAccess) {
     win.loadURL(serverReady ? `http://127.0.0.1:${SERVER_PORT}` : buildErrorPage({ allPortsOccupied: serverStartConflictOnly, logDir: LOG_DIR }));
   } else if (remote) {
-    void win.loadURL(remote.origin).catch(() => {});
+    void Promise.resolve(personalUi).then(() => win.loadURL(remote.origin)).catch(() => {});
   } else if (app.isPackaged) {
     win.loadURL(serverReady ? `http://127.0.0.1:${SERVER_PORT}` : buildErrorPage({ allPortsOccupied: serverStartConflictOnly, logDir: LOG_DIR }));
   } else {
