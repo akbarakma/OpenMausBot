@@ -53,6 +53,8 @@ config.mac = { ...config.mac, identity: null, extendInfo: { ...config.mac.extend
 config.mac.extraResources = config.mac.extraResources.map(resource => resource.to === "OpenMausBot Speech.app" ? { ...resource, from: speech } : resource);
 
 process.env.CSC_IDENTITY_AUTO_DISCOVERY = "false";
+// electron-builder runs the pnpm on PATH; pnpm 11 refuses to switch to the project's pnpm while COREPACK_ROOT is set.
+delete process.env.COREPACK_ROOT;
 rmSync(output, { recursive: true, force: true });
 const { Arch, build, Platform } = require("electron-builder");
 await build({ projectDir: root, config, publish: "never", targets: Platform.MAC.createTarget(["dir"], Arch[process.arch]) });
