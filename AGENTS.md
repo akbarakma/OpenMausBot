@@ -5,6 +5,9 @@
 This public fork customizes the desktop interface for Akbar's mb-0.
 The upstream repository is `milind-soni/OpenMausBot`.
 
+Before starting Personal development or packaging, read
+[`docs/personal-development.md`](docs/personal-development.md) for profile isolation and the authenticated client workflow.
+
 - Keep personal changes in the desktop UI and client connection code.
 - Keep mb-0 as a client; do not start a local agent server during normal use.
 - Keep bb-1 on official upstream builds; do not deploy this fork there or change its services.
