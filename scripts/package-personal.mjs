@@ -1,5 +1,5 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { existsSync, readFileSync, renameSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { homedir } from "node:os";
 import path from "node:path";
@@ -56,8 +56,12 @@ process.env.CSC_IDENTITY_AUTO_DISCOVERY = "false";
 // electron-builder runs the pnpm on PATH; pnpm 11 refuses to switch to the project's pnpm while COREPACK_ROOT is set.
 delete process.env.COREPACK_ROOT;
 rmSync(output, { recursive: true, force: true });
+mkdirSync(output, { recursive: true });
+// A config object is merged into electron-builder.yml, where an empty list keeps the yml's entries; a config file replaces it.
+const configFile = path.join(output, "electron-builder.json");
+writeFileSync(configFile, JSON.stringify(config));
 const { Arch, build, Platform } = require("electron-builder");
-await build({ projectDir: root, config, publish: "never", targets: Platform.MAC.createTarget(["dir"], Arch[process.arch]) });
+await build({ projectDir: root, config: configFile, publish: "never", targets: Platform.MAC.createTarget(["dir"], Arch[process.arch]) });
 
 const built = path.join(output, `mac-${process.arch}`, `${PERSONAL_APP_NAME}.app`);
 run("codesign", ["--force", "--deep", "--sign", "-", "--options", "runtime", "--entitlements", path.join(root, "build/entitlements.mac.plist"), built]);
@@ -65,6 +69,7 @@ run("codesign", ["--verify", "--deep", "--strict", built]);
 const info = plist(built);
 if (info.CFBundleIdentifier !== PERSONAL_APP_ID || info.CFBundleName !== PERSONAL_APP_NAME || info.OMBSourceCommit !== commit) fail("The built app has the wrong identity.");
 if (existsSync(path.join(built, "Contents/Resources/app-update.yml"))) fail("The built app would auto-update from upstream.");
+if (info.CFBundleURLTypes?.length) fail("The built app would take openmausbot:// links from the official app.");
 if (!existsSync(path.join(built, "Contents/Resources/ui/index.html"))) fail("The built app has no bundled UI.");
 process.stdout.write(`Built ${built}\n`);
 if (!values.install) process.exit(0);
