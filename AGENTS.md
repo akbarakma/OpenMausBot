@@ -16,6 +16,10 @@ Before starting Personal development or packaging, read
 - Use isolated fixtures for development and verification; do not mutate live conversations or settings during tests.
 - Give the fork a separate app identity and profile before installing it alongside the official app.
 - Disable upstream binary auto-updates or point them at this fork's releases before installing a custom build.
+- Installed Personal shows its bundled UI; bb-1 answers only API, stream, upload and WebSocket requests.
+- Build and install Personal with `corepack pnpm package:personal --install`; use `dev:personal` while editing.
+- Before reporting a UI change as installed, confirm the running Personal window shows it, not only that the bundle contains it.
+- Merge upstream release tags, not upstream `main`, so the fork's UI matches the version bb-1 runs.
 
 ## Public repository credentials
 
