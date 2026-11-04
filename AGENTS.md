@@ -1,5 +1,31 @@
 # OpenMausBot agent notes
 
+## Personal desktop fork
+
+This public fork customizes the desktop interface for Akbar's mb-0.
+The upstream repository is `milind-soni/OpenMausBot`.
+
+- Keep personal changes in the desktop UI and client connection code.
+- Keep mb-0 as a client; do not start a local agent server during normal use.
+- Keep bb-1 on official upstream builds; do not deploy this fork there or change its services.
+- Preserve the server's existing API contracts and authentication.
+- Defer iOS development and release notifications until Akbar requests them.
+- Use isolated fixtures for development and verification; do not mutate live conversations or settings during tests.
+- Give the fork a separate app identity and profile before installing it alongside the official app.
+- Disable upstream binary auto-updates or point them at this fork's releases before installing a custom build.
+
+## Public repository credentials
+
+- Keep provider credentials on the server; do not copy them into this checkout.
+- Store local secrets in OS credential storage or ignored `.env.local` files.
+- Commit only dummy values in `.env.example` or `.env.*.example` files.
+- Treat `VITE_*` variables and packaged frontend code as public; never put secrets in them.
+- Keep passwords, tokens, private keys, pairing links, session data, and signing credentials out of tracked files and screenshots.
+- Keep inherited deployment and release workflows disabled until Akbar requests their setup.
+- Before committing, inspect `git diff --cached` and `git diff --cached --name-only` for credentials and private files.
+- Check each local secret file with `git check-ignore -v -- <path>` before committing or pushing.
+- Stop publication if a secret appears; redact it when reporting the problem.
+
 Before claiming a server or conversation change works, follow
 [`docs/verification/README.md`](docs/verification/README.md). Always launch an
 isolated fixture; never verify mutations against the user's live app or data.

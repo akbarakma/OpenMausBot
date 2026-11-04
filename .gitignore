@@ -33,10 +33,21 @@ cloudflare/control-plane/worker-configuration.d.ts
 *.jks
 *.keystore
 *.p12
+*.pfx
+*.p8
+*.pem
+*.key
+*.mobileprovision
+auth.json
+credentials.json
+.credentials.json
 
 # per-tenant deploy settings (see deploy/.env.example)
 deploy/.env
 deploy/podman/.env
 deploy/podman/.env.*
 !deploy/podman/.env.example
-/.env
+.env
+.env.*
+!.env.example
+!.env.*.example
