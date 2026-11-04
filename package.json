@@ -30,6 +30,7 @@
     "dev:personal": "node scripts/dev-personal.mjs",
     "verify:personal-dev": "node scripts/verify-personal-dev.mjs",
     "verify:personal-ui": "node scripts/verify-personal-ui.mjs",
+    "package:personal": "node scripts/package-personal.mjs",
     "docs:dev": "pnpm --filter @openmausbot/docs dev",
     "docs:build": "pnpm --filter @openmausbot/docs build",
     "docs:preview": "pnpm --filter @openmausbot/docs preview",
