@@ -171,8 +171,9 @@ The sidebar's top row has no "Show your computers" button. Akbar never uses
 it. The rail of places still shows and hides from **Settings → Show your
 computers**, and from the small button in the top bar when **Settings → Window
 frame** is on. The fork removes `ChromeRailToggle` from `src/components/Sidebar.tsx`
-and keeps it in `WindowFrameBar.tsx`. The sidebar still calls
-`useOfferChromeRail()`. Main shows a hidden rail again 5 seconds after a page
+and keeps it in `WindowFrameBar.tsx`. `WindowFrameBar` calls
+`useOfferChromeRail()` even with the frame off. Main shows a hidden rail again 5 seconds after a page
 loads unless the page offers a way back, so without that call the Settings
 switch could not keep the rail hidden. `Sidebar.header.test.ts` fails if a
-merge puts the button back in the sidebar or drops the offer.
+merge puts the button back in the sidebar, and `WindowFrameBar.test.ts` fails
+if it drops the offer.
