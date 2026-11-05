@@ -18,6 +18,7 @@ import { openBotContextMenu, useVisibleMessages, type BotRowProps } from "./Side
 import { sidebarBotStatus } from "./SidebarBotActivity";
 import { SIMPLE_ROW_FOCUS } from "./SidebarSimpleTop";
 import { useBotUnread } from "./unread-notice";
+import { useMotionBeat } from "./motion-beat";
 
 const RING = "ring-2 ring-[var(--tile)]";
 
@@ -30,8 +31,9 @@ export const SidebarBotTile = memo(function SidebarBotTile({ primary = false, dr
   const remoteClient = typeof window !== "undefined" && window.ogb?.remoteClient?.active === true;
   const [renaming, setRenaming] = useState(false);
   const visible = useVisibleMessages(bot);
-  const { waiting, working, teammateWait, queued } = sidebarBotStatus(bot, pendingQueued);
+  const { waiting, working, running, teammateWait, queued } = sidebarBotStatus(bot, pendingQueued);
   const { unread, noticing } = useBotUnread(bot);
+  const beat = useMotionBeat(mascotMotion);
   const onLiveCall = liveBadgeFor(bot.id, liveMedia, liveCall);
   const tooltip = botTooltip(bot, instances);
   const status = waiting ? t("sidebar.preview.waiting") : working ? t("chat.activity.working") : teammateWait ? t("sidebar.preview.waitingOnTeammate") : queued ? t("task.queued") : "";
@@ -83,11 +85,11 @@ export const SidebarBotTile = memo(function SidebarBotTile({ primary = false, dr
       <span className="relative flex">
         <BotAvatar
           bot={bot}
-          state={stateForBot({ ...bot, messages: visible })}
+          state={stateForBot({ ...bot, busy: bot.busy || running, messages: visible })}
           size={56}
           motion={mascotMotion?.kind ?? "none"}
           motionKey={mascotMotion?.nonce ?? 0}
-          animated={working || noticing || (mascotMotion?.kind ?? "none") !== "none"}
+          animated={running || noticing || beat !== null} working={running} greet={beat === "switch"}
         />
         {primary && bot.chiefOfStaff && (
           <span data-testid="chief-badge" className={cn("absolute -bottom-px -right-px flex size-4 items-center justify-center rounded-full bg-[#E8993A] text-white", RING)}>

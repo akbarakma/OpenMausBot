@@ -617,7 +617,7 @@ export interface AppState {
   revealThread: { threadId: string; nonce: number } | null;
   mascotMotion: {
     botId: string;
-    nonce: number;
+    nonce: number; at: number;
     kind: Exclude<MausMotion, "none">;
   } | null;
   pendingQueued: Record<string, Array<{ queueId: string; text: string; reason?: SteerQueueReason }>>;
@@ -852,7 +852,7 @@ function withMascotMotion(
     ...state,
     mascotMotion: {
       botId,
-      nonce: (state.mascotMotion?.nonce ?? 0) + 1,
+      nonce: (state.mascotMotion?.nonce ?? 0) + 1, at: Date.now(),
       kind,
     },
   };

@@ -2037,12 +2037,25 @@ html[data-cloud-intent-morph] [data-tour="composer"] { view-transition-name: clo
   will-change: transform;
 }
 .working-ring[data-offscreen] svg { animation-play-state: paused; }
+.working-ring[data-greet] { animation: working-ring-greet 1.4s ease-out forwards; }
+.working-ring[data-greet] svg {
+  animation-duration: 1.2s;
+  animation-iteration-count: 1;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  animation-fill-mode: forwards;
+}
+@keyframes working-ring-greet {
+  0% { opacity: 0; }
+  15%, 60% { opacity: 1; }
+  100% { opacity: 0; }
+}
 @keyframes working-ring-spin {
   to { transform: rotate(1turn); }
 }
 @media (prefers-reduced-motion: reduce) {
   .working-ring,
   .working-ring svg { animation: none; }
+  .working-ring[data-greet] { display: none; }
 }
 /* Simple mode's typing row is quieter: the sheen runs from tertiary ink up to secondary. */
 .turn-phrase-quiet .thinking-shimmer { color: var(--color-ink-tertiary); }

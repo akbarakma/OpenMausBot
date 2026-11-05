@@ -7,8 +7,8 @@ import { BotAvatar } from "./Avatar";
 import { EFFECTS } from "./CursorAvatar";
 import { RING_FPS, ringRibbons, ringSpec } from "./WorkingRing";
 
-const avatar = (working: boolean | undefined, state: MausState = "working") =>
-  renderToStaticMarkup(createElement(BotAvatar, { bot: { color: "green" }, state, animated: false, working }));
+const avatar = (working: boolean | undefined, state: MausState = "working", greet = false) =>
+  renderToStaticMarkup(createElement(BotAvatar, { bot: { color: "green" }, state, animated: false, working, greet }));
 
 const ribbons = (markup: string) => markup.match(/<path d="M[^"]*" fill="none" stroke="#/g) ?? [];
 
@@ -30,12 +30,19 @@ describe("the working ring", () => {
 
   it("asks for at most RING_FPS frames a second", () => {
     const markup = avatar(true);
-    const steps = [...markup.matchAll(/animation-duration:(\d+)ms;animation-direction:\w+;animation-timing-function:steps\((\d+)\)/g)];
+    const steps = [...markup.matchAll(/animation-direction:\w+;animation-duration:(\d+)ms;animation-timing-function:steps\((\d+)\)/g)];
     expect(steps).toHaveLength(EFFECTS.orbit!.trails!.count);
     for (const [, duration, count] of steps) expect(Number(count) / (Number(duration) / 1000)).toBeLessThanOrEqual(RING_FPS + 0.5);
   });
 
   it("spins the ribbons both ways", () => {
     expect(new Set(ringRibbons(ringSpec("orbit")).map((ribbon) => ribbon.reverse))).toEqual(new Set([true, false]));
+  });
+
+  it("sweeps once for a selected bot that is not working, and keeps spinning for one that is", () => {
+    const greeting = avatar(false, "idle", true);
+    expect(greeting).toContain('data-greet="true"');
+    expect(greeting).not.toContain("animation-timing-function:steps");
+    expect(avatar(true, "idle", true)).not.toContain("data-greet");
   });
 });

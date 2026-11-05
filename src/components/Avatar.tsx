@@ -44,7 +44,7 @@ const MOTION_FACE: MotionFaces = {
   failure: { state: "sad" },
 };
 
-const MOTION_FACE_MS = 1400;
+export const MOTION_FACE_MS = 1400;
 
 function mix(hex: string, toward: string, t: number): string {
   const a = Number.parseInt(hex.slice(1), 16);
@@ -95,6 +95,8 @@ export type MausAvatarProps = {
   trackPointer?: boolean;
   animated?: boolean;
   effects?: boolean;
+  /** false turns off the face's own orbit trails, judged on the face it actually shows, motion beats included. */
+  trails?: boolean;
   bodyId?: BotBodyId;
   gradient?: [string, string, string];
   faceColor?: MascotFaceColor | null;
@@ -143,6 +145,7 @@ function GradientAvatarComponent(
     trackPointer = true,
     animated = true,
     effects,
+    trails,
     bodyId,
     gradient,
     faceColor,
@@ -169,7 +172,10 @@ function GradientAvatarComponent(
     if (!beat.state) return;
     setMotionState(beat.state);
     const timer = setTimeout(() => setMotionState(null), MOTION_FACE_MS);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      setMotionState(null);
+    };
   }, [motion, motionKey, animated]);
 
   const [pointer, setPointer] = useState({ x: 0, y: 0 });
@@ -208,7 +214,7 @@ function GradientAvatarComponent(
         showMouth={showMouth}
         mouthStroke={mouthStroke}
         paused={!animated}
-        effects={effects}
+        effects={trails === false && EFFECTS[motionState ?? state]?.trails ? false : effects}
       />
     </span>
   );
@@ -222,6 +228,7 @@ export type BotAvatarProps = Omit<MausAvatarProps, "color" | "gradient"> & {
   readable?: boolean;
   /** Keep it a boolean at a call site that shows work: switching to or from undefined remounts the face. */
   working?: boolean;
+  greet?: boolean;
   bot: {
     name?: string;
     color: MausColor;
@@ -250,20 +257,23 @@ export function resolveBotAvatarOutcome(params: {
   return "flatImage";
 }
 
-export function BotAvatar({ working, ...props }: BotAvatarProps) {
+export function BotAvatar({ working, greet = false, ...props }: BotAvatarProps) {
   if (working === undefined) return <BotAvatarFace {...props} />;
-  const state = props.state ?? "idle";
+  const profile = botAvatarProfile(props.bot);
+  const ring = <WorkingRing active={working} greet={greet} state={props.state ?? "idle"} />;
+  const overImage = Boolean(profile.avatarUrl) && profile.avatarCrop !== "mascot";
   return (
     <span className="relative inline-flex shrink-0">
-      <WorkingRing active={working} state={state} />
+      {!overImage && ring}
       <span className="relative inline-flex">
-        <BotAvatarFace {...props} effects={working && EFFECTS[state]?.trails ? false : props.effects} />
+        <BotAvatarFace {...props} trails={false} />
       </span>
+      {overImage && ring}
     </span>
   );
 }
 
-function BotAvatarFace({ bot, size = 44, label, readable = false, ...mascotProps }: Omit<BotAvatarProps, "working">) {
+function BotAvatarFace({ bot, size = 44, label, readable = false, ...mascotProps }: Omit<BotAvatarProps, "working" | "greet">) {
   const profile = botAvatarProfile(bot);
   const dressed = useHalloweenDressed();
   const [imageFailed, setImageFailed] = useState(false);

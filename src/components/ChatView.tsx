@@ -51,7 +51,7 @@ import { isProviderSafetyBlock, PROVIDER_SAFETY_GUIDANCE, PROVIDER_SAFETY_HELP_U
 import { isCancelledTranscriptRow, PERSON_STOPPED_TURN_NAME } from "../../shared/client-cancel";
 import { stopNoticeDue, useStoppedAt } from "@/lib/stop-turn";
 import { THIS_COMPUTER_NOT_READY } from "../../shared/your-computer";
-import { BotAvatar } from "./Avatar";
+import { BotAvatar } from "./Avatar"; import { useMotionBeat } from "./motion-beat";
 import { TurnPresence } from "./TurnPresence";
 import { showToolCallsEnabled, skillAuthoringEnabled } from "@/lib/feature-flags";
 import { normalizeState, stateForBot } from "@/lib/mascot";
@@ -900,7 +900,7 @@ export function ChatView({ bot: profile }: { bot: Bot }) {
   const busy = Boolean(bot.busy);
   const stoppedAt = useStoppedAt(bot.threadId);
   const openedAt = useThreadOpenedAt(bot.threadId);
-  const headerAnimated = busy || (mascotMotion?.kind ?? "none") !== "none";
+  const beat = useMotionBeat(mascotMotion), headerAnimated = busy || beat !== null;
   const branch = useRef(messages);
   branch.current = messages;
   const onBranch = useCallback((messageId: string) => branch.current.some((m) => m.id === messageId), []);
@@ -1023,7 +1023,7 @@ export function ChatView({ bot: profile }: { bot: Bot }) {
           {simpleHead ? (
             <ChatHeadPill
               bot={bot}
-              avatar={{ state: stateForBot({ ...bot, messages }), motion: mascotMotion?.kind ?? "none", motionKey: mascotMotion?.nonce ?? 0, animated: headerAnimated, working: busy }}
+              avatar={{ state: stateForBot({ ...bot, messages }), motion: mascotMotion?.kind ?? "none", motionKey: mascotMotion?.nonce ?? 0, animated: headerAnimated, working: busy, greet: beat === "switch" }}
               privacy={privateChat ? { kind: "private" } : ownHelper ? { kind: "ownHelper" } : sharedChat && team ? { kind: "shared", team: team.name, onlyPeopleAdded: bot.onlyPeopleAdded } : null}
               onToggle={() => dispatch({ type: "toggleSettings", open: !state.settingsOpen })}
             />
@@ -1042,7 +1042,7 @@ export function ChatView({ bot: profile }: { bot: Bot }) {
                   size={24}
                   motion={mascotMotion?.kind ?? "none"}
                   motionKey={mascotMotion?.nonce ?? 0}
-                  animated={headerAnimated} working={busy}
+                  animated={headerAnimated} working={busy} greet={beat === "switch"}
                 />
               </button>
               <RenameTitle
@@ -1074,7 +1074,7 @@ export function ChatView({ bot: profile }: { bot: Bot }) {
               className={cn("group flex h-9 min-w-0 items-center gap-2.5 rounded-full py-0.5 pl-2 pr-3.5 text-ink", ELEVATED_FLOAT, ELEVATED_HOVER)}
             >
               <BotAvatar bot={bot} state={stateForBot({ ...bot, messages })} size={24}
-                motion={mascotMotion?.kind ?? "none"} motionKey={mascotMotion?.nonce ?? 0} animated={headerAnimated} working={busy} />
+                motion={mascotMotion?.kind ?? "none"} motionKey={mascotMotion?.nonce ?? 0} animated={headerAnimated} working={busy} greet={beat === "switch"} />
               <span className="min-w-0 truncate text-[14px] font-medium text-ink">{bot.name}</span>
               {chiefOfStaffBadge(bot)}
               <ChevronRight size={14} aria-hidden="true" className="-ml-2.5 w-0 shrink-0 text-ink-secondary opacity-0 transition-[width,margin,opacity] duration-150 group-hover:ml-0 group-hover:w-3.5 group-hover:opacity-100 group-focus-visible:ml-0 group-focus-visible:w-3.5 group-focus-visible:opacity-100" />

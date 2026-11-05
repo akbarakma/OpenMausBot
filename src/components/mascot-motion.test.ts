@@ -11,6 +11,7 @@ import {
   morphUnitsPerMs,
   nextFrameAt,
   nextMascotFrame,
+  spinEase,
   type CadenceInput,
 } from "./mascot-motion";
 
@@ -99,5 +100,19 @@ describe("mascot cadence", () => {
     expect(start).toBeGreaterThan(0);
     expect(delay("idle", 24, { faceUnitsPerMs: start })).toBeLessThan(Infinity);
     expect(morphUnitsPerMs(0, 0.99, 7, 40)).toBeLessThan(start / 50);
+  });
+
+  it("spins and enters at full rate at any size, while blinks keep the small-mascot floor", () => {
+    expect(delay("idle", 40, { blinkingOrSpinning: true, spinning: true })).toBeCloseTo(FULL_FRAME_MS);
+    expect(delay("waking", 40, { stateElapsedMs: 100 })).toBeCloseTo(FULL_FRAME_MS);
+    expect(delay("idle", 40, { blinkingOrSpinning: true })).toBeGreaterThan(40);
+  });
+
+  it("eases the spin past a full turn and back onto it", () => {
+    expect(spinEase(0)).toBe(0);
+    expect(spinEase(1)).toBe(1);
+    const peak = Math.max(...Array.from({ length: 101 }, (_, i) => spinEase(i / 100)));
+    expect(peak * 360 - 360).toBeGreaterThan(8);
+    expect(peak * 360 - 360).toBeLessThan(18);
   });
 });

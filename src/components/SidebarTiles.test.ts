@@ -70,6 +70,12 @@ describe("the sidebar tiles", () => {
     expect(unread).toContain('aria-label="MausBot · Unread"');
   });
 
+  it("circles a working tile with the working ring, and only while it works", () => {
+    expect(renderToStaticMarkup(createElement(SidebarBotTile, props(bot({ busy: true }))))).toContain('data-testid="working-ring"');
+    expect(renderToStaticMarkup(createElement(SidebarBotTile, props(bot())))).not.toContain('data-testid="working-ring"');
+    expect(renderToStaticMarkup(createElement(SidebarBotTile, props(bot({ activity: "waiting-on-you" }))))).not.toContain('data-testid="working-ring"');
+  });
+
   it("opens the bot on Enter and its menu from the ContextMenu key", () => {
     let tree: ReactNode;
     function Capture() { tree = tile({ ...props(bot()), primary: true }); return tree; }

@@ -155,6 +155,7 @@ export interface CadenceInput {
   sizePx: number;
   faceUnitsPerMs: number;
   blinkingOrSpinning: boolean;
+  spinning?: boolean;
 }
 
 export function frameIntervalFor(pxPerMs: number): number {
@@ -194,8 +195,17 @@ export function frameFloorMs(sizePx: number): number {
   return sizePx <= SMALL_MASCOT_PX ? SMALL_MASCOT_FRAME_MS : FULL_FRAME_MS;
 }
 
+/** A spin or an entrance plays once, for under a second, so it runs at full rate at any size. */
 export function nextMascotFrame(now: number, input: CadenceInput): number {
+  const oneShot = input.spinning || (input.strength > 0 && bodyTransient(input.motion, input.stateElapsedMs));
+  if (oneShot) return nextFrameAt(now, FULL_FRAME_MS);
   return Math.max(smoothFrameAt(now, input), nextFrameAt(now, frameFloorMs(input.sizePx)));
+}
+
+/** Ease-out that swings about 13 degrees past a full turn and settles back. */
+export function spinEase(t: number): number {
+  const u = t - 1;
+  return 1 + 2 * u ** 3 + u ** 2;
 }
 
 function smoothFrameAt(now: number, input: CadenceInput): number {

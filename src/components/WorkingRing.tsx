@@ -71,9 +71,11 @@ function useRingPresence(active: boolean): boolean {
 }
 
 /** Orbit trails around a working bot's avatar. CSS spins each ribbon on the compositor, so the main thread and the
- * mascot clock stay asleep; steps() caps the frames it asks for, because a smooth spin redraws every display frame. */
-export function WorkingRing({ active, state }: { active: boolean; state: MausState }) {
-  const present = useRingPresence(active);
+ * mascot clock stay asleep; steps() caps the frames it asks for, because a smooth spin redraws every display frame.
+ * `greet` sweeps the ring once and fades it, for a selected bot that is not working. */
+export function WorkingRing({ active, greet = false, state }: { active: boolean; greet?: boolean; state: MausState }) {
+  const present = useRingPresence(active || greet);
+  const greeting = greet && !active;
   const box = useRef<HTMLSpanElement>(null);
   useEffect(() => (present && box.current ? watchOnScreen(box.current) : undefined), [present]);
   if (!present) return null;
@@ -82,8 +84,9 @@ export function WorkingRing({ active, state }: { active: boolean; state: MausSta
       ref={box}
       aria-hidden="true"
       data-testid="working-ring"
+      data-greet={greeting || undefined}
       className="working-ring pointer-events-none absolute inset-0 overflow-hidden"
-      style={{ opacity: active ? 1 : 0 }}
+      style={{ opacity: active || greeting ? 1 : 0 }}
     >
       <span className="absolute inset-0 scale-y-[0.78]">
         {ringRibbons(ringSpec(state)).map((ribbon) => (
@@ -92,9 +95,11 @@ export function WorkingRing({ active, state }: { active: boolean; state: MausSta
             viewBox={VIEW_BOX}
             className="absolute inset-0 size-full"
             style={{
-              animationDuration: `${ribbon.periodMs}ms`,
               animationDirection: ribbon.reverse ? "reverse" : "normal",
-              animationTimingFunction: `steps(${Math.round((ribbon.periodMs * RING_FPS) / 1000)})`,
+              ...(greeting ? {} : {
+                animationDuration: `${ribbon.periodMs}ms`,
+                animationTimingFunction: `steps(${Math.round((ribbon.periodMs * RING_FPS) / 1000)})`,
+              }),
             }}
           >
             <path d={ribbon.d} fill="none" stroke={ribbon.stroke} strokeWidth={ribbon.width.toFixed(1)} strokeLinecap="round" opacity={0.85} />

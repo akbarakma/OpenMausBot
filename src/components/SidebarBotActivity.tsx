@@ -32,9 +32,10 @@ export function runningRoutineRuns(bot: Bot): Array<Task & { queued: boolean }> 
 export function sidebarBotStatus(bot: Bot, queued: Record<string, unknown[]>) {
   const tasks = sidebarBotActivityTasks(bot, queued);
   const waiting = bot.activity === "waiting-on-you" || tasks.some((task) => task.activity === "waiting-on-you");
-  const working = !waiting && (Boolean(bot.busy) || tasks.some((task) => task.busy || task.activity === "working"));
+  const running = Boolean(bot.busy) || tasks.some((task) => task.busy || task.activity === "working");
+  const working = !waiting && running;
   const teammateWait = !waiting && !working && (Boolean(bot.waitingForTeammates) || tasks.some((task) => Boolean(task.waitingForTeammates)));
-  return { waiting, working, teammateWait, queued: tasks.some((task) => task.queued) };
+  return { waiting, working, running, teammateWait, queued: tasks.some((task) => task.queued) };
 }
 
 export function threadsWhenTreeHidden(bot: Bot, queued: Record<string, unknown[]>) {

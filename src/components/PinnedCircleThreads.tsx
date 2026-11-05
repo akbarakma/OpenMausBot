@@ -19,6 +19,7 @@ import { sidebarSectionAttention } from "@/lib/sidebar-attention";
 import { SidebarSectionHeader } from "./SidebarSectionHeader";
 import { BotListItem, BotThreadList, type BotRowProps } from "./Sidebar";
 import { useUnreadNotice } from "./unread-notice";
+import { useMotionBeat } from "./motion-beat";
 
 function useVisibleMessages(bot: Bot): Message[] {
   const { messages, activeLeafId } = bot;
@@ -188,9 +189,10 @@ export const PinnedBotCircle = memo(function PinnedBotCircle({
   const expanded = showThreads && density !== "icons" && threadsOpen && hasThreadList;
   const activityTasks = sidebarBotActivityTasks(bot, pendingQueued);
   const waiting = bot.activity === "waiting-on-you" || activityTasks.some((task) => task.activity === "waiting-on-you");
-  const working = !waiting && (Boolean(bot.busy) || activityTasks.some((task) => task.busy || task.activity === "working"));
+  const running = Boolean(bot.busy) || activityTasks.some((task) => task.busy || task.activity === "working"), working = !waiting && running;
   const unread = bot.unread || activityTasks.some((task) => task.unread);
   const noticing = useUnreadNotice(Boolean(bot.unread));
+  const beat = useMotionBeat(mascotMotion);
   const radius = avatarCropRadius(botAvatarProfile(bot).avatarCrop);
   return (
     <div className="flex w-full min-w-0 flex-col items-center">
@@ -224,11 +226,11 @@ export const PinnedBotCircle = memo(function PinnedBotCircle({
           >
             <BotAvatar
               bot={bot}
-              state={stateForBot({ ...bot, messages: visible })}
+              state={stateForBot({ ...bot, busy: bot.busy || running, messages: visible })}
               size={64}
               motion={mascotMotion?.kind ?? "none"}
               motionKey={mascotMotion?.nonce ?? 0}
-              animated={working || noticing || (mascotMotion?.kind ?? "none") !== "none"}
+              animated={running || noticing || beat !== null} working={running} greet={beat === "switch"}
             />
           </span>
           {unread && (

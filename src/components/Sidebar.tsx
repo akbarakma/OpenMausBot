@@ -85,7 +85,7 @@ import { PHONE_TOP_BUTTON, SIMPLE_CORNER_BUTTON, SIMPLE_ROW_FOCUS, SIMPLE_TOP_BU
 import { isSidebarToggle } from "@/lib/keyboard-shortcuts";
 import { SidebarRailSeparator, SimpleRailFooter } from "./SidebarSimpleRail";
 import { useShowThreads } from "@/lib/thread-preferences";
-import { useBotUnread } from "./unread-notice";
+import { useBotUnread } from "./unread-notice"; import { useMotionBeat } from "./motion-beat";
 import { attentionHasRunningWork, attentionJumpAction, attentionUnpinAction, crossBotAttentionThreads, crossBotPinnedThreads, runningRoutineRun, SidebarBotActivity, sidebarBotActivityTasks, sidebarBotStatus } from "./SidebarBotActivity";
 import { SidebarNoBots, SidebarTileGrid } from "./SidebarTiles";
 import { BotContextMenu } from "./SidebarBotMenu";
@@ -727,19 +727,19 @@ export const BotListItem = memo(function BotListItem(props: BotRowProps) {
     selected ? "bg-raised" : "hover:bg-raised/50",
     simpleRow && rowSurface(selected),
   );
-  const { waiting, working, teammateWait, queued } = sidebarBotStatus(bot, pendingQueued);
-  const { unread, noticing } = useBotUnread(bot);
+  const { waiting, working, running, teammateWait, queued } = sidebarBotStatus(bot, pendingQueued);
+  const { unread, noticing } = useBotUnread(bot), beat = useMotionBeat(mascotMotion);
   const onLiveCall = liveBadgeFor(bot.id, liveMedia, liveCall);
   const body = (
     <>
       <span className={cn("relative flex shrink-0", simpleRow && "-m-[3px]")} title={iconOnly || simpleList ? undefined : [bot.name, ...details].join(" · ")}>
         <BotAvatar
           bot={bot}
-          state={stateForBot({ ...bot, busy: bot.busy || working, messages: visible })}
+          state={stateForBot({ ...bot, busy: bot.busy || running, messages: visible })}
           size={simpleRow ? avatarSize + 6 : avatarSize}
           motion={mascotMotion?.kind ?? "none"}
           motionKey={mascotMotion?.nonce ?? 0}
-          animated={working || noticing || (mascotMotion?.kind ?? "none") !== "none"} working={working}
+          animated={running || noticing || beat !== null} working={running} greet={beat === "switch"}
         />
         {/* Bottom-left, clear of the status dots on the right and of the row's hover actions. */}
         {(iconOnly || !simpleList) && <BotModelBadge bot={bot} instances={instances} avatarSize={avatarSize} />}
