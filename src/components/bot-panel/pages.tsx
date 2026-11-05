@@ -1,29 +1,33 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { FolderOpen, Plus } from "lucide-react";
 
 import { appSwitchPatch } from "@/lib/bot-app-access";
+import { cn } from "@/lib/cn";
 import { skillsLibraryEnabled } from "@/lib/feature-flags";
-import { t } from "@/lib/i18n";
+import { activeLocale, t } from "@/lib/i18n";
 import { deleteMemoryDoc, MEMORY_INDEX, saveMemoryDoc, type MemoryDoc } from "@/lib/memory";
 import { openExternalLink } from "@/lib/app-links";
 import type { Routine } from "@/lib/routines";
 import { shortPath } from "@/lib/short-path";
 import { useStore, type Bot } from "@/state/store";
+import { ConfirmDialog } from "../ConfirmDialog";
 import { useDesktopCapabilities } from "../DesktopCapabilities";
 import { ServiceIcon } from "../ServiceIcon";
 import { RoutineEditor } from "../RoutinesPage";
 import { useWorkingFolder } from "../bot-settings/AccessSection";
+import { BotApiCard } from "../bot-settings/BotApiCard";
 import { useBotEditor } from "../bot-settings/BotEditorContext";
 import { SkillReviewDialog, useManagedSkills, type ManagedSkill } from "../bot-settings/SkillsSection";
 import { useBotApps, type BotApp } from "../bot-settings/useBotApps";
 import type { useBotSettingsDerived } from "../bot-settings/useBotSettingsDerived";
 import { RoutineList } from "../routines/RoutineList";
+import { BackupAis } from "./BackupAis";
 import { BrowserLogins } from "./browser-logins";
 import { useOpenComputer, WherePage } from "./ComputerTab";
 import { SettingsPage } from "./SettingsPage";
-import { panelMemoryNotes, withMemoryNote, withoutMemoryNote, type PanelMemoryNote } from "./memory-notes";
+import { memoryNoteKey, memoryNoteParts, panelMemoryNotes, withMemoryNote, withoutMemoryNote, type PanelMemoryNote } from "./memory-notes";
 import type { SimplePageId } from "./page-registry";
-import { BotSwitch, buttonCls, Card, LinkRow, NoteRow, RadioRow, rowCls, SwitchRow, TextRow, TrashButton } from "./rows";
+import { BotSwitch, buttonCls, Card, LinkRow, NavRow, NoteRow, RadioRow, rowCls, RowText, TextRow } from "./rows";
 import { useMemoryDoc } from "./use-memory-doc";
 
 type Derived = ReturnType<typeof useBotSettingsDerived>;
@@ -32,6 +36,17 @@ export interface PageContext {
   bot: Bot;
   derived: Derived;
 }
+
+/** The one item a list page has open in place of its list (a memory note's key, a skill's name), or null. */
+interface DetailContext {
+  detail: string | null;
+  onDetail: (key: string | null) => void;
+}
+
+const dateFormat = (date: string) => {
+  const day = new Date(`${date}T00:00:00Z`);
+  return Number.isNaN(day.getTime()) || day.toISOString().slice(0, 10) !== date ? null : new Intl.DateTimeFormat(activeLocale(), { dateStyle: "medium", timeZone: "UTC" }).format(day);
+};
 
 export const pageSurfaceCls = "flex flex-col gap-3";
 
@@ -128,14 +143,24 @@ export function RoutinesPage({ bot, derived }: PageContext) {
 
 /** MEMORY.md's bullets, and on a Team Cloud the person's own notes. Every write goes through the memory file route with
  * the hash it was read at, so a note the bot added meanwhile is never lost: a conflict re-reads and asks again. */
-export function MemoryPage({ bot }: PageContext) {
+export function MemoryPage({ bot, detail, onDetail }: PageContext & DetailContext) {
   const memory = useMemoryDoc(bot);
   const [draft, setDraft] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState<{ note: PanelMemoryNote; doc: MemoryDoc } | null>(null);
   const memoryOn = bot.memoryEnabled !== false;
   const notes = memory.docs ? panelMemoryNotes(memory.docs) : null;
   const index = memory.docs?.find((doc) => doc.path === MEMORY_INDEX) ?? null;
+  const open = detail === null ? null : notes?.find((note) => memoryNoteKey(note) === detail) ?? null;
+  const openDoc = open ? memory.docs?.find((doc) => doc.path === open.path) ?? null : null;
+  const gone = detail !== null && notes !== null && (open === null || openDoc === null);
+
+  useEffect(() => {
+    if (!gone) return;
+    setConfirming(null);
+    onDetail(null);
+  }, [gone]);
 
   const change = async (save: () => Promise<boolean>) => {
     if (saving) return false;
@@ -160,11 +185,9 @@ export function MemoryPage({ bot }: PageContext) {
     setError(t("memory.conflict.title", { name: bot.name }));
     return false;
   });
-  const forget = (note: PanelMemoryNote) => {
-    const doc = memory.docs?.find((candidate) => candidate.path === note.path);
-    if (!doc) return;
-    if (note.line !== null) void write(doc, withoutMemoryNote(doc.text, note.line));
-    else void change(async () => {
+  const forget = async ({ note, doc }: { note: PanelMemoryNote; doc: MemoryDoc }) => {
+    if (note.line !== null) return write(doc, withoutMemoryNote(doc.text, note.line));
+    return change(async () => {
       await deleteMemoryDoc(bot.id, doc.path, memory.mine);
       await memory.reload();
       return true;
@@ -174,6 +197,41 @@ export function MemoryPage({ bot }: PageContext) {
     if (!index || !draft.trim()) return;
     if (await write(index, withMemoryNote(index.text, draft))) setDraft("");
   };
+
+  const confirmDialog = (
+    <ConfirmDialog
+      open={confirming !== null}
+      tone="danger"
+      title={t("botPanel.memory.deleteTitle")}
+      body={t("botPanel.memory.deleteBody", { name: bot.name })}
+      confirmLabel={t("common.delete")}
+      pending={saving}
+      onCancel={() => setConfirming(null)}
+      onConfirm={() => {
+        const chosen = confirming;
+        setConfirming(null);
+        if (chosen) void forget(chosen).then((done) => { if (done) onDetail(null); });
+      }}
+    />
+  );
+
+  if (open && openDoc) {
+    const parts = memoryNoteParts(open.text);
+    const meta = [parts.source && t("botPanel.memory.from", { source: parts.source }), parts.date && dateFormat(parts.date)].filter(Boolean).join(" · ");
+    return (
+      <>
+        <p data-memory-text className={cn("mx-1 whitespace-pre-wrap break-words text-[14px] leading-[1.5]", parts.inactive ? "text-ink-tertiary line-through" : "text-ink")}>{parts.body}</p>
+        {meta && <p data-memory-meta className="mx-1 -mt-1 text-[12px] leading-[1.4] text-ink-tertiary">{meta}</p>}
+        {error && <p className="mx-1 text-[13px] text-warning">{error}</p>}
+        <div className="mx-1 mt-1">
+          <button type="button" data-panel-action="delete-memory" disabled={saving} onClick={() => setConfirming({ note: open, doc: openDoc })} className={buttonCls}>
+            {t("common.delete")}
+          </button>
+        </div>
+        {confirmDialog}
+      </>
+    );
+  }
 
   return (
     <>
@@ -186,12 +244,17 @@ export function MemoryPage({ bot }: PageContext) {
           <NoteRow>{t("common.checking")}</NoteRow>
         ) : notes.length === 0 ? (
           <NoteRow>{t("botPanel.memory.empty")}</NoteRow>
-        ) : notes.map((note) => (
-          <div key={`${note.path}:${note.line}:${note.text}`} data-memory-note={note.line ?? note.path} className={rowCls}>
-            <div className="min-w-0 flex-1 text-[13px] leading-[1.45] text-ink">{note.text}</div>
-            <TrashButton label={t("botPanel.memory.forget")} disabled={saving} onClick={() => forget(note)} />
-          </div>
-        ))}
+        ) : notes.map((note) => {
+          const parts = memoryNoteParts(note.text);
+          return (
+            <NavRow
+              key={memoryNoteKey(note)}
+              data-memory-note={note.line ?? note.path}
+              title={<span className={cn("block truncate font-normal", parts.inactive && "text-ink-tertiary line-through")}>{parts.body}</span>}
+              onClick={() => { setError(null); onDetail(memoryNoteKey(note)); }}
+            />
+          );
+        })}
         {error && <NoteRow tone="warn">{error}</NoteRow>}
       </Card>
       {memoryOn && (
@@ -208,21 +271,28 @@ export function MemoryPage({ bot }: PageContext) {
           />
         </Card>
       )}
+      {confirmDialog}
     </>
   );
 }
 
-export function SkillsPage({ bot }: PageContext) {
+export function SkillsPage({ bot, detail, onDetail }: PageContext & DetailContext) {
   const { request: api } = useBotEditor();
   const { state, dispatch } = useStore();
   const skills = useManagedSkills(bot);
   const [source, setSource] = useState("");
   const [importing, setImporting] = useState(false);
+  const [confirming, setConfirming] = useState<ManagedSkill | null>(null);
   const libraryOn = skillsLibraryEnabled(state.config);
+  const open = detail === null || skills.loading ? null : skills.skills.find((skill) => skill.name === detail) ?? null;
+  const gone = detail !== null && !skills.loading && open === null;
+
+  useEffect(() => {
+    if (gone) onDetail(null);
+  }, [gone]);
 
   const remove = async (skill: ManagedSkill) => {
-    if (skills.working) return;
-    if (!window.confirm(t("botPanel.skills.removeConfirm", { name: skill.name }))) return;
+    if (skills.working) return false;
     skills.setWorking(skill.name);
     skills.setError("");
     try {
@@ -231,12 +301,79 @@ export function SkillsPage({ bot }: PageContext) {
         await api(`/api/bots/${bot.id}/skills/${encodeURIComponent(skill.name)}`, { method: "DELETE" });
         await skills.refresh();
       }
+      return true;
     } catch (cause) {
       skills.setError(errorText(cause, t("botPanel.skills.removeFailed")));
+      return false;
     } finally {
       skills.setWorking("");
     }
   };
+  const switchFor = (skill: ManagedSkill) => (
+    <BotSwitch
+      color={bot.color}
+      checked={skill.enabled}
+      aria-label={t("botSettings.simple.skillToggle", { name: skill.name })}
+      disabled={Boolean(skills.working)}
+      onClick={() => void skills.toggle(skill)}
+      className="disabled:cursor-not-allowed"
+    />
+  );
+  const reviewDialog = skills.reviewing && (
+    <SkillReviewDialog
+      skill={skills.reviewing.skill}
+      text={skills.reviewing.text}
+      error={skills.error}
+      working={skills.working === skills.reviewing.skill.name}
+      onCancel={() => skills.setReviewing(null)}
+      onEnable={() => void skills.enableReviewed()}
+    />
+  );
+  const confirmDialog = (
+    <ConfirmDialog
+      open={confirming !== null}
+      tone="danger"
+      title={t("botPanel.skills.removeConfirm", { name: confirming?.name ?? "" })}
+      body={t("botPanel.skills.removeBody", { name: bot.name })}
+      confirmLabel={t("botPanel.skills.removeAction")}
+      pending={Boolean(skills.working)}
+      onCancel={() => setConfirming(null)}
+      onConfirm={() => {
+        const skill = confirming;
+        setConfirming(null);
+        if (skill) void remove(skill).then((done) => { if (done) onDetail(null); });
+      }}
+    />
+  );
+
+  if (open) {
+    return (
+      <>
+        <h3 className="mx-1 break-words text-[18px] font-semibold text-ink">{open.name}</h3>
+        {open.description && <p data-skill-description className="mx-1 -mt-1 whitespace-pre-wrap break-words text-[14px] leading-[1.5] text-ink-secondary">{open.description}</p>}
+        <Card>
+          <div data-panel-row={`skill:${open.name}`} className={rowCls}>
+            <RowText title={t("botSettings.simple.skillToggle", { name: open.name })} hint={open.source && open.source !== open.description ? <span className="break-all">{open.source}</span> : undefined} />
+            {switchFor(open)}
+          </div>
+          {skills.error && !skills.reviewing && <NoteRow tone="warn">{skills.error}</NoteRow>}
+        </Card>
+        <div className="mx-1 mt-1">
+          <button
+            type="button"
+            data-panel-action={`remove-skill:${open.name}`}
+            disabled={Boolean(skills.working)}
+            onClick={() => setConfirming(open)}
+            className={buttonCls}
+          >
+            {t("botPanel.skills.removeAction")}
+          </button>
+        </div>
+        {reviewDialog}
+        {confirmDialog}
+      </>
+    );
+  }
   const importSkill = async () => {
     const trimmed = source.trim();
     if (!trimmed || importing) return;
@@ -269,18 +406,18 @@ export function SkillsPage({ bot }: PageContext) {
         ) : skills.skills.length === 0 ? (
           <NoteRow>{t("botSettings.simple.noSkills")}</NoteRow>
         ) : skills.skills.map((skill) => (
-          <SwitchRow
-            key={skill.name}
-            data-panel-row={`skill:${skill.name}`}
-            title={skill.name}
-            hint={skill.description || skill.source}
-            label={t("botSettings.simple.skillToggle", { name: skill.name })}
-            color={bot.color}
-            checked={skill.enabled}
-            disabled={Boolean(skills.working)}
-            onChange={() => void skills.toggle(skill)}
-            extra={<TrashButton data-panel-action={`remove-skill:${skill.name}`} label={t("botPanel.skills.remove", { name: skill.name })} disabled={Boolean(skills.working)} onClick={() => void remove(skill)} />}
-          />
+          <div key={skill.name} data-panel-row={`skill:${skill.name}`} className="flex items-center">
+            <button
+              type="button"
+              data-panel-open={`skill:${skill.name}`}
+              onClick={() => { skills.setError(""); onDetail(skill.name); }}
+              className="flex min-h-[46px] min-w-0 flex-1 flex-col justify-center py-[11px] pl-3.5 pr-2.5 text-left hover:bg-ink/[0.03]"
+            >
+              <span className="truncate text-[14px] font-medium text-ink">{skill.name}</span>
+              {(skill.description || skill.source) && <span className="mt-px truncate text-[13px] leading-[1.35] text-ink-secondary">{skill.description || skill.source}</span>}
+            </button>
+            <span className="flex shrink-0 items-center pr-3.5">{switchFor(skill)}</span>
+          </div>
         ))}
         {skills.error && !skills.reviewing && <NoteRow tone="warn">{skills.error}</NoteRow>}
       </Card>
@@ -297,16 +434,8 @@ export function SkillsPage({ bot }: PageContext) {
         />
         <LinkRow data-panel-link="browse-skills" onClick={browse}>{t("botPanel.skills.browse")}</LinkRow>
       </Card>
-      {skills.reviewing && (
-        <SkillReviewDialog
-          skill={skills.reviewing.skill}
-          text={skills.reviewing.text}
-          error={skills.error}
-          working={skills.working === skills.reviewing.skill.name}
-          onCancel={() => skills.setReviewing(null)}
-          onEnable={() => void skills.enableReviewed()}
-        />
-      )}
+      {reviewDialog}
+      {confirmDialog}
     </>
   );
 }
@@ -393,7 +522,15 @@ export function BrowserPage({ bot, derived }: PageContext) {
   return <BrowserLogins bot={bot} browserEnabled={derived.browserEnabled} onOpenBrowser={() => openComputer("browser")} />;
 }
 
-export function PageBody({ page, onOpen, editingInstructions, onEditInstructions, ...context }: PageContext & {
+export function BackupsPage({ bot, derived }: PageContext) {
+  return <BackupAis bot={bot} onChange={(fallback) => derived.patch({ fallback })} />;
+}
+
+export function BotApiPage({ bot }: PageContext) {
+  return <BotApiCard bot={bot} webhooksLink titled={false} className="mt-3.5" />;
+}
+
+export function PageBody({ page, onOpen, detail = null, onDetail = () => {}, editingInstructions, onEditInstructions, ...context }: PageContext & Partial<DetailContext> & {
   page: SimplePageId;
   onOpen?: (page: SimplePageId) => void;
   editingInstructions?: boolean;
@@ -406,12 +543,16 @@ export function PageBody({ page, onOpen, editingInstructions, onEditInstructions
       return <WherePage {...context} />;
     case "apps":
       return <AppsPage {...context} />;
+    case "backups":
+      return <BackupsPage {...context} />;
+    case "botapi":
+      return <BotApiPage {...context} />;
     case "routines":
       return <RoutinesPage {...context} />;
     case "memory":
-      return <MemoryPage {...context} />;
+      return <MemoryPage {...context} detail={detail} onDetail={onDetail} />;
     case "skills":
-      return <SkillsPage {...context} />;
+      return <SkillsPage {...context} detail={detail} onDetail={onDetail} />;
     case "folder":
       return <FolderPage {...context} />;
     case "browser":

@@ -37,6 +37,7 @@ export function BotPanel({ bot, derived, linkedSection, onClose }: {
   const [anchor, setAnchor] = useState<string | null>(() => initialTarget(linkedSection, link).anchor ?? null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingInstructions, setEditingInstructions] = useState(() => Boolean(initialTarget(linkedSection, link).editInstructions));
+  const [detail, setDetail] = useState<string | null>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<HTMLDivElement>(null);
   const page = stack.at(-1) ?? null;
@@ -48,12 +49,14 @@ export function BotPanel({ bot, derived, linkedSection, onClose }: {
     setAnchor(target.anchor ?? null);
     setEditorOpen(false);
     setEditingInstructions(Boolean(target.editInstructions));
+    setDetail(null);
     scrollTop();
   };
   const openTab = (next: PanelTab) => go({ tab: next });
   const openPage = (next: SimplePageId) => {
     setStack((current) => [...current, next]);
     setEditorOpen(false);
+    setDetail(null);
     scrollTop();
   };
   const closeEditor = () => {
@@ -61,8 +64,13 @@ export function BotPanel({ bot, derived, linkedSection, onClose }: {
     // The card held focus: hand it back to the avatar that opened it, before the card goes, not to the page body.
     editorRef.current?.querySelector<HTMLElement>("[data-panel-avatar]")?.focus();
   };
+  const openDetail = (key: string | null) => {
+    setDetail(key);
+    scrollTop();
+  };
   const back = () => {
-    setStack((current) => current.slice(0, -1));
+    if (detail !== null) setDetail(null);
+    else setStack((current) => current.slice(0, -1));
     scrollTop();
   };
 
@@ -86,13 +94,14 @@ export function BotPanel({ bot, derived, linkedSection, onClose }: {
     const ownDialog = inDialog && !inDialog.contains(event.currentTarget) && inDialog !== editorRef.current && !editorRef.current?.contains(inDialog);
     if (ownDialog) return;
     if (editorOpen) closeEditor();
-    else if (stack.length > 0) back();
+    else if (detail !== null || stack.length > 0) back();
     else return;
     event.preventDefault();
     event.stopPropagation();
   };
 
-  const backLabel = stack.length > 1 ? t(PAGES[stack[stack.length - 2]!].title, { name: bot.name }) : t(TAB_LABEL[tab]);
+  const backLabel = page && detail !== null ? t(PAGES[page].title, { name: bot.name })
+    : stack.length > 1 ? t(PAGES[stack[stack.length - 2]!].title, { name: bot.name }) : t(TAB_LABEL[tab]);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col" onKeyDown={onKeyDown}>
@@ -165,8 +174,8 @@ export function BotPanel({ bot, derived, linkedSection, onClose }: {
             <span id="bot-settings-title" className="sr-only">{bot.name}</span>
             <PageHeader
               back={backLabel}
-              title={t(PAGES[page].title, { name: bot.name })}
-              intro={PAGES[page].intro ? t(PAGES[page].intro, { name: bot.name }) : undefined}
+              title={detail === null ? t(PAGES[page].title, { name: bot.name }) : undefined}
+              intro={detail === null && PAGES[page].intro ? t(PAGES[page].intro, { name: bot.name }) : undefined}
               onBack={back}
             />
             <div className={cn("mt-4", pageSurfaceCls)}>
@@ -175,6 +184,8 @@ export function BotPanel({ bot, derived, linkedSection, onClose }: {
                 bot={bot}
                 derived={derived}
                 onOpen={openPage}
+                detail={detail}
+                onDetail={openDetail}
                 editingInstructions={editingInstructions}
                 onEditInstructions={setEditingInstructions}
               />

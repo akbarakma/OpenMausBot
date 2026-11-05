@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { AppWindow, AudioLines, ChevronRight, FileText, ShieldCheck, Tag } from "lucide-react";
+import { AppWindow, AudioLines, ChevronRight, FileText, LifeBuoy, Plug, ShieldCheck, Tag } from "lucide-react";
 
 import { cn } from "@/lib/cn";
 import { t } from "@/lib/i18n";
@@ -7,17 +7,15 @@ import { CALL_MODES, effectiveCallMode, setCallMode, useCallMode, type CallMode 
 import { callCapabilityHelp } from "@/lib/call-capability";
 import { firstSentence } from "@/lib/soul";
 import { currentTaskBot, useStore, type Bot } from "@/state/store";
-import type { ApprovalMode } from "../../../shared/approval-mode";
+import { approvalModeFor, type ApprovalMode } from "../../../shared/approval-mode";
 import { BOT_PROFILE_LIMITS } from "../../../shared/bot-profile";
 import { ApprovalChip } from "../ComposerPlusMenu";
 import { useDesktopCapabilities } from "../DesktopCapabilities";
-import { DefaultBotHideRow } from "../DefaultBotControls";
+import { HideFromSidebarRow } from "../DefaultBotControls";
 import { SoulField } from "../SoulField";
-import { BotApiCard } from "../bot-settings/BotApiCard";
 import { useBotApps } from "../bot-settings/useBotApps";
 import type { useBotSettingsDerived } from "../bot-settings/useBotSettingsDerived";
 import { useThreadApproval } from "../thread-approval";
-import { BackupAis } from "./BackupAis";
 import type { SimplePageId } from "./page-registry";
 import { buttonCls, Card, ColRow, NavRow, RowIcon, rowCls, RowText, Segmented, type SegmentOption } from "./rows";
 
@@ -41,7 +39,8 @@ export function SettingsPage({ bot, derived, onOpen, editingInstructions = false
   const { dispatch, flushBotPatches } = useStore();
   const { capabilities, ready } = useDesktopCapabilities();
   const apps = useBotApps(bot);
-  const approval = useThreadApproval(currentTaskBot(bot));
+  const thread = currentTaskBot(bot);
+  const approval = useThreadApproval(thread);
   const storedCallMode = useCallMode();
   const [jobDraft, setJobDraft] = useState<string | null>(null);
   const { patch, approvalMode, engine } = derived;
@@ -77,11 +76,36 @@ export function SettingsPage({ bot, derived, onOpen, editingInstructions = false
   }));
 
   const soulOpen = editingInstructions || Boolean(bot.soulDrift);
+  const backups = bot.fallback?.length ?? 0;
   const enabledApps = apps.apps.filter((app) => app.scope !== null).map((app) => app.label);
 
   return (
     <div data-panel-settings>
-      <Card anchor="instructions">
+      <Card label={t("settings.profile.title")} anchor="instructions">
+        <label data-panel-row="job" className={cn(rowCls, "cursor-text")}>
+          <RowIcon icon={Tag} />
+          <span className="shrink-0 text-[14px] font-medium text-ink">{t("botSettings.simple.job")}</span>
+          <input
+            data-panel-job
+            value={jobDraft ?? bot.title}
+            placeholder={t("botSettings.simple.jobPlaceholder")}
+            aria-label={t("botSettings.simple.job")}
+            maxLength={BOT_PROFILE_LIMITS.title}
+            onChange={(event) => setJobDraft(event.target.value)}
+            onBlur={commitJob}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                event.currentTarget.blur();
+              } else if (event.key === "Escape" && jobDraft !== null) {
+                event.preventDefault();
+                event.stopPropagation();
+                setJobDraft(null);
+              }
+            }}
+            className="min-w-0 flex-1 bg-transparent text-right text-[13px] text-ink-secondary outline-none placeholder:text-ink-tertiary focus:text-ink"
+          />
+        </label>
         {soulOpen ? (
           <ColRow data-panel-row="soul">
             <SoulField
@@ -118,23 +142,21 @@ export function SettingsPage({ bot, derived, onOpen, editingInstructions = false
         )}
       </Card>
 
-      <Card anchor="approval">
+      <Card label={t("botPanel.group.rules")} anchor="approval">
         <ColRow data-panel-row="approval">
           <div className="flex items-center gap-2.5">
             <RowIcon icon={ShieldCheck} />
             <RowText title={t("botSettings.simple.beforeActs", { name })} hint={bot.busy ? t("approvalMode.whileWorking") : undefined} />
           </div>
-          <div className="pl-[38px]">
-            <Segmented
-              attr="data-approval-choice"
-              label={t("botSettings.simple.beforeActs", { name })}
-              value={displayedMode}
-              onChange={chooseActs}
-              options={actsOptions}
-            />
-          </div>
-          {approval.choice && (
-            <div data-panel-row="thread-approval" className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 pl-[38px]">
+          <Segmented
+            attr="data-approval-choice"
+            label={t("botSettings.simple.beforeActs", { name })}
+            value={displayedMode}
+            onChange={chooseActs}
+            options={actsOptions}
+          />
+          {approval.choice && approvalModeFor(thread) !== approvalMode && (
+            <div data-panel-row="thread-approval" className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
               <span className="text-[13px] text-ink-secondary">{t("botPanel.thisConversation")}</span>
               <span className="ms-auto flex">
                 <ApprovalChip choice={approval.choice} />
@@ -142,23 +164,6 @@ export function SettingsPage({ bot, derived, onOpen, editingInstructions = false
             </div>
           )}
         </ColRow>
-      </Card>
-
-      <BackupAis bot={bot} onChange={(fallback) => patch({ fallback })} />
-
-      <Card anchor="call">
-        <ColRow data-panel-row="call-mode">
-          <div className="flex items-center gap-2.5">
-            <RowIcon icon={AudioLines} />
-            <RowText title={t("call.mode.menu")} />
-          </div>
-          <div className="pl-[38px]">
-            <Segmented attr="data-call-mode" label={t("call.mode.menu")} value={callMode} onChange={setCallMode} options={callOptions} />
-          </div>
-        </ColRow>
-      </Card>
-
-      <Card anchor="uses">
         <NavRow
           data-panel-page="apps"
           icon={AppWindow}
@@ -166,35 +171,38 @@ export function SettingsPage({ bot, derived, onOpen, editingInstructions = false
           value={enabledApps.length > 0 ? enabledApps.join(", ") : t("botPanel.appsNoneYet")}
           onClick={() => onOpen?.("apps")}
         />
-        <label data-panel-row="job" className={cn(rowCls, "cursor-text")}>
-          <RowIcon icon={Tag} />
-          <span className="shrink-0 text-[14px] font-medium text-ink">{t("botSettings.simple.job")}</span>
-          <input
-            data-panel-job
-            value={jobDraft ?? bot.title}
-            placeholder={t("botSettings.simple.jobPlaceholder")}
-            aria-label={t("botSettings.simple.job")}
-            maxLength={BOT_PROFILE_LIMITS.title}
-            onChange={(event) => setJobDraft(event.target.value)}
-            onBlur={commitJob}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                event.preventDefault();
-                event.currentTarget.blur();
-              } else if (event.key === "Escape" && jobDraft !== null) {
-                event.preventDefault();
-                event.stopPropagation();
-                setJobDraft(null);
-              }
-            }}
-            className="min-w-0 flex-1 bg-transparent text-right text-[13px] text-ink-secondary outline-none placeholder:text-ink-tertiary focus:text-ink"
-          />
-        </label>
       </Card>
 
-      <BotApiCard bot={bot} webhooksLink className="mt-3.5" />
+      <Card label={t("botPanel.group.models")} anchor="backups">
+        <NavRow
+          data-panel-page="backups"
+          icon={LifeBuoy}
+          title={t("botPanel.backups.title")}
+          value={backups > 0 ? backups : t("botPanel.none")}
+          onClick={() => onOpen?.("backups")}
+        />
+      </Card>
 
-      <DefaultBotHideRow bot={bot} />
+      <Card label={t("botPanel.group.calls")} anchor="call">
+        <ColRow data-panel-row="call-mode">
+          <div className="flex items-center gap-2.5">
+            <RowIcon icon={AudioLines} />
+            <RowText title={t("call.mode.menu")} />
+          </div>
+          <Segmented attr="data-call-mode" label={t("call.mode.menu")} value={callMode} onChange={setCallMode} options={callOptions} />
+        </ColRow>
+      </Card>
+
+      <Card label={t("settings.simple.advanced")} anchor="advanced">
+        <NavRow
+          data-panel-page="botapi"
+          icon={Plug}
+          title={t("botApi.title")}
+          hint={t("botApi.switch")}
+          onClick={() => onOpen?.("botapi")}
+        />
+        <HideFromSidebarRow bot={bot} />
+      </Card>
       {approval.dialogs}
     </div>
   );

@@ -117,12 +117,9 @@ describe("a bot's conversations in its panel", () => {
     expect(more()!.textContent).toBe("Show 6 more");
   });
 
-  it("offers only New conversation while the open one is the bot's only conversation", () => {
+  it("shows nothing while the open one is the bot's only conversation", () => {
     render(research({ tasks: [task("who", "Who am I?", 2)] }));
-    expect(host.querySelector("[data-conversations-new]")).not.toBeNull();
-    expect(host.querySelector("[data-conversations-search]")).toBeNull();
-    expect(host.querySelector('[role="list"]')).toBeNull();
-    expect(listed()).toEqual([]);
+    expect(host.querySelector("[data-panel-card=conversations]")).toBeNull();
   });
 
   it("sets the rows in the panel's type: never bolder than medium, a 12px time and a larger unread dot", () => {
@@ -131,12 +128,12 @@ describe("a bot's conversations in its panel", () => {
     expect(list).toEqual(expect.arrayContaining(["[&_.font-semibold]:font-medium", "[&_time]:text-[12px]", "[&_time]:text-ink-tertiary", "[&_span.bg-accent]:size-2"]));
   });
 
-  it("puts New conversation first, as a labelled button beside search", () => {
+  it("labels the list Conversations, with search beside the label and no New conversation button", () => {
     render(research());
-    const add = host.querySelector("[data-conversations-new]")!;
-    expect(add.textContent).toBe("New conversation");
-    expect(add.compareDocumentPosition(host.querySelector("[data-conversation]")!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(add.nextElementSibling).toBe(host.querySelector("[data-conversations-search]"));
+    const search = host.querySelector("[data-conversations-search]")!;
+    expect(search.previousElementSibling?.textContent).toBe("Conversations");
+    expect(search.compareDocumentPosition(host.querySelector("[data-conversation]")!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(host.querySelector("[data-conversations-new]")).toBeNull();
   });
 
   it("shows no Show more when every conversation fits", () => {
@@ -204,7 +201,7 @@ describe("a bot's conversations in its panel", () => {
     expect(fixture.dispatch).not.toHaveBeenCalled();
   });
 
-  it("closes the panel after opening or starting a conversation at phone width", () => {
+  it("closes the panel after opening a conversation at phone width", () => {
     fixture.wide = false;
     render(research());
     click(row("launch").querySelector('[data-sidebar-thread-row="launch"]'));
@@ -212,17 +209,6 @@ describe("a bot's conversations in its panel", () => {
       [{ type: "switchTask", botId: "research", threadId: "launch" }],
       [{ type: "toggleSettings", open: false }],
     ]);
-    fixture.dispatch.mockReset();
-    click(host.querySelector("[data-conversations-new]"));
-    expect(fixture.dispatch.mock.calls).toEqual([[{ type: "newTask", botId: "research" }], [{ type: "toggleSettings", open: false }]]);
-  });
-
-  it("starts a new conversation from +, keeping the panel open on a wide window", () => {
-    render(research());
-    const add = host.querySelector("[data-conversations-new]")!;
-    expect(add.getAttribute("aria-label")).toBe("New conversation");
-    click(add);
-    expect(fixture.dispatch.mock.calls).toEqual([[{ type: "newTask", botId: "research" }]]);
   });
 
   it("pins, archives, renames and deletes through the thread menu the sidebar uses", () => {

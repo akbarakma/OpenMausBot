@@ -31,10 +31,10 @@ describe("the bot panel's page registry", () => {
   });
 
   it("draws the Simple pages on their tabs: settings on Details, what it keeps on Library, where it works on Computer", () => {
-    expect(SIMPLE_PAGES).toEqual(["settings", "apps", "routines", "memory", "skills", "folder", "browser", "where"]);
+    expect(SIMPLE_PAGES).toEqual(["settings", "apps", "backups", "botapi", "routines", "memory", "skills", "folder", "browser", "where"]);
     const home = Object.fromEntries(SIMPLE_PAGES.map((page) => [page, PAGES[page].home]));
     expect(home).toEqual({
-      settings: "details", apps: "details", routines: "details",
+      settings: "details", apps: "details", backups: "details", botapi: "details", routines: "details",
       memory: "library", skills: "library", folder: "library",
       browser: "computer", where: "computer",
     });
@@ -50,5 +50,6 @@ describe("the bot panel's page registry", () => {
     for (const tab of PANEL_TABS) expect(keys[TAB_LABEL[tab]]).toBeTruthy();
     expect(PANEL_TABS.map((tab) => keys[TAB_LABEL[tab]])).toEqual(["Details", "Library", "Computer"]);
     expect(keys[PAGES.settings.title]).toBe("Bot settings");
+    expect(keys[PAGES.backups.intro!]).toContain("Used only when {name}'s AI is at its usage limit");
   });
 });

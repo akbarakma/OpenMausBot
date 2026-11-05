@@ -50,18 +50,25 @@ export function DefaultBotSidebarRow({ simple = false }: { simple?: boolean }) {
 
 /** Bot settings: MausBot is never deleted, only taken off the sidebar. */
 export function DefaultBotHideRow({ bot }: { bot: Bot }) {
-  const { dispatch } = useStore();
   if (!bot.defaultBot || bot.sidebarHidden) return null;
   return (
     <Card anchor="default-bot">
-      <NavRow
-        data-panel-row="default-bot-hide"
-        icon={EyeOff}
-        title={t("defaultBot.hide")}
-        hint={t("defaultBot.hideHint")}
-        drill={false}
-        onClick={() => showDefaultBot(dispatch, bot, false)}
-      />
+      <HideFromSidebarRow bot={bot} />
     </Card>
+  );
+}
+
+export function HideFromSidebarRow({ bot }: { bot: Bot }) {
+  const { dispatch } = useStore();
+  if (!bot.defaultBot || bot.sidebarHidden) return null;
+  return (
+    <NavRow
+      data-panel-row="default-bot-hide"
+      icon={EyeOff}
+      title={t("defaultBot.hide")}
+      hint={t("defaultBot.hideHint")}
+      drill={false}
+      onClick={() => showDefaultBot(dispatch, bot, false)}
+    />
   );
 }

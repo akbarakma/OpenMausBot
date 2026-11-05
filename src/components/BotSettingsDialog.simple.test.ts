@@ -125,6 +125,7 @@ const { callMode, setCallMode } = await import("@/lib/call-mode");
 const { ComputerTab, WherePage } = await import("./bot-panel/ComputerTab");
 const { PageBody, AppsPage, RoutinesPage, MemoryPage, SkillsPage, FolderPage, BrowserPage } = await import("./bot-panel/pages");
 const { BrowserLogins } = await import("./bot-panel/browser-logins");
+const { memoryNoteKey, panelMemoryNotes } = await import("./bot-panel/memory-notes");
 const { PAGES, sectionTarget } = await import("./bot-panel/page-registry");
 const { openBotSettings } = await import("./bot-panel/panel-link");
 const { PageHeader } = await import("./bot-panel/rows");
@@ -141,6 +142,7 @@ const { AvatarImageGenerator } = await import("./AvatarImageGenerator");
 const { AvatarFraming } = await import("./avatar-editing");
 const { MascotFaceColorPicker } = await import("./MascotFaceColorPicker");
 const { Switch } = await import("./SettingsPrimitives");
+const { ConfirmDialog } = await import("./ConfirmDialog");
 
 afterAll(() => vi.unstubAllGlobals());
 
@@ -326,7 +328,13 @@ describe("the bot panel in Simple mode", () => {
 
     click(find(panel(bot), "data-panel-tab", "library"));
     (ofType(panel(bot), LibraryTab)!.props.onOpen as (page: string) => void)("memory");
-    expect(ofType(panel(bot), PageHeader)!.props).toMatchObject({ back: "Library", title: "What it remembers" });
+    expect(ofType(panel(bot), PageHeader)!.props).toMatchObject({ back: "Library", title: "Memories", intro: "Scout keeps these tidy on its own." });
+    (ofType(panel(bot), PageBody)!.props.onDetail as (key: string) => void)("MEMORY.md:0");
+    expect(ofType(panel(bot), PageHeader)!.props).toMatchObject({ back: "Memories", title: undefined, intro: undefined });
+    expect(ofType(panel(bot), PageBody)!.props.detail).toBe("MEMORY.md:0");
+    (ofType(panel(bot), PageHeader)!.props.onBack as () => void)();
+    expect(ofType(panel(bot), PageHeader)!.props).toMatchObject({ back: "Library", title: "Memories" });
+    expect(ofType(panel(bot), PageBody)!.props.detail).toBeNull();
     (ofType(panel(bot), PageHeader)!.props.onBack as () => void)();
 
     click(find(panel(bot), "data-panel-tab", "computer"));
@@ -404,7 +412,7 @@ describe("the bot panel in Simple mode", () => {
     expect(shown(panel(makeBot(), "access"))).toEqual({ tab: "computer", page: undefined });
   });
 
-  it("shows no switch on any tab, and on Bot settings only Bot API's: memory, upkeep, browser, record steps and Work until done live elsewhere", () => {
+  it("shows no switch on any tab or on Bot settings, and Bot API's on its own page: memory, upkeep, browser, record steps and Work until done live elsewhere", () => {
     const bot = makeBot();
     expect(switches(panel(bot).html)).toBe(0);
     expect(panel(bot).html).not.toContain('aria-label="Work until done"');
@@ -416,8 +424,11 @@ describe("the bot panel in Simple mode", () => {
     }
     click(find(panel(bot), "data-panel-gear"));
     const settings = panel(bot).html;
-    expect(switches(settings)).toBe(1);
-    expect(settings).toContain('aria-label="Let apps talk to this bot"');
+    expect(settings).toContain('data-panel-page="botapi"');
+    expect(switches(settings)).toBe(0);
+    const botApi = capture(() => PageBody({ page: "botapi", bot, derived: derived() })).html;
+    expect(switches(botApi)).toBe(1);
+    expect(botApi).toContain('aria-label="Let apps talk to this bot"');
   });
 });
 
@@ -607,14 +618,15 @@ describe("the avatar editor", () => {
 
 
 describe("the Details tab", () => {
-  it("holds the model, the conversations, routines and this conversation's rows, in that order, with no switch or Thinking row", () => {
+  it("holds the model and routines in one card, then the conversations and this conversation's rows, with no switch or Thinking row", () => {
     const rendered = botTab(makeBot());
     expect(ofType(rendered, ModelPicker)!.props).toMatchObject({ bot: expect.objectContaining({ id: "scout" }), threadId: "thread-scout", contained: true });
     expect(ofType(rendered, BotConversations)!.props.bot).toMatchObject({ id: "scout" });
-    const order = ['data-panel-row="model"', 'data-panel-card="conversations"', 'data-panel-empty="routines"', 'data-panel-item="find"', 'data-panel-item="activity"']
+    const order = ['data-panel-card="model"', 'data-panel-row="model"', 'data-panel-page="routines"', 'data-panel-item="find"', 'data-panel-item="activity"']
       .map((marker) => rendered.html.indexOf(marker));
     expect(order.every((index) => index > -1)).toBe(true);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
+    expect(rendered.html).not.toContain('data-panel-card="routines"');
     for (const gone of ['data-panel-row="thinking"', 'data-panel-edit="soul"', 'data-panel-row="approval"', 'data-panel-row="goal"', 'data-panel-row="call-mode"',
       'data-panel-page="apps"', 'data-panel-page="memory"', 'data-panel-page="skills"', 'data-panel-page="folder"']) {
       expect(rendered.html, gone).not.toContain(gone);
@@ -623,19 +635,20 @@ describe("the Details tab", () => {
     expect(switches(rendered.html)).toBe(0);
   });
 
-  it("says what routines are while the bot has none, with Add a routine, and lists them once it has some", () => {
-    const empty = botTab(makeBot());
-    expect(empty.html).toContain('data-panel-empty="routines"');
-    expect(empty.html).toContain(">Routines are recurring tasks this bot runs on a schedule. Ask it in chat to set one up.<");
+  it("shows Routines as one row before the conversations, with or without routines, and no example asks", () => {
+    const empty = botTab(makeBot({ defaultBot: {} }));
+    expect(empty.html).not.toContain("data-panel-empty");
+    expect(empty.html).not.toContain("data-panel-ask");
+    expect(empty.html).not.toContain(">Try asking<");
     expect(empty.html.match(/data-panel-page="routines"/g)).toHaveLength(1);
-    const add = find(empty, "data-panel-page", "routines");
-    expect(add.props.children).toBe("Add a routine");
-    click(add);
+    expect(rowValue(empty, "routines")).toBe("None");
+    click(find(empty, "data-panel-page", "routines"));
     expect(onOpen).toHaveBeenLastCalledWith("routines");
     fixture.derived.botRoutines = [routine()];
-    const some = botTab(makeBot());
-    expect(some.html).not.toContain('data-panel-empty="routines"');
-    expect(some.html.indexOf('data-panel-card="conversations"')).toBeLessThan(some.html.indexOf('data-panel-page="routines"'));
+    const two = [{ threadId: "thread-scout", title: "Plan", createdAt: 2 }, { threadId: "thread-older", title: "Older", createdAt: 1 }];
+    const some = botTab(makeBot({ tasks: two }));
+    expect(some.html.indexOf('data-panel-card="conversations"')).toBeGreaterThan(-1);
+    expect(some.html.indexOf('data-panel-page="routines"')).toBeLessThan(some.html.indexOf('data-panel-card="conversations"'));
   });
 
   it("values Routines by how many are on, and opens the routines page", () => {
@@ -659,15 +672,28 @@ describe("the Details tab", () => {
 });
 
 describe("the Bot settings page", () => {
-  it("holds Instructions, Before it acts, Backup AIs, Call mode, Apps, Job and Hide, with every title on one edge", () => {
+  it("groups Job and Instructions under Profile, Before it acts and Apps under Rules, then Models, Calls and Advanced, with every title on one edge", () => {
     const rendered = settingsPage(makeBot({ defaultBot: {} }));
-    const order = ['data-panel-edit="soul"', 'data-panel-row="approval"', 'data-panel-row="backups"', 'data-panel-row="call-mode"', 'data-panel-page="apps"', 'data-panel-row="job"', 'data-panel-row="default-bot-hide"']
+    const order = ['>Profile<', 'data-panel-row="job"', 'data-panel-edit="soul"', '>Rules<', 'data-panel-row="approval"', 'data-panel-page="apps"',
+      '>Models<', 'data-panel-page="backups"', '>Calls<', 'data-panel-row="call-mode"', '>Advanced<', 'data-panel-page="botapi"', 'data-panel-row="default-bot-hide"']
       .map((marker) => rendered.html.indexOf(marker));
     expect(order.every((index) => index > -1)).toBe(true);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
-    expect(switches(rendered.html)).toBe(1);
-    expect(rendered.html).toContain('aria-label="Let apps talk to this bot"');
-    expect(rendered.html.match(/pl-\[38px\]/g)).toHaveLength(4);
+    expect(switches(rendered.html)).toBe(0);
+    expect(rendered.html).not.toContain('data-testid="bot-api"');
+    expect(rendered.html).not.toContain("Used only when");
+    expect(rendered.html).not.toContain("pl-[26px]");
+    expect(rendered.html.match(/data-panel-card="default-bot"/g)).toBeNull();
+  });
+
+  it("opens Backup AIs and Bot API on their own pages, counting the backups", () => {
+    expect(rowValue(settingsPage(makeBot()), "backups")).toBe("None");
+    const two = settingsPage(makeBot({ fallback: [{ instanceId: "codex", model: "gpt-5.5" }, { instanceId: "gemini", model: "gemini-3" }] }));
+    expect(rowValue(two, "backups")).toBe(2);
+    click(find(two, "data-panel-page", "backups"));
+    expect(onOpen).toHaveBeenLastCalledWith("backups");
+    click(find(two, "data-panel-page", "botapi"));
+    expect(onOpen).toHaveBeenLastCalledWith("botapi");
   });
 
   it("shows the first line of the instructions, or how to start, and edits them in place with Done", () => {
@@ -739,9 +765,10 @@ describe("the Bot settings page", () => {
     expect(settingsPage(makeBot()).html).not.toContain("The bot is working");
   });
 
-  it("holds the conversation's approval level, the composer's choice, beside the bot's own", () => {
+  it("shows the conversation's approval level, the composer's choice, only where it differs from the bot's own", () => {
     expect(has(settingsPage(makeBot()), "data-panel-row", "thread-approval")).toBe(false);
     fixture.storeState = { ...fixture.storeState, instances: [engine({ displayName: "Claude" })] };
+    expect(has(settingsPage(makeBot({ tasks: [{ threadId: "thread-scout", title: "Plan", createdAt: 1, approvalMode: "ask" }] })), "data-panel-row", "thread-approval")).toBe(false);
     const rendered = settingsPage(makeBot({ tasks: [{ threadId: "thread-scout", title: "Plan", createdAt: 1, approvalMode: "full" }] }));
     expect(has(rendered, "data-panel-row", "thread-approval")).toBe(true);
     expect(rendered.html).toContain(">In this conversation<");
@@ -793,15 +820,24 @@ describe("the Bot settings page", () => {
 });
 
 describe("the Library tab", () => {
-  it("says what it will hold while the bot has made nothing, then what it remembers, its skills and its folder", () => {
+  it("leads with what the bot knows: memories, skills, folder and tables, then says what it will hold while it has made nothing", () => {
     const rendered = library(makeBot());
-    expect(rendered.html).toContain('data-panel-empty="library"');
-    const order = ['data-panel-empty="library"', 'data-panel-page="memory"', 'data-panel-page="skills"', 'data-panel-page="folder"'].map((marker) => rendered.html.indexOf(marker));
+    expect(rendered.html).toContain(">What Scout knows<");
+    const order = ['data-panel-page="memory"', 'data-panel-page="skills"', 'data-panel-page="folder"', 'data-panel-action="open-data"', ">From this conversation<", 'data-panel-empty="library"']
+      .map((marker) => rendered.html.indexOf(marker));
     expect(order.every((index) => index > -1)).toBe(true);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
   });
 
-  it("values What it remembers by the notes in MEMORY.md, says Off when memory is off, and opens the memory page", () => {
+  it("opens the data sheet on the side panel from Tables", () => {
+    click(find(library(makeBot()), "data-panel-action", "open-data"));
+    expect((fixture.dispatch as ReturnType<typeof vi.fn>).mock.calls.slice(-2)).toEqual([
+      [{ type: "toggleSettings", open: false }],
+      [{ type: "openDataResult", botId: "scout" }],
+    ]);
+  });
+
+  it("values Memories by the notes in MEMORY.md, says Off when memory is off, and opens the memory page", () => {
     expect(rowValue(library(makeBot()), "memory")).toBeUndefined();
     fixture.memory.docs = [memoryDoc("# Notes\n- Likes short replies\n- Uses Resolve\n- Works nights\n")];
     const rendered = library(makeBot());
@@ -836,13 +872,15 @@ describe("the Library tab", () => {
 });
 
 describe("the Computer tab", () => {
-  it("shows the screen as one button that opens the full view, the caption, and where it works", () => {
+  it("labels the screen above one button that opens the full view, then sets up where it works", () => {
     const rendered = computer(makeBot());
     expect(find(rendered, "data-panel-action", "open-computer").props["aria-label"]).toBe("Watch: Scout's screen");
     expect(rendered.html).toContain(">Not using its computer right now<");
     expect(rendered.html).toContain(">Watch<");
-    expect(rendered.html).toContain("Scout&#x27;s screen");
-    expect(rendered.html).toContain("Where Scout works");
+    expect(rendered.html.indexOf(">Scout&#x27;s screen<")).toBeGreaterThan(-1);
+    expect(rendered.html.indexOf(">Scout&#x27;s screen<")).toBeLessThan(rendered.html.indexOf('data-panel-action="open-computer"'));
+    expect(rendered.html.indexOf(">Setup<")).toBeLessThan(rendered.html.indexOf('data-panel-page="where"'));
+    expect(find(rendered, "data-panel-page", "where").props.title).toBe("Works in");
     expect(rowValue(rendered, "where")).toBe("Let it choose");
     expect(has(rendered, "attr", "data-place-choice")).toBe(false);
     expect(switches(rendered.html)).toBe(0);
@@ -957,7 +995,10 @@ describe("the drill-in pages", () => {
     settings: SettingsPage, apps: AppsPage, routines: RoutinesPage, memory: MemoryPage, skills: SkillsPage, folder: FolderPage, browser: BrowserPage, where: WherePage,
   } as const;
   // The walker reads only what a component returns, so each page is called as the function PageBody picks.
-  const body = (page: keyof typeof PAGE, bot = makeBot()) => capture(() => PAGE[page]({ bot, derived: derived() }) as ReactNode);
+  const onDetail = vi.fn();
+  const body = (page: keyof typeof PAGE, bot = makeBot(), detail: string | null = null) =>
+    capture(() => PAGE[page]({ bot, derived: derived(), detail, onDetail }) as ReactNode);
+  const confirm = (rendered: { nodes: Node[] }) => ofType(rendered, ConfirmDialog)!;
 
   it("draws one component per Simple page", () => {
     for (const page of Object.keys(PAGE) as Array<keyof typeof PAGE>) {
@@ -965,8 +1006,6 @@ describe("the drill-in pages", () => {
       expect(picked.props.bot, page).toMatchObject({ id: "scout" });
     }
   });
-  const row = (rendered: { nodes: Node[] }, id: string) => find(rendered, "data-panel-row", id);
-
   it("gives each connected app one switch that writes the same scopes as Access, with no scopes or tool grants", () => {
     fixture.apps = { phase: "ready", connectedSlugs: ["github", "gmail", "slack"], apps: [app("github", "write"), app("gmail", "write"), app("slack", "write")] };
     const rendered = body("apps");
@@ -1030,24 +1069,39 @@ describe("the drill-in pages", () => {
     expect(ofType(body("routines"), RoutineEditor)!.props).toMatchObject({ lockedBotId: "scout", routine: undefined });
   });
 
-  it("lists what MEMORY.md remembers, forgets one line through the memory file route, and adds one", async () => {
-    fixture.memory.docs = [memoryDoc("# Notes\n- Likes short replies\n\n- Uses Resolve Studio\n")];
+  it("lists each note as one line without its date or source, opens one, deletes it after a confirm, and adds one", async () => {
+    onDetail.mockReset();
+    fixture.memory.docs = [memoryDoc('# Notes\n- 2026-11-04 · from chat "Rename the bot" · Likes short replies · updated 2026-11-05\n\n- Uses Resolve Studio\n')];
     const rendered = body("memory");
-    expect(rendered.html).toContain("Likes short replies");
-    expect(rendered.html).toContain("Uses Resolve Studio");
-    expect(rendered.html).not.toContain("# Notes");
+    expect(rendered.html).toContain(">Likes short replies<");
+    expect(rendered.html).toContain(">Uses Resolve Studio<");
+    for (const text of ["# Notes", "2026-11-04", "Rename the bot", "updated", "Tidy now", "Upkeep", "Obsidian", "Daily logs", "Journal"]) expect(rendered.html).not.toContain(text);
     expect(switches(rendered.html)).toBe(0);
-    for (const text of ["Tidy now", "Upkeep", "Obsidian", "Daily logs", "Journal"]) expect(rendered.html).not.toContain(text);
-    click(rendered.nodes.filter((node) => node.props.label === "Forget")[0]!);
+    expect(has(rendered, "label", "Forget")).toBe(false);
+    click(find(rendered, "data-memory-note", 1));
+    const key = memoryNoteKey(panelMemoryNotes(fixture.memory.docs)[0]!);
+    expect(key.startsWith("MEMORY.md:1:")).toBe(true);
+    expect(onDetail).toHaveBeenLastCalledWith(key);
+
+    const note = body("memory", makeBot(), key);
+    expect(note.html).toContain(">Likes short replies<");
+    expect(note.html).toContain(">From chat &quot;Rename the bot&quot; · Nov 4, 2026<");
+    expect(confirm(note).props.open).toBe(false);
+    click(find(note, "data-panel-action", "delete-memory"));
+    expect(fixture.saveMemory).not.toHaveBeenCalled();
+    const asking = confirm(body("memory", makeBot(), key));
+    expect(asking.props).toMatchObject({ open: true, tone: "danger", title: "Delete this note?", body: "Scout will no longer remember it.", confirmLabel: "Delete" });
+    (asking.props.onConfirm as () => void)();
     await Promise.resolve();
     expect(fixture.saveMemory).toHaveBeenLastCalledWith("scout", "MEMORY.md", "# Notes\n\n- Uses Resolve Studio\n", "h1", false);
     await Promise.resolve();
     expect(fixture.memory.setDoc).toHaveBeenLastCalledWith(expect.objectContaining({ text: "# Notes\n\n- Uses Resolve Studio\n", hash: "h2" }));
+    await vi.waitFor(() => expect(onDetail).toHaveBeenLastCalledWith(null));
 
     (find(body("memory"), "data-panel-form", "memory-add").props.onChange as (value: string) => void)("  Prefers the free version ");
     (find(body("memory"), "data-panel-form", "memory-add").props.onSubmit as () => void)();
     await Promise.resolve();
-    expect(fixture.saveMemory).toHaveBeenLastCalledWith("scout", "MEMORY.md", "# Notes\n- Likes short replies\n\n- Uses Resolve Studio\n- Prefers the free version\n", "h1", false);
+    expect(fixture.saveMemory).toHaveBeenLastCalledWith("scout", "MEMORY.md", '# Notes\n- 2026-11-04 · from chat "Rename the bot" · Likes short replies · updated 2026-11-05\n\n- Uses Resolve Studio\n- Prefers the free version\n', "h1", false);
   });
 
   it("says when memory is off, empty or unreadable, and re-reads on a conflict", async () => {
@@ -1060,29 +1114,48 @@ describe("the drill-in pages", () => {
 
     fixture.memory = { ...fixture.memory, docs: [memoryDoc("- Old\n")], error: false };
     fixture.saveMemory = vi.fn(() => Promise.resolve({ ok: false, conflict: true, current: "- New\n", currentHash: "h3" }));
-    click(find(body("memory"), "label", "Forget"));
+    const old = memoryNoteKey(panelMemoryNotes([memoryDoc("- Old\n")])[0]!);
+    click(find(body("memory", makeBot(), old), "data-panel-action", "delete-memory"));
+    (confirm(body("memory", makeBot(), old)).props.onConfirm as () => void)();
     await Promise.resolve();
     await Promise.resolve();
     expect(fixture.memory.reload).toHaveBeenCalled();
-    expect(body("memory").html).toContain("Scout changed this file while you were editing.");
+    expect(body("memory", makeBot(), old).html).toContain("Scout changed this file while you were editing.");
   });
 
-  it("switches skills, removes one, adds one from a link and browses the library or skills.sh", async () => {
+  it("switches skills from the list, opens one, removes it after a confirm, adds one from a link and browses the library or skills.sh", async () => {
+    onDetail.mockReset();
     const off = skill("summarise", false);
     const shared = skill("triage", true, "library");
     fixture.skills.skills = [shared, off];
     const rendered = body("skills");
-    expect(row(rendered, "skill:summarise").props).toMatchObject({ checked: false, label: "Use summarise", hint: "summarise helper", disabled: false });
-    (row(rendered, "skill:summarise").props.onChange as () => void)();
+    const toggle = find(rendered, "aria-label", "Use summarise");
+    expect(toggle.props).toMatchObject({ checked: false, disabled: false });
+    expect(rendered.html).toContain(">summarise helper<");
+    click(toggle);
     expect(fixture.skills.toggle).toHaveBeenCalledWith(off);
     expect(rendered.html).not.toContain("Write a command");
+    expect(has(rendered, "data-panel-action", "remove-skill:summarise")).toBe(false);
+    click(find(rendered, "data-panel-open", "skill:summarise"));
+    expect(onDetail).toHaveBeenLastCalledWith("summarise");
 
-    click(find(rendered, "data-panel-action", "remove-skill:summarise"));
+    const page = body("skills", makeBot(), "summarise");
+    expect(page.html).toContain(">summarise<");
+    expect(page.html).toContain(">summarise helper<");
+    expect(find(page, "aria-label", "Use summarise").props.checked).toBe(false);
+    click(find(page, "data-panel-action", "remove-skill:summarise"));
+    expect(fixture.api).not.toHaveBeenCalled();
+    const asking = confirm(body("skills", makeBot(), "summarise"));
+    expect(asking.props).toMatchObject({ open: true, tone: "danger", title: "Remove the skill “summarise”?", body: "Scout stops using it.", confirmLabel: "Remove" });
+    (asking.props.onConfirm as () => void)();
     await Promise.resolve();
     expect(fixture.api).toHaveBeenCalledWith("/api/bots/scout/skills/summarise", { method: "DELETE" });
     await Promise.resolve();
     expect(fixture.skills.refresh).toHaveBeenCalled();
-    click(find(rendered, "data-panel-action", "remove-skill:triage"));
+    await Promise.resolve();
+    expect(onDetail).toHaveBeenLastCalledWith(null);
+    click(find(body("skills", makeBot(), "triage"), "data-panel-action", "remove-skill:triage"));
+    (confirm(body("skills", makeBot(), "triage")).props.onConfirm as () => void)();
     expect(fixture.skills.putAssignments).toHaveBeenCalledWith("triage", true);
 
     (find(rendered, "data-panel-form", "skill-import").props.onChange as (value: string) => void)("owner/repo");
@@ -1099,7 +1172,7 @@ describe("the drill-in pages", () => {
       [{ type: "toggleAppSettings", open: true, section: "skills" }],
     ]);
     fixture.skills.working = "triage";
-    expect(row(body("skills"), "skill:summarise").props.disabled).toBe(true);
+    expect(find(body("skills"), "aria-label", "Use summarise").props.disabled).toBe(true);
     fixture.skills.skills = [];
     expect(body("skills").html).toContain("No skills yet.");
   });

@@ -64,12 +64,12 @@ export function webhooksLine(count: number): string {
 
 /** Starter: one line and the usual Upgrade (its preview, then the person's confirmation). Where this page has no way to change the
  * plan, a browser tab on the Cloud's own address, the line stands alone. */
-function BotApiStarter({ className }: { className?: string }) {
+function BotApiStarter({ titled = true, className }: { titled?: boolean; className?: string }) {
   const { usage, bridge } = useCloudUsage();
   const upgrade = useUpgrade(bridge, usage, "app_settings");
   return (
     <div className={cn("rounded-xl bg-card p-4", className)} data-testid="bot-api">
-      <div className="text-[15px] font-medium text-ink">{t("botApi.title")}</div>
+      {titled && <div className="text-[15px] font-medium text-ink">{t("botApi.title")}</div>}
       <div className="mt-0.5 text-[13px] text-ink-secondary" data-testid="bot-api-starter">{t("botApi.starter")}</div>
       {bridge && usage && (
         <button type="button" onClick={() => upgrade.start()} disabled={upgrade.busy !== null} className={cn(buttonCls, "mt-3")} data-testid="bot-api-upgrade">{t("roomCard.upgrade")}</button>
@@ -81,12 +81,12 @@ function BotApiStarter({ className }: { className?: string }) {
 }
 
 /** The Bot API, the same in the bot panel and in Bot settings: a switch, the key once, the command to paste. */
-export function BotApiCard(props: { bot: Bot; webhooksLink?: boolean; className?: string }) {
+export function BotApiCard(props: { bot: Bot; webhooksLink?: boolean; titled?: boolean; className?: string }) {
   const { state } = useStore();
-  return state.config?.cloudStarter === true ? <BotApiStarter className={props.className} /> : <BotApiSection {...props} />;
+  return state.config?.cloudStarter === true ? <BotApiStarter titled={props.titled} className={props.className} /> : <BotApiSection {...props} />;
 }
 
-function BotApiSection({ bot, webhooksLink = false, className }: { bot: Bot; webhooksLink?: boolean; className?: string }) {
+function BotApiSection({ bot, webhooksLink = false, titled = true, className }: { bot: Bot; webhooksLink?: boolean; titled?: boolean; className?: string }) {
   const { state, dispatch } = useStore();
   const [view, setView] = useState<BotApiView | null>(null);
   const [freshKey, setFreshKey] = useState<string | null>(null);
@@ -134,8 +134,8 @@ function BotApiSection({ bot, webhooksLink = false, className }: { bot: Bot; web
     <div className={cn("rounded-xl bg-card p-4", className)} data-testid="bot-api">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <div className="text-[15px] font-medium text-ink">{t("botApi.title")}</div>
-          <div className="mt-0.5 text-[14px] text-ink">{t("botApi.switch")}</div>
+          {titled && <div className="text-[15px] font-medium text-ink">{t("botApi.title")}</div>}
+          <div className={cn(titled && "mt-0.5", "text-[14px] text-ink")}>{t("botApi.switch")}</div>
           <div className="mt-0.5 text-[13px] text-ink-secondary">{canManage || !view ? t("botApi.hint", { name: bot.name }) : t("botApi.notAllowed", { name: bot.name })}</div>
         </div>
         <Switch

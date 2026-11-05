@@ -215,6 +215,7 @@ export function ModelPicker({
   className,
   contained = false,
   label,
+  row = false,
   size = "md",
 }: {
   bot: Bot;
@@ -222,6 +223,8 @@ export function ModelPicker({
   className?: string;
   contained?: boolean;
   label?: ReactNode;
+  /** Simple mode, contained: the whole settings row, label included, is the button that opens the picker. */
+  row?: boolean;
   size?: "sm" | "md";
 }) {
   const { state, dispatch: storeDispatch, refreshInstances, refreshModels: refreshInstanceModels } = useStore();
@@ -259,6 +262,7 @@ export function ModelPicker({
   const floating = typeof document !== "undefined";
   const simpleView = !advanced && !fullView;
   const popoverWidth = simpleView ? SIMPLE_POPOVER_WIDTH : POPOVER_WIDTH;
+  const rowWide = simpleView && contained && row;
   useLayoutEffect(() => {
     if (!open) return;
     const place = (event?: Event) => {
@@ -267,7 +271,8 @@ export function ModelPicker({
       const menu = menuRef.current;
       if (!anchor || !menu) return;
       const viewport = { width: window.innerWidth, height: window.innerHeight };
-      setPlacement((locked) => pickerPlacement(anchor, { width: popoverWidth, height: menu.offsetHeight }, viewport, locked ?? undefined,
+      const width = rowWide ? anchor.width : popoverWidth;
+      setPlacement((locked) => pickerPlacement(anchor, { width, height: menu.offsetHeight }, viewport, locked ?? undefined,
         simpleView ? undefined : POPOVER_HEIGHT));
     };
     const settled = (event: Event) => {
@@ -282,7 +287,7 @@ export function ModelPicker({
       window.removeEventListener("scroll", place, true);
       window.removeEventListener("animationend", settled, true);
     };
-  }, [open, popoverWidth, simpleView]);
+  }, [open, popoverWidth, rowWide, simpleView]);
 
   useEffect(() => {
     if (!open || !placement || focusOnPlace.current === null) return;
@@ -610,6 +615,16 @@ export function ModelPicker({
     title: `${summary}${followLine}${attentionLine}${busyLine}`,
   };
 
+  const wholeRow = contained && row && !advanced;
+  const providerMark = (
+    <span className="relative mr-1.5 flex shrink-0 self-center group-disabled:opacity-50">
+      {active
+        ? <InstanceProviderMark instance={active} size={14} subtle />
+        : <span className="size-3.5 rounded-full bg-ink/[0.08]" aria-hidden="true" />}
+      {attention && <span data-model-attention className="absolute -bottom-0.5 -right-0.5 size-1.5 rounded-full bg-warning ring-[1.5px] ring-app" />}
+    </span>
+  );
+  const modelText = <span className="min-w-0 max-w-[160px] truncate">{modelName(active, selection.model)}</span>;
   const trigger = advanced ? (
     <button
       {...triggerProps}
@@ -659,20 +674,21 @@ export function ModelPicker({
     <button
       {...triggerProps}
       className={cn(
-        "group flex items-center rounded-full text-[13px] leading-[18px] text-ink-secondary disabled:cursor-not-allowed disabled:text-ink-tertiary",
-        contained
-          ? "min-w-0 max-w-[58%] transition-colors duration-150 hover:bg-ink/[0.06] hover:text-ink aria-expanded:bg-ink/[0.08] aria-expanded:text-ink disabled:hover:bg-transparent"
-          : cn("shrink-0", ELEVATED_FLOAT, ELEVATED_HOVER, "hover:text-ink aria-expanded:text-ink disabled:hover:bg-composer"),
-        size === "sm" ? "h-7 pl-2 pr-1.5" : "h-8 pl-2.5 pr-2",
+        "group flex items-center text-[13px] leading-[18px] text-ink-secondary disabled:cursor-not-allowed disabled:text-ink-tertiary",
+        wholeRow
+          ? "min-h-[46px] w-full gap-2.5 px-3.5 py-[11px] text-left transition-colors duration-150 enabled:hover:bg-ink/[0.03] aria-expanded:bg-ink/[0.04]"
+          : contained
+            ? "min-w-0 max-w-[58%] rounded-full transition-colors duration-150 hover:bg-ink/[0.06] hover:text-ink aria-expanded:bg-ink/[0.08] aria-expanded:text-ink disabled:hover:bg-transparent"
+            : cn("shrink-0 rounded-full", ELEVATED_FLOAT, ELEVATED_HOVER, "hover:text-ink aria-expanded:text-ink disabled:hover:bg-composer"),
+        !wholeRow && (size === "sm" ? "h-7 pl-2 pr-1.5" : "h-8 pl-2.5 pr-2"),
       )}
     >
-      <span className="relative mr-1.5 flex shrink-0 group-disabled:opacity-50">
-        {active
-          ? <InstanceProviderMark instance={active} size={14} subtle />
-          : <span className="size-3.5 rounded-full bg-ink/[0.08]" aria-hidden="true" />}
-        {attention && <span data-model-attention className="absolute -bottom-0.5 -right-0.5 size-1.5 rounded-full bg-warning ring-[1.5px] ring-app" />}
-      </span>
-      <span className="min-w-0 max-w-[160px] truncate">{modelName(active, selection.model)}</span>
+      {wholeRow ? (
+        <span className="flex min-w-0 flex-1 items-baseline gap-2.5 [&>svg]:self-center">
+          {label}
+          <span className="ml-auto flex min-w-0 items-baseline">{providerMark}{modelText}</span>
+        </span>
+      ) : <>{providerMark}{modelText}</>}
       <UsageBars engine={selection.instanceId} className="ml-1.5" />
       <ChevronDown size={12} strokeWidth={2} aria-hidden="true" className="ml-1 shrink-0 text-ink-tertiary group-hover:text-ink-secondary" />
     </button>
@@ -1002,7 +1018,7 @@ export function ModelPicker({
 
   return (
     <div ref={rootRef} className={cn(contained ? "w-full" : "relative", className)}>
-      {contained ? (
+      {wholeRow ? trigger : contained ? (
         <div className="flex items-center justify-between gap-4">
           {label}
           {trigger}

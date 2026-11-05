@@ -4,9 +4,10 @@ import { Crown, Pencil } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { t } from "@/lib/i18n";
 import type { MausState } from "@/lib/mascot";
-import type { Bot } from "@/state/store";
+import { useStore, type Bot } from "@/state/store";
 import { BOT_PROFILE_LIMITS } from "../../../shared/bot-profile";
 import { BotAvatar } from "../Avatar";
+import { sidebarBotStatus } from "../SidebarBotActivity";
 import type { BotPatch } from "../bot-settings/useBotSettingsDerived";
 
 const inlineInputCls =
@@ -69,6 +70,8 @@ export function PanelHero({ bot, activeState, patch, editorOpen, onToggleEditor 
     if (next !== bot.title.trim()) patch({ title: next });
   });
   const title = bot.title.trim();
+  const { state } = useStore();
+  const { running } = sidebarBotStatus(bot, state.pendingQueued);
 
   return (
     <div className="group/hero flex flex-col items-center text-center">
@@ -80,7 +83,7 @@ export function PanelHero({ bot, activeState, patch, editorOpen, onToggleEditor 
         onClick={onToggleEditor}
         className="group relative rounded-[24px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-border"
       >
-        <BotAvatar bot={bot} size={80} state={activeState} />
+        <BotAvatar bot={bot} size={80} state={activeState} working={running} />
         <span
           aria-hidden="true"
           className="absolute inset-0 flex items-center justify-center rounded-[24px] bg-black/0 text-white opacity-0 transition-[opacity,background-color] group-hover:bg-black/40 group-hover:opacity-100 group-focus-visible:bg-black/40 group-focus-visible:opacity-100 group-focus-within:opacity-100 touch:opacity-100 motion-reduce:transition-none"

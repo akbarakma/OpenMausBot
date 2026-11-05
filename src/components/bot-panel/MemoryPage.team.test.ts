@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { act, createElement } from "react";
+import { act, createElement, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
@@ -51,14 +51,21 @@ afterEach(() => {
 
 const settle = () => act(async () => { for (let i = 0; i < 5; i += 1) await new Promise((resolve) => setTimeout(resolve, 0)); });
 
+function Memories({ busy = false }: { busy?: boolean }) {
+  const [detail, setDetail] = useState<string | null>(null);
+  return createElement(MemoryPage, { bot: { ...bot, busy }, derived: {} as never, detail, onDetail: setDetail });
+}
+
 it("on a Team Cloud shows what the bot remembers about the person, from their own notes, and lets them forget it", async () => {
-  await act(async () => root.render(createElement(MemoryPage, { bot, derived: {} as never })));
+  await act(async () => root.render(createElement(Memories)));
   await settle();
   expect(host.textContent).toContain("Ada's favourite fruit is durian");
   expect(host.textContent).not.toContain("Couldn't read the memory file");
   expect(calls.every(([, path]) => path.includes("/memory/mine"))).toBe(true);
-  const forget = host.querySelector<HTMLButtonElement>("[data-memory-note] button")!;
-  await act(async () => forget.click());
+  await act(async () => host.querySelector<HTMLButtonElement>("[data-memory-note]")!.click());
+  await act(async () => host.querySelector<HTMLButtonElement>('[data-panel-action="delete-memory"]')!.click());
+  const buttons = document.querySelectorAll<HTMLButtonElement>('[role="alertdialog"] button');
+  await act(async () => buttons[buttons.length - 1]!.click());
   await settle();
   expect(files["memory/food.md"]).toBe("");
   expect(host.textContent).not.toContain("durian");
@@ -68,4 +75,19 @@ it("counts those notes on the Library tab", async () => {
   await act(async () => root.render(createElement(LibraryTab, { bot, onOpen: () => {} })));
   await settle();
   expect(host.querySelector('[data-panel-page="memory"]')?.textContent).toContain("1 note");
+});
+
+it("closes an open note and its delete confirm when a reload no longer has that note", async () => {
+  await act(async () => root.render(createElement(Memories)));
+  await settle();
+  await act(async () => host.querySelector<HTMLButtonElement>("[data-memory-note]")!.click());
+  await act(async () => host.querySelector<HTMLButtonElement>('[data-panel-action="delete-memory"]')!.click());
+  expect(document.querySelector('[role="alertdialog"]')).not.toBeNull();
+  files["memory/food.md"] = "- Ada's favourite fruit is mango\n";
+  await act(async () => root.render(createElement(Memories, { busy: true })));
+  await settle();
+  expect(document.querySelector('[role="alertdialog"]')).toBeNull();
+  expect(host.querySelector('[data-panel-action="delete-memory"]')).toBeNull();
+  expect(host.textContent).toContain("mango");
+  expect(calls.some(([method]) => method === "PUT" || method === "DELETE")).toBe(false);
 });

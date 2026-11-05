@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ChevronDown, ChevronUp, Search, SquarePen } from "lucide-react";
+import { ChevronDown, ChevronUp, Search } from "lucide-react";
 
 import { cn } from "@/lib/cn";
 import { llmThreadTitlesEnabled } from "@/lib/feature-flags";
@@ -90,17 +90,12 @@ export function BotConversations({ bot }: { bot: Bot }) {
     : conversations;
   const shown = needle ? matches : expanded ? conversations : collapsed;
   const hidden = conversations.length - collapsed.length;
-  const project = bot.projects?.find((folder) => folder.id === bot.tasks?.find((task) => task.threadId === bot.threadId)?.projectId);
 
   const closeOnPhone = () => {
     if (phone) dispatch({ type: "toggleSettings", open: false });
   };
   const select = (task: { threadId: string }) => {
     if (task.threadId !== bot.threadId) openBotThread(dispatch, bot, task.threadId, false);
-    closeOnPhone();
-  };
-  const startNew = () => {
-    dispatch({ type: "newTask", botId: bot.id, ...(project ? { projectId: project.id } : {}) });
     closeOnPhone();
   };
   const stopSearching = () => {
@@ -111,6 +106,7 @@ export function BotConversations({ bot }: { bot: Bot }) {
   // An open search stays up even if archiving leaves one conversation, so it can still be cleared.
   // An archived open conversation stays listed too, so it is not hidden while it is open.
   const listed = conversations.length >= 2 || searching || conversations.some((task) => task.threadId === bot.threadId && isArchived(task));
+  if (!listed && archived.length === 0) return null;
   const row = (task: (typeof threads)[number]) => (
     <div role="listitem" key={task.threadId} data-conversation={task.threadId}>
       <SidebarThreadRow panel preview={preview(task.threadId)} task={task} ownerId={bot.id} current={task.threadId === bot.threadId}
@@ -119,21 +115,10 @@ export function BotConversations({ bot }: { bot: Bot }) {
   );
 
   return (
-    <section data-panel-card="conversations" aria-label={t("botPanel.conversations.title")} className="mt-3.5">
-      <div className={cn("flex items-center gap-2", listed && "mb-2")}>
-        {bot.yourAccess !== "view" && (
-          <button
-            type="button"
-            data-conversations-new
-            aria-label={t("botPanel.conversations.new")}
-            onClick={startNew}
-            className="flex h-9 min-w-0 flex-1 items-center gap-2.5 rounded-full bg-ink/[0.05] px-3.5 text-[14px] font-medium text-ink transition-colors hover:bg-ink/[0.09]"
-          >
-            <SquarePen size={15} aria-hidden="true" className="shrink-0 text-ink-secondary" />
-            <span className="truncate">{t("botPanel.conversations.new")}</span>
-          </button>
-        )}
-        {listed && (
+    <section data-panel-card="conversations" aria-label={t("botPanel.conversations.title")} className="mt-5">
+      {listed && (
+        <div className="mx-1 mb-2 flex min-h-5 items-center justify-between gap-3 text-[13px] text-ink-secondary">
+          <span className="min-w-0 truncate">{t("botPanel.conversations.title")}</span>
           <button
             type="button"
             data-conversations-search
@@ -141,12 +126,12 @@ export function BotConversations({ bot }: { bot: Bot }) {
             title={t("botPanel.conversations.search")}
             aria-pressed={searching}
             onClick={() => (searching ? stopSearching() : setSearching(true))}
-            className={cn("flex size-9 shrink-0 items-center justify-center rounded-full text-ink-secondary transition-colors hover:bg-ink/[0.06] hover:text-ink", searching && "bg-ink/[0.06] text-ink")}
+            className={cn("-my-2 -me-2 flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-ink-secondary transition-colors hover:bg-ink/[0.06] hover:text-ink", searching && "bg-ink/[0.06] text-ink")}
           >
             <Search size={15} aria-hidden="true" />
           </button>
-        )}
-      </div>
+        </div>
+      )}
       {listed && searching && (
         <input
           autoFocus

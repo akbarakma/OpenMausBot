@@ -1,6 +1,6 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode, type RefObject } from "react";
 import { createPortal } from "react-dom";
-import { ChevronDown, LifeBuoy, Plus } from "lucide-react";
+import { ChevronDown, Plus } from "lucide-react";
 
 import { cn } from "@/lib/cn";
 import { configuredModelInstances } from "@/lib/engine-rail";
@@ -16,7 +16,7 @@ import { modelMenuKey, modelMenuPointerMove } from "../model-menu-keys";
 import { SIMPLE_POPOVER_WIDTH } from "../ModelPicker";
 import { InstanceProviderMark } from "../ProviderIcons";
 import { SimpleModelMenu } from "../SimpleModelMenu";
-import { buttonCls, Card, ColRow, RowIcon, RowText, TrashButton } from "./rows";
+import { buttonCls, Card, ColRow, TrashButton } from "./rows";
 
 type Backup = NonNullable<Bot["fallback"]>[number];
 
@@ -220,13 +220,8 @@ export function BackupAis({ bot, onChange }: { bot: Bot; onChange: (fallback: Ba
   return (
     <Card anchor="backups">
       <ColRow data-panel-row="backups">
-        <div className="flex items-center gap-2.5">
-          <RowIcon icon={LifeBuoy} />
-          <RowText title={t("botPanel.backups.title")} />
-        </div>
-        <p className="-mt-1 pl-[38px] text-[13px] leading-[1.35] text-ink-secondary">{t("botPanel.backups.hint", { name: bot.name })}</p>
         {chain.length > 0 && (
-          <ol aria-label={t("botPanel.backups.title")} className="flex flex-col gap-1 pl-[38px]">
+          <ol aria-label={t("botPanel.backups.title")} className="flex flex-col gap-1">
             {chain.map((entry, index) => {
               const { instance, name, short } = describe(entry);
               return (
@@ -263,7 +258,7 @@ export function BackupAis({ bot, onChange }: { bot: Bot; onChange: (fallback: Ba
           </ol>
         )}
         {chain.length < MAX_BACKUPS && (
-          <div className="pl-[38px]">
+          <div>
             <BackupChooser
               bot={bot}
               current={null}

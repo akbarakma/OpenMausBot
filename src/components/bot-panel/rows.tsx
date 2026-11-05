@@ -36,20 +36,26 @@ export function LabelAction({ children, onClick, ...rest }: { children: ReactNod
   );
 }
 
-export function Card({ label, action, anchor, children }: { label?: ReactNode; action?: ReactNode; anchor?: string; children: ReactNode }) {
+export function CardSurface({ children }: { children: ReactNode }) {
   const advanced = useAdvancedMode();
+  return (
+    <div
+      data-panel-card-surface=""
+      className={cn(
+        "divide-y divide-ink/[0.05] overflow-hidden max-md:rounded-[20px] max-md:border-hairline max-md:bg-card",
+        advanced ? "rounded-[14px] border border-ink/[0.04] bg-ink/[0.03]" : "rounded-[12px] bg-composer ring-1 ring-inset ring-ink/[0.06] max-md:border max-md:ring-0",
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
+export function Card({ label, action, anchor, children }: { label?: ReactNode; action?: ReactNode; anchor?: string; children: ReactNode }) {
   return (
     <section data-panel-card={anchor}>
       {label ? <CardLabel action={action}>{label}</CardLabel> : <div className="h-3.5" />}
-      <div
-        data-panel-card-surface=""
-        className={cn(
-          "divide-y divide-ink/[0.05] overflow-hidden max-md:rounded-[20px] max-md:border-hairline max-md:bg-card",
-          advanced ? "rounded-[14px] border border-ink/[0.04] bg-ink/[0.03]" : "rounded-[12px] bg-composer ring-1 ring-inset ring-ink/[0.06] max-md:border max-md:ring-0",
-        )}
-      >
-        {children}
-      </div>
+      <CardSurface>{children}</CardSurface>
     </section>
   );
 }
@@ -64,44 +70,11 @@ export function RowText({ title, hint }: { title: ReactNode; hint?: ReactNode })
 }
 
 export function RowIcon({ icon: Icon }: { icon: LucideIcon }) {
-  return (
-    <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-ink/[0.05] text-ink-secondary max-md:size-8 max-md:rounded-full" aria-hidden="true">
-      <Icon size={15} />
-    </span>
-  );
+  return <Icon size={16} strokeWidth={1.75} className="shrink-0 text-ink-secondary" aria-hidden="true" />;
 }
 
 export function BotSwitch({ color, checked, ...props }: Parameters<typeof Switch>[0] & { color: MausColor }) {
   return <Switch {...props} checked={checked} style={checked ? { backgroundColor: MAUS_COLORS[color] } : undefined} />;
-}
-
-export function SwitchRow({ title, hint, checked, onChange, disabled, color, label, tooltip, extra, ...rest }: {
-  title: ReactNode;
-  hint?: ReactNode;
-  checked: boolean;
-  onChange: () => void;
-  disabled?: boolean;
-  color: MausColor;
-  label?: string;
-  tooltip?: string;
-  extra?: ReactNode;
-  "data-panel-row"?: string;
-}) {
-  return (
-    <div {...rest} className={rowCls}>
-      <RowText title={title} hint={hint} />
-      {extra}
-      <BotSwitch
-        color={color}
-        checked={checked}
-        disabled={disabled}
-        title={tooltip}
-        aria-label={label ?? (typeof title === "string" ? title : undefined)}
-        onClick={onChange}
-        className="disabled:cursor-not-allowed"
-      />
-    </div>
-  );
 }
 
 export function NavRow({ title, hint, value, icon, onClick, drill = true, danger = false, disabled, tooltip, ...rest }: {
@@ -118,6 +91,7 @@ export function NavRow({ title, hint, value, icon, onClick, drill = true, danger
   "data-panel-row"?: string;
   "data-panel-page"?: string;
 }) {
+  const valued = value !== undefined && value !== null && value !== "";
   return (
     <button
       type="button"
@@ -128,13 +102,15 @@ export function NavRow({ title, hint, value, icon, onClick, drill = true, danger
       className={cn(rowCls, "w-full text-left enabled:hover:bg-ink/[0.03] disabled:cursor-default disabled:opacity-45")}
     >
       {icon && <RowIcon icon={icon} />}
-      <div className="min-w-0 flex-1">
-        <div className={cn(titleCls, danger && "text-danger")}>{title}</div>
-        {hint && <div className={hintCls}>{hint}</div>}
+      <div className={cn("flex min-w-0 flex-1 gap-2.5", hint ? "items-center" : "items-baseline")}>
+        <div className={cn("min-w-0", valued ? "max-w-[65%] shrink-0" : "flex-1")}>
+          <div className={cn(titleCls, valued && "truncate", danger && "text-danger")}>{title}</div>
+          {hint && <div className={hintCls}>{hint}</div>}
+        </div>
+        {valued && (
+          <span className="min-w-0 flex-1 truncate text-right text-[13px] text-ink-secondary">{value}</span>
+        )}
       </div>
-      {value !== undefined && value !== null && value !== "" && (
-        <span className="inline-flex max-w-[45%] shrink-0 items-center gap-1 truncate text-[13px] text-ink-secondary">{value}</span>
-      )}
       {drill && <ChevronRight size={15} className="shrink-0 text-ink-tertiary" aria-hidden="true" />}
     </button>
   );
@@ -310,7 +286,7 @@ export function TextRow({ value, placeholder, label, action, disabled, onChange,
   );
 }
 
-export function PageHeader({ back, title, intro, onBack }: { back: string; title: string; intro?: ReactNode; onBack: () => void }) {
+export function PageHeader({ back, title, intro, onBack }: { back: string; title?: string; intro?: ReactNode; onBack: () => void }) {
   return (
     <div>
       <button
@@ -322,7 +298,7 @@ export function PageHeader({ back, title, intro, onBack }: { back: string; title
         <ChevronLeft size={15} aria-hidden="true" />
         <span>{back}</span>
       </button>
-      <h3 className="mx-1 mt-1.5 text-[18px] font-semibold text-ink">{title}</h3>
+      {title && <h3 className="mx-1 mt-1.5 text-[18px] font-semibold text-ink">{title}</h3>}
       {intro && <p className="mx-1 mt-1.5 text-[13px] leading-normal text-ink-secondary">{intro}</p>}
     </div>
   );
