@@ -132,6 +132,9 @@ export const PICKABLE_STATES: MausState[] = [
   "sleeping",
   "suspicious",
   "proud",
+  "orbit",
+  "radar",
+  "progress",
 ];
 
 type MascotMessage = {

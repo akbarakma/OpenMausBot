@@ -128,7 +128,7 @@ export function BotPanel({ bot, derived, linkedSection, onClose }: {
               {editorOpen && (
                 <>
                   <div className="fixed inset-0 z-20" aria-hidden="true" data-panel-scrim onClick={closeEditor} />
-                  <AvatarEditorCard bot={bot} activeState={derived.activeState} onPatch={derived.patch} onClose={closeEditor} />
+                  <AvatarEditorCard bot={bot} onPatch={derived.patch} onClose={closeEditor} />
                 </>
               )}
             </div>

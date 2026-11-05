@@ -3,6 +3,7 @@ import { ImagePlus, Loader2, Trash2 } from "lucide-react";
 import type { Bot } from "@/state/store";
 import { cn } from "@/lib/cn";
 import {
+  normalizeState,
   PICKABLE_STATES,
   MAUS_COLOR_LABEL,
   colorSwatch,
@@ -32,6 +33,7 @@ export function BotProfileAvatarCard({
   onPatch: (patch: AvatarPatch) => void;
 }) {
   const { fileRef, crop, uploading, generating, setSavingConnection, busy, error, upload, removeImage, generate } = useAvatarImage(bot, onPatch);
+  const pinnedFace = normalizeState(bot.mascotExpression);
 
   return (
     <div className="overflow-hidden rounded-xl border border-hairline/40 bg-card">
@@ -123,21 +125,23 @@ export function BotProfileAvatarCard({
               {t("botIdentity.expression")}
             </div>
             <div className="grid grid-cols-5 gap-2">
-              {PICKABLE_STATES.map((expression) => (
+              {([null, ...PICKABLE_STATES] as const).map((expression) => (
                 <button
-                  key={expression}
+                  key={expression ?? "auto"}
                   type="button"
                   disabled={busy}
-                  aria-pressed={activeState === expression}
+                  aria-pressed={pinnedFace === expression}
                   onClick={() => onPatch({ mascotExpression: expression })}
                   className={cn(
-                    "flex h-[58px] items-center justify-center rounded-xl bg-inset transition-colors hover:bg-control disabled:opacity-50",
-                    activeState === expression && "ring-2 ring-accent-border",
+                    "flex h-[58px] cursor-pointer items-center justify-center rounded-xl bg-inset transition-colors hover:bg-control disabled:cursor-not-allowed disabled:opacity-50",
+                    pinnedFace === expression && "ring-2 ring-accent-border",
                   )}
-                  title={expression}
-                  aria-label={`Use ${expression} expression`}
+                  title={expression ?? t("botPanel.face.auto")}
+                  aria-label={`Use ${expression ?? "automatic"} expression`}
                 >
-                  <MausAvatar color={bot.color} faceColor={bot.mascotFaceColor} bodyId={bot.mascotBody ?? undefined} state={expression} size={42} animated={false} />
+                  {expression
+                    ? <MausAvatar color={bot.color} faceColor={bot.mascotFaceColor} bodyId={bot.mascotBody ?? undefined} state={expression} size={42} animated={false} />
+                    : <span className="text-[13px] font-medium text-ink-secondary">{t("botPanel.face.auto")}</span>}
                 </button>
               ))}
             </div>

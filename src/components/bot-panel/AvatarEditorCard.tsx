@@ -4,7 +4,7 @@ import { ChevronDown, ImagePlus, Loader2, Trash2 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { t } from "@/lib/i18n";
 import type { LocaleKey } from "@/locales";
-import { colorSwatch, MAUS_COLOR_LABEL, MAUS_COLOR_NAMES, PICKABLE_STATES, type MausState } from "@/lib/mascot";
+import { colorSwatch, MAUS_COLOR_LABEL, MAUS_COLOR_NAMES, normalizeState, PICKABLE_STATES, type MausState } from "@/lib/mascot";
 import type { Bot } from "@/state/store";
 import { MASCOT_BODIES, MASCOT_BODY_IDS } from "../../../shared/mascot-bodies";
 import { HALLOWEEN_BODIES, HALLOWEEN_BODY_IDS } from "../../../shared/halloween-bodies";
@@ -42,6 +42,9 @@ const FACE_KEY: Partial<Record<MausState, LocaleKey>> = {
   sleeping: "botPanel.face.sleeping",
   suspicious: "botPanel.face.suspicious",
   proud: "botPanel.face.proud",
+  orbit: "botPanel.face.orbit",
+  radar: "botPanel.face.radar",
+  progress: "botPanel.face.progress",
 };
 
 const faceLabel = (state: MausState) => {
@@ -49,9 +52,8 @@ const faceLabel = (state: MausState) => {
   return key ? t(key) : state;
 };
 
-export function AvatarEditorCard({ bot, activeState, onPatch, onClose }: {
+export function AvatarEditorCard({ bot, onPatch, onClose }: {
   bot: Bot;
-  activeState: MausState;
   onPatch: (patch: AvatarPatch) => void;
   onClose: () => void;
 }) {
@@ -66,6 +68,7 @@ export function AvatarEditorCard({ bot, activeState, onPatch, onClose }: {
   }, []);
   const pickMascot = (patch: AvatarPatch) => onPatch(crop === "mascot" ? patch : { ...patch, avatarCrop: "mascot" });
   const body = bot.mascotBody ?? "cursor";
+  const pinnedFace = normalizeState(bot.mascotExpression);
   const dressed = useHalloweenDressed();
   const costume = wornBody(bot.mascotBody, bot.color, dressed);
   const [moreLooks, setMoreLooks] = useState(() => dressed || isHalloweenBody(body) || Boolean(bot.mascotExpression && bot.mascotExpression !== "idle"));
@@ -177,20 +180,20 @@ export function AvatarEditorCard({ bot, activeState, onPatch, onClose }: {
                 </div>
                 <div className="flex flex-wrap items-center justify-center gap-1.5 pt-2.5" role="group" aria-label={t("botPanel.avatar.face")}>
                   <span className="mr-0.5 text-[12px] text-ink-tertiary">{t("botPanel.avatar.face")}</span>
-                  {PICKABLE_STATES.map((expression) => (
+                  {([null, ...PICKABLE_STATES] as const).map((expression) => (
                     <button
-                      key={expression}
+                      key={expression ?? "auto"}
                       type="button"
                       disabled={busy}
-                      data-avatar-face={expression}
-                      aria-pressed={activeState === expression}
+                      data-avatar-face={expression ?? "auto"}
+                      aria-pressed={pinnedFace === expression}
                       onClick={() => pickMascot({ mascotExpression: expression })}
                       className={cn(
-                        "rounded-full px-2.5 py-1 text-[12px] disabled:opacity-50",
-                        activeState === expression ? "bg-ink/[0.15] text-ink" : "bg-ink/[0.04] text-ink-secondary hover:text-ink",
+                        "cursor-pointer rounded-full px-2.5 py-1 text-[12px] disabled:cursor-not-allowed disabled:opacity-50",
+                        pinnedFace === expression ? "bg-ink/[0.15] text-ink" : "bg-ink/[0.04] text-ink-secondary hover:text-ink",
                       )}
                     >
-                      {faceLabel(expression)}
+                      {expression ? faceLabel(expression) : t("botPanel.face.auto")}
                     </button>
                   ))}
                 </div>

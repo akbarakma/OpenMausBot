@@ -493,7 +493,7 @@ describe("the hero", () => {
 });
 
 describe("the avatar editor", () => {
-  const editor = (bot: Bot) => capture(() => AvatarEditorCard({ bot, activeState: "idle", onPatch: patch, onClose }));
+  const editor = (bot: Bot) => capture(() => AvatarEditorCard({ bot, onPatch: patch, onClose }));
 
   it("shows the ten bodies and twelve colors, with the Halloween bodies and the faces behind More looks", () => {
     const bot = makeBot();
@@ -524,10 +524,22 @@ describe("the avatar editor", () => {
     expect(open.html).toContain(">Halloween<");
     click(find(open, "aria-label", "Use the Pumpkin body"));
     expect(patch).toHaveBeenLastCalledWith({ mascotBody: "pumpkin" });
-    expect(find(open, "data-avatar-face", "idle").props["aria-pressed"]).toBe(true);
+    expect(find(open, "data-avatar-face", "auto").props["aria-pressed"]).toBe(true);
+    expect(find(open, "data-avatar-face", "idle").props["aria-pressed"]).toBe(false);
     click(find(open, "data-avatar-face", "proud"));
     expect(patch).toHaveBeenLastCalledWith({ mascotExpression: "proud" });
     expect(open.html).toContain(">Proud<");
+    click(find(open, "data-avatar-face", "radar"));
+    expect(patch).toHaveBeenLastCalledWith({ mascotExpression: "radar" });
+    expect(open.html).toContain(">Radar<");
+  });
+
+  it("marks a pinned face, and Auto removes the pin", () => {
+    const pinned = editor(makeBot({ mascotExpression: "proud" }));
+    expect(find(pinned, "data-avatar-face", "proud").props["aria-pressed"]).toBe(true);
+    expect(find(pinned, "data-avatar-face", "auto").props["aria-pressed"]).toBe(false);
+    click(find(pinned, "data-avatar-face", "auto"));
+    expect(patch).toHaveBeenLastCalledWith({ mascotExpression: null });
   });
 
   it("opens More looks at once for a Halloween body or a chosen face", () => {
