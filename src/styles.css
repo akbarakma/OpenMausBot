@@ -2026,6 +2026,24 @@ html[data-cloud-intent-morph] [data-tour="composer"] { view-transition-name: clo
   color: var(--color-ink);
   animation: sheen-letters var(--sheen-period) linear var(--sheen-delay) infinite;
 }
+.working-ring {
+  transition: opacity 0.3s ease-out;
+  animation: fade-in 0.3s ease-out;
+}
+.working-ring svg {
+  overflow: visible;
+  animation-name: working-ring-spin;
+  animation-iteration-count: infinite;
+  will-change: transform;
+}
+.working-ring[data-offscreen] svg { animation-play-state: paused; }
+@keyframes working-ring-spin {
+  to { transform: rotate(1turn); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .working-ring,
+  .working-ring svg { animation: none; }
+}
 /* Simple mode's typing row is quieter: the sheen runs from tertiary ink up to secondary. */
 .turn-phrase-quiet .thinking-shimmer { color: var(--color-ink-tertiary); }
 .turn-phrase-quiet .thinking-sheen > span::before { color: var(--color-ink-secondary); }

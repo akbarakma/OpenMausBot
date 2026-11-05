@@ -47,20 +47,20 @@ export const DEFAULT_SILHOUETTE: CursorSilhouette = cursorSilhouette;
 
 export const DEFAULT_GRADIENT: [string, string, string] = ["#9FE6B5","#3FAE6E","#1C7A4C"]
 
-const VIEW_BOX = `-15 -15 ${VIEW_SPAN} ${VIEW_SPAN}`
+export const VIEW_BOX = `-15 -15 ${VIEW_SPAN} ${VIEW_SPAN}`
 const SPHERE_C = 114.2705
 const SPHERE_R = 105
 
 
 const TAU = Math.PI * 2
 
-const hash01 = (n: number) => {
+export const hash01 = (n: number) => {
   const x = Math.sin(n * 127.1 + 311.7) * 43758.5453
   return x - Math.floor(x)
 }
 
 const CONFETTI_COLORS = ['#F472B6', '#C084FC', '#818CF8', '#38BDF8', '#34D399', '#FACC15', '#FB7185']
-const RIBBON_COLORS = ['#4ADE80', '#34D399', '#22D3EE', '#60A5FA']
+export const RIBBON_COLORS = ['#4ADE80', '#34D399', '#22D3EE', '#60A5FA']
 
 export interface ConfettiSpec {
   count: number

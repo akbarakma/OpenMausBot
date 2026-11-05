@@ -249,8 +249,11 @@ describe("header name", () => {
         const start = markup.indexOf("data-chathead-pill");
         return markup.slice(start, markup.indexOf("data-chathead-status", start));
       };
+      const withoutRing = (pill: string) => pill.replace(/<span[^>]*data-testid="working-ring"[\s\S]*?<\/svg><\/span><\/span>/, "");
       expect(pillOf(busyMarkup)).not.toContain("animate-status-pulse");
-      expect(pillOf(busyMarkup)).toBe(pillOf(idleMarkup));
+      expect(pillOf(busyMarkup)).toContain('data-testid="working-ring"');
+      expect(pillOf(idleMarkup)).not.toContain('data-testid="working-ring"');
+      expect(withoutRing(pillOf(busyMarkup))).toBe(pillOf(idleMarkup));
       expect(busyMarkup).toMatch(/<span role="status" class="sr-only" data-chathead-status="true">Working…<\/span>/);
       expect(idleMarkup).toMatch(/<span role="status" class="sr-only" data-chathead-status="true"><\/span>/);
       expect(busyMarkup).toContain(advanced ? 'title="Stop this turn"' : 'aria-label="Stop this turn"');

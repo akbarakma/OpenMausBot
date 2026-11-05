@@ -10,13 +10,14 @@ import {
 } from "react";
 import { cn } from "@/lib/cn";
 import { CHROME_EYES, CHROME_GRADIENT, MAUS_COLORS, type MausColor, type MausMotion, type MausState } from "@/lib/mascot";
-import { CursorAvatar, type CursorAvatarHandle } from "./CursorAvatar";
+import { CursorAvatar, EFFECTS, type CursorAvatarHandle } from "./CursorAvatar";
 import { avatarCropRadius, botAvatarProfile, clampAvatarFocus, clampAvatarZoom, mascotFaceInk, type BotAvatarCrop, type MascotFaceColor } from "../../shared/bot-avatar";
 import { MASCOT_BODIES, botMascotBody } from "../../shared/mascot-bodies";
 import { isHalloweenBody, type BotBodyId } from "../../shared/bot-body";
 import { useHalloweenDressed, wornBody } from "@/lib/halloween-dress";
 import { CarvedAvatar } from "./CarvedAvatar";
 import { steelBodyImage } from "@/lib/steel-body";
+import { WorkingRing } from "./WorkingRing";
 
 export const EYE_SCALE = 1.12;
 export const MOUTH_WEIGHT = 11;
@@ -93,6 +94,7 @@ export type MausAvatarProps = {
   lookAround?: number;
   trackPointer?: boolean;
   animated?: boolean;
+  effects?: boolean;
   bodyId?: BotBodyId;
   gradient?: [string, string, string];
   faceColor?: MascotFaceColor | null;
@@ -140,6 +142,7 @@ function GradientAvatarComponent(
     lookAround,
     trackPointer = true,
     animated = true,
+    effects,
     bodyId,
     gradient,
     faceColor,
@@ -205,6 +208,7 @@ function GradientAvatarComponent(
         showMouth={showMouth}
         mouthStroke={mouthStroke}
         paused={!animated}
+        effects={effects}
       />
     </span>
   );
@@ -216,6 +220,8 @@ export const MausAvatar = memo(forwardRef(MausAvatarComponent));
 
 export type BotAvatarProps = Omit<MausAvatarProps, "color" | "gradient"> & {
   readable?: boolean;
+  /** Keep it a boolean at a call site that shows work: switching to or from undefined remounts the face. */
+  working?: boolean;
   bot: {
     name?: string;
     color: MausColor;
@@ -244,7 +250,20 @@ export function resolveBotAvatarOutcome(params: {
   return "flatImage";
 }
 
-export function BotAvatar({ bot, size = 44, label, readable = false, ...mascotProps }: BotAvatarProps) {
+export function BotAvatar({ working, ...props }: BotAvatarProps) {
+  if (working === undefined) return <BotAvatarFace {...props} />;
+  const state = props.state ?? "idle";
+  return (
+    <span className="relative inline-flex shrink-0">
+      <WorkingRing active={working} state={state} />
+      <span className="relative inline-flex">
+        <BotAvatarFace {...props} effects={working && EFFECTS[state]?.trails ? false : props.effects} />
+      </span>
+    </span>
+  );
+}
+
+function BotAvatarFace({ bot, size = 44, label, readable = false, ...mascotProps }: Omit<BotAvatarProps, "working">) {
   const profile = botAvatarProfile(bot);
   const dressed = useHalloweenDressed();
   const [imageFailed, setImageFailed] = useState(false);

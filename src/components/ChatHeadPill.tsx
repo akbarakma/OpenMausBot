@@ -34,7 +34,7 @@ function privacyLabelOf(privacy: ChatHeadPrivacy): string | null {
  * look; a team chat says who can read it with one quiet glyph. */
 export function ChatHeadPill({ bot, avatar, privacy, onToggle }: {
   bot: Bot;
-  avatar: Pick<ComponentProps<typeof BotAvatar>, "state" | "motion" | "motionKey" | "animated">;
+  avatar: Pick<ComponentProps<typeof BotAvatar>, "state" | "motion" | "motionKey" | "animated" | "working">;
   privacy: ChatHeadPrivacy;
   onToggle: () => void;
 }) {
