@@ -9,6 +9,7 @@ import { PERSONAL_APP_NAME } from "../electron/personal-ui.mjs";
 
 const PERSONAL_APP_ID = "com.akbarakma.openmausbot.personal";
 const INSTALLED = `/Applications/${PERSONAL_APP_NAME}.app`;
+const LSREGISTER = "/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister";
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const require = createRequire(import.meta.url);
 const { values } = parseArgs({ options: { install: { type: "boolean" } } });
@@ -87,5 +88,7 @@ try {
   throw error;
 }
 run("codesign", ["--verify", "--deep", "--strict", INSTALLED]);
+// Launch Services keeps the build folder's record after the move, and each one shows as another app icon.
+run(LSREGISTER, ["-u", built]);
 if (existsSync(previous)) run("/usr/bin/trash", [previous]);
 process.stdout.write(`Installed ${INSTALLED} from ${commit.slice(0, 9)}. The previous copy is in the Trash.\n`);
