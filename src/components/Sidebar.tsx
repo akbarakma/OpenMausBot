@@ -13,7 +13,6 @@ import { BotAvatar } from "./Avatar";
 import { BotEngineMark, BotModelBadge, botTooltip } from "./BotModelBadge"; import { SidebarBotRole } from "./BotRole";
 import { stateForBot } from "@/lib/mascot";
 import { cn } from "@/lib/cn";
-import { useOfferChromeRail } from "@/lib/chrome-rail";
 import { searchMatchesThreads, useSearchDisclosure } from "@/lib/search-disclosure";
 import { useHeldMenuMotion, useMenuMotion } from "./MenuMotion";
 import { lastNonReceipt } from "@/lib/receipts";
@@ -1067,8 +1066,6 @@ export function Sidebar({ open, onClose, collapseToIcons = false }: {
       setTeamFeedback({ error: true, text: cause instanceof Error ? cause.message : String(cause) });
     }
   };
-
-  useOfferChromeRail();
 
   // A framed window (WindowFrameBar) holds the traffic lights and the rail's button in its top bar, so the top row keeps
   // no room for them; in Simple it is only the corner holding Search and New, with the bot tiles beside it. With the

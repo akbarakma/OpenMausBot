@@ -1,7 +1,7 @@
 import { Settings } from "lucide-react";
 import { useEffect } from "react";
 
-import { sayFrameDrawn } from "@/lib/chrome-rail";
+import { sayFrameDrawn, useOfferChromeRail } from "@/lib/chrome-rail";
 import { cn } from "@/lib/cn";
 import { t } from "@/lib/i18n";
 import { useStore } from "@/state/store";
@@ -23,6 +23,7 @@ export function WindowFrameBar() {
   const { dispatch } = useStore();
   const frameable = windowFrameable(capabilities), framed = windowFramed(capabilities);
   useEffect(() => { if (frameable) sayFrameDrawn(framed); }, [frameable, framed]);
+  useOfferChromeRail();
   if (!framed) return null;
   const mac = capabilities.windowChrome === "mac-inset";
   const { dragProps } = captionChrome(capabilities.windowChrome);

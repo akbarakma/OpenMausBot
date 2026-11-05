@@ -21,8 +21,7 @@ vi.mock("@/lib/sidebar-preferences", async (importOriginal) => ({
   useSidebarDensity: () => fixture.density,
 }));
 vi.mock("@/lib/interface-mode", () => ({ useAdvancedMode: () => fixture.advanced, setAdvancedMode: () => {} }));
-const offerRail = vi.hoisted(() => vi.fn());
-vi.mock("@/lib/chrome-rail", () => ({ useChromeRail: () => fixture.rail, setChromeRailHidden: () => {}, useOfferChromeRail: offerRail }));
+vi.mock("@/lib/chrome-rail", () => ({ useChromeRail: () => fixture.rail, setChromeRailHidden: () => {} }));
 vi.mock("./DesktopCapabilities", async (importOriginal) => ({
   ...await importOriginal<typeof import("./DesktopCapabilities")>(),
   useDesktopCapabilities: () => {
@@ -275,14 +274,6 @@ describe("the button that hides and shows the window's rail of places", () => {
         expect(render(), `${windowChrome}, frame ${windowFrame}, ${hostLabel}, ${advanced ? "Advanced" : "Simple"}, ${density}`).not.toContain("data-rail-toggle");
       }
     }
-  });
-
-  it("still offers the rail a way back, so one hidden in Settings stays hidden", () => {
-    offerRail.mockClear();
-    fixture.windowChrome = "mac-inset";
-    fixture.windowFrame = false;
-    render();
-    expect(offerRail).toHaveBeenCalled();
   });
 });
 
