@@ -605,7 +605,7 @@ export interface AppState {
   computerControl: Record<string, ComputerControlState>;
   dataSheets: Record<string, DataSheet>;
   dataTables: Record<string, DataTable[]>;
-  dataResultFocus: { botId: string; id: string; requestId: number; consumed: boolean } | null;
+  dataResultFocus: { botId: string; id?: string; requestId: number; consumed: boolean } | null;
   signInFocus: { botId: string; messageId: string; url: string; site: string; place: import("../../shared/wire").Surface; requestId: number; consumed: boolean } | null;
   dataView: import("@/lib/composer-attachments").DataViewContext | null;
   focusMessage: { threadId: string; messageId: string; matchText?: string; nonce: number; consumed: boolean } | null;
@@ -787,7 +787,7 @@ export type Action =
   | { type: "toggleSettings"; open?: boolean; section?: BotSettingsSection; botId?: string }
   | { type: "togglePlugins"; open?: boolean; surface?: "apps" | "mcp" }
   | { type: "toggleComputer"; open?: boolean; botId?: string }
-  | { type: "openDataResult"; botId: string; cardId: string }
+  | { type: "openDataResult"; botId: string; cardId?: string }
   | { type: "dataResultFocusConsumed"; requestId: number }
   | { type: "openSignIn"; botId: string; messageId: string; url: string; site: string; place: import("../../shared/wire").Surface }
   | { type: "signInFocusConsumed"; requestId: number }

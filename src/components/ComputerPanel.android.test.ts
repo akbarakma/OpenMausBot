@@ -191,4 +191,18 @@ describe("Computer panel Android tab", () => {
     expect(panelViewStore.current).toBe("data");
     expect(selectedTab()).toBe("Data");
   });
+
+  it("moves an open panel to Data on a request with no card", async () => {
+    vi.stubGlobal("ogb", { androidDevice: { status: async () => ({ available: true, devices: [] }), frame: async () => ({ serial: "", dataUrl: "" }), input: async () => {} } });
+    const bot = makeBot();
+    await open(bot);
+    expect(selectedTab()).not.toBe("Data");
+    await act(async () => {
+      const focused = value();
+      focused.state = { ...focused.state, dataResultFocus: { botId: bot.id, requestId: 1, consumed: false } };
+      root!.render(createElement(BotEditorStore, { value: focused, children: createElement(ComputerPanel, { bot }) }));
+    });
+    expect(panelViewStore.current).toBe("data");
+    expect(selectedTab()).toBe("Data");
+  });
 });

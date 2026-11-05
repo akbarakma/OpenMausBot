@@ -321,7 +321,8 @@ export function ComputerPanel({
   useEffect(() => {
     if (!requestedDataResult || requestedDataResult.consumed) return;
     explicitPanelView.current = true;
-    setDataRequest(requestedDataResult);
+    const { id, requestId } = requestedDataResult;
+    setDataRequest(id === undefined ? undefined : { id, requestId });
     setPanelView("data");
     writeComputerPanelView(bot.id, "data");
     dispatch({ type: "dataResultFocusConsumed", requestId: requestedDataResult.requestId });
