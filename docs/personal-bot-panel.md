@@ -45,6 +45,7 @@ Delete on a note and Remove on a skill confirm in `ConfirmDialog` first.
 | `src/components/bot-panel/PanelHero.tsx` | Avatar gets `working` from `sidebarBotStatus` |
 | `src/components/bot-panel/page-registry.ts` | `backups` and `botapi` Simple pages |
 | `src/components/ModelPicker.tsx` | `row` prop: in Simple mode with `contained`, the whole row is the picker button, its label and model name share a baseline, and the list opens at the row's width |
+| `src/components/ModelTrigger.tsx` | New: the Simple-mode trigger's contents, moved out of `ModelPicker.tsx` to keep it under its size limit in `scripts/testing/file-size-ratchet.test.ts` |
 | `src/components/bot-settings/BotApiCard.tsx` | `titled` prop, false on the Bot API page |
 | `src/components/DefaultBotControls.tsx` | `HideFromSidebarRow`, the row without its card |
 | `src/state/store.tsx` | `openDataResult` takes an optional `cardId`; without one it opens the Data tab |
@@ -69,7 +70,7 @@ translated in every language pack. `botPanel.memoryRow` reads "Memories" and
 ## Merging an upstream release
 
 1. List upstream's changes to the files above:
-   `git diff <old-tag> <new-tag> -- src/components/bot-panel/ src/components/ModelPicker.tsx src/components/DefaultBotControls.tsx src/components/bot-settings/BotApiCard.tsx src/components/ComputerPanel.tsx src/state/store.tsx`.
+   `git diff <old-tag> <new-tag> -- src/components/bot-panel/ src/components/ModelPicker.tsx src/components/ModelTrigger.tsx src/components/DefaultBotControls.tsx src/components/bot-settings/BotApiCard.tsx src/components/ComputerPanel.tsx src/state/store.tsx`.
 2. Keep upstream's new rows, settings and behaviour. Place each new row in the
    card it belongs to, with a `RowIcon` and no icon tile.
 3. If upstream changes the memory entry grammar in

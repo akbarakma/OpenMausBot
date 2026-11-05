@@ -13,6 +13,7 @@ import { pickerPlacement, type PickerPlacement } from "@/lib/picker-placement";
 import type { Typeahead } from "@/lib/menu-keys";
 import { usePopoverDismiss } from "@/hooks/use-popover-dismiss";
 import { InstanceProviderMark } from "./ProviderIcons";
+import { ModelTrigger } from "./ModelTrigger";
 import { ELEVATED_FLOAT, ELEVATED_HOVER } from "./elevated";
 import { ApiKeyHint, EngineSetup, EngineUpdateNotice, InstanceAccountNotes, needsCli, needsSignIn, openKeysFor } from "./EngineSetup";
 import { offersLocalModels, probeLocalModels } from "./local-model-probe";
@@ -223,7 +224,6 @@ export function ModelPicker({
   className?: string;
   contained?: boolean;
   label?: ReactNode;
-  /** Simple mode, contained: the whole settings row, label included, is the button that opens the picker. */
   row?: boolean;
   size?: "sm" | "md";
 }) {
@@ -262,7 +262,7 @@ export function ModelPicker({
   const floating = typeof document !== "undefined";
   const simpleView = !advanced && !fullView;
   const popoverWidth = simpleView ? SIMPLE_POPOVER_WIDTH : POPOVER_WIDTH;
-  const rowWide = simpleView && contained && row;
+  const wholeRow = contained && row && !advanced;
   useLayoutEffect(() => {
     if (!open) return;
     const place = (event?: Event) => {
@@ -271,8 +271,7 @@ export function ModelPicker({
       const menu = menuRef.current;
       if (!anchor || !menu) return;
       const viewport = { width: window.innerWidth, height: window.innerHeight };
-      const width = rowWide ? anchor.width : popoverWidth;
-      setPlacement((locked) => pickerPlacement(anchor, { width, height: menu.offsetHeight }, viewport, locked ?? undefined,
+      setPlacement((locked) => pickerPlacement(anchor, { width: wholeRow && simpleView ? anchor.width : popoverWidth, height: menu.offsetHeight }, viewport, locked ?? undefined,
         simpleView ? undefined : POPOVER_HEIGHT));
     };
     const settled = (event: Event) => {
@@ -287,7 +286,7 @@ export function ModelPicker({
       window.removeEventListener("scroll", place, true);
       window.removeEventListener("animationend", settled, true);
     };
-  }, [open, popoverWidth, rowWide, simpleView]);
+  }, [open, popoverWidth, simpleView, wholeRow]);
 
   useEffect(() => {
     if (!open || !placement || focusOnPlace.current === null) return;
@@ -615,16 +614,6 @@ export function ModelPicker({
     title: `${summary}${followLine}${attentionLine}${busyLine}`,
   };
 
-  const wholeRow = contained && row && !advanced;
-  const providerMark = (
-    <span className="relative mr-1.5 flex shrink-0 self-center group-disabled:opacity-50">
-      {active
-        ? <InstanceProviderMark instance={active} size={14} subtle />
-        : <span className="size-3.5 rounded-full bg-ink/[0.08]" aria-hidden="true" />}
-      {attention && <span data-model-attention className="absolute -bottom-0.5 -right-0.5 size-1.5 rounded-full bg-warning ring-[1.5px] ring-app" />}
-    </span>
-  );
-  const modelText = <span className="min-w-0 max-w-[160px] truncate">{modelName(active, selection.model)}</span>;
   const trigger = advanced ? (
     <button
       {...triggerProps}
@@ -671,8 +660,11 @@ export function ModelPicker({
       />
     </button>
   ) : (
-    <button
+    <ModelTrigger
       {...triggerProps}
+      active={active} attention={attention}
+      model={modelName(active, selection.model)} engine={selection.instanceId}
+      label={wholeRow ? label : undefined}
       className={cn(
         "group flex items-center text-[13px] leading-[18px] text-ink-secondary disabled:cursor-not-allowed disabled:text-ink-tertiary",
         wholeRow
@@ -682,16 +674,7 @@ export function ModelPicker({
             : cn("shrink-0 rounded-full", ELEVATED_FLOAT, ELEVATED_HOVER, "hover:text-ink aria-expanded:text-ink disabled:hover:bg-composer"),
         !wholeRow && (size === "sm" ? "h-7 pl-2 pr-1.5" : "h-8 pl-2.5 pr-2"),
       )}
-    >
-      {wholeRow ? (
-        <span className="flex min-w-0 flex-1 items-baseline gap-2.5 [&>svg]:self-center">
-          {label}
-          <span className="ml-auto flex min-w-0 items-baseline">{providerMark}{modelText}</span>
-        </span>
-      ) : <>{providerMark}{modelText}</>}
-      <UsageBars engine={selection.instanceId} className="ml-1.5" />
-      <ChevronDown size={12} strokeWidth={2} aria-hidden="true" className="ml-1 shrink-0 text-ink-tertiary group-hover:text-ink-secondary" />
-    </button>
+    />
   );
 
   const simpleMenu = simpleView ? simpleModelMenu({
