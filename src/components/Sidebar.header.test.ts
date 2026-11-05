@@ -21,7 +21,8 @@ vi.mock("@/lib/sidebar-preferences", async (importOriginal) => ({
   useSidebarDensity: () => fixture.density,
 }));
 vi.mock("@/lib/interface-mode", () => ({ useAdvancedMode: () => fixture.advanced, setAdvancedMode: () => {} }));
-vi.mock("@/lib/chrome-rail", () => ({ useChromeRail: () => fixture.rail, setChromeRailHidden: () => {} }));
+const offerRail = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/chrome-rail", () => ({ useChromeRail: () => fixture.rail, setChromeRailHidden: () => {}, useOfferChromeRail: offerRail }));
 vi.mock("./DesktopCapabilities", async (importOriginal) => ({
   ...await importOriginal<typeof import("./DesktopCapabilities")>(),
   useDesktopCapabilities: () => {
@@ -175,7 +176,7 @@ describe("sidebar top row", () => {
     },
   );
 
-  it("with the frame turned off on macOS, makes room for the traffic lights in its corner again, the rail's button after them", () => {
+  it("with the frame turned off on macOS, makes room for the traffic lights in its corner again", () => {
     fixture.windowChrome = "mac-inset";
     fixture.windowFrame = false;
     fixture.rail = { available: true, hidden: false };
@@ -183,11 +184,9 @@ describe("sidebar top row", () => {
     const advanced = topRow(render());
     expect(advanced).toMatch(/^data-sidebar-top-row="true" class="[^"]*" style="-webkit-app-region:drag;height:46px"/);
     expect(classesOf(advanced, "data-traffic-light-space")).toEqual(["w-[72px]", "shrink-0", "md:w-[calc(72px_-_var(--rail-beside,0px))]"]);
-    expect(advanced.indexOf("data-traffic-light-space")).toBeLessThan(advanced.indexOf("data-rail-toggle"));
     fixture.advanced = false;
     const simple = topRow(render());
     expect(simple, "Simple keeps its own top row, not the frame's corner").toMatch(/^data-sidebar-top-row="true"/);
-    expect(simple.indexOf("data-traffic-light-space")).toBeLessThan(simple.indexOf("data-rail-toggle"));
     fixture.density = "icons";
     expect(classesOf(render(), "data-traffic-light-space"), "the column of avatars keeps a strip above for them").toEqual(["h-5", "w-full"]);
   });
@@ -260,63 +259,30 @@ describe("sidebar top row", () => {
 });
 
 describe("the button that hides and shows the window's rail of places", () => {
-  const row = () => {
-    const html = render();
-    return html.slice(html.indexOf("data-sidebar-top-row"), html.indexOf('aria-label="New or share"'));
-  };
-  const toggle = (html: string) => /<button type="button" data-rail-toggle="true"[^>]*>/.exec(html)?.[0] ?? "";
   beforeEach(() => {
     vi.stubGlobal("window", { innerWidth: 1280, location: { protocol: "http:", search: "" }, ogb: { workspaces: { state: () => new Promise(() => {}), menu: () => Promise.resolve() } } });
-    fixture.windowChrome = "mac-inset";
     fixture.rail = { available: true, hidden: false };
   });
 
-  it("moves to the window frame's top bar on macOS and Windows: no row of the sidebar holds it", () => {
-    for (const windowChrome of ["mac-inset", "win-caption"] as const) {
+  it("is in no row of the sidebar, framed or not: Settings and the frame's top bar hold it", () => {
+    for (const [windowChrome, windowFrame, hostLabel] of [["mac-inset", true, "macOS"], ["mac-inset", false, "macOS"], ["win-caption", true, "Windows"], ["native", false, "Windows"], ["native", false, "Linux"]] as const) {
       fixture.windowChrome = windowChrome;
+      fixture.windowFrame = windowFrame;
+      fixture.hostLabel = hostLabel;
       for (const [advanced, density] of [[true, "comfortable"], [false, "comfortable"], [true, "icons"], [false, "icons"]] as const) {
         fixture.advanced = advanced;
         fixture.density = density;
-        expect(render(), `${windowChrome}, ${advanced ? "Advanced" : "Simple"}, ${density}`).not.toContain("data-rail-toggle");
+        expect(render(), `${windowChrome}, frame ${windowFrame}, ${hostLabel}, ${advanced ? "Advanced" : "Simple"}, ${density}`).not.toContain("data-rail-toggle");
       }
     }
   });
 
-  it("leads the row on Linux, round like the row's other buttons, its words saying what a click does", () => {
-    fixture.windowChrome = "native";
-    fixture.hostLabel = "Linux";
-    const advanced = row();
-    expect(advanced.indexOf("data-rail-toggle")).toBeGreaterThan(-1);
-    expect(advanced.indexOf("data-rail-toggle")).toBeLessThan(advanced.indexOf("data-sidebar-top-slot"));
-    expect(toggle(advanced)).toMatch(/aria-label="Hide your computers" title="Hide your computers" aria-expanded="true" class="[^"]*\bsize-8\b[^"]*\brounded-full\b/);
-    expect(advanced).toMatch(/data-rail-toggle="true"[^>]*><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect[^>]*><\/rect><path d="M9 3v18"><\/path>(<circle[^>]*fill="currentColor"><\/circle>){3}<\/svg>/);
-    fixture.advanced = false;
-    const simple = row();
-    expect(simple.indexOf("data-rail-toggle")).toBeLessThan(simple.indexOf("data-sidebar-top-slot"));
-    expect(toggle(simple)).toMatch(/class="[^"]*\bsize-9\b[^"]*\brounded-full\b[^"]*\bbg-composer\b/);
-    expect(toggle(simple), "the rail is shown most of the time: no open-menu tint for it").not.toContain("aria-expanded:bg-");
-    fixture.rail = { available: true, hidden: true };
-    expect(toggle(row())).toContain('aria-label="Show your computers" title="Show your computers" aria-expanded="false"');
-  });
-
-  it("tops the column of buttons on Linux when the sidebar shows only avatars", () => {
-    fixture.windowChrome = "native";
-    fixture.density = "icons";
-    const column = render();
-    expect(column.indexOf("data-rail-toggle")).toBeGreaterThan(-1);
-    expect(column.indexOf("data-rail-toggle")).toBeLessThan(column.indexOf("data-sidebar-top-buttons"));
-    expect(toggle(column)).toMatch(/class="[^"]*\bsize-\[46px\][^"]*\brounded-xl\b/);
-    fixture.advanced = false;
-    const rail = render();
-    expect(rail.indexOf("data-rail-toggle")).toBeLessThan(rail.indexOf("data-sidebar-rail-top"));
-    expect(toggle(rail)).toMatch(/class="[^"]*\bsize-9\b[^"]*\brounded-full\b/);
-  });
-
-  it("is nowhere without a rail to hide: one place, a browser, an older app, or a page that isn't beside it", () => {
-    for (const rail of [null, { available: false, hidden: false }, { available: false, hidden: true }]) {
-      fixture.rail = rail;
-      expect(render()).not.toContain("data-rail-toggle");
-    }
+  it("still offers the rail a way back, so one hidden in Settings stays hidden", () => {
+    offerRail.mockClear();
+    fixture.windowChrome = "mac-inset";
+    fixture.windowFrame = false;
+    render();
+    expect(offerRail).toHaveBeenCalled();
   });
 });
 
