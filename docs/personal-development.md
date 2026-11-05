@@ -151,9 +151,11 @@ For example, when `v0.1.141` is released:
 2. Update bb-1 with `npm install -g openmausbot@latest`, then restart its service.
 3. Merge the upstream tag: `git fetch upstream --tags && git merge v0.1.141`.
    Merge tags, not upstream `main`, so the UI matches the server exactly.
-4. Resolve conflicts. The only Personal hook in upstream code is in
+4. Resolve conflicts. The window hook in upstream code is in
    `electron/main.mjs`: the `personalWindowUi` call in `createWindow`, and the
-   remote branch that waits for it before loading the server's origin.
+   remote branch that waits for it before loading the server's origin. For UI
+   conflicts, read "Sidebar changes" below and
+   [`personal-bot-panel.md`](personal-bot-panel.md).
 5. Run the checks above, then `corepack pnpm package:personal --install`.
 
 Between steps 2 and 5, Personal shows the old UI against the new server. Most
@@ -162,3 +164,15 @@ gap the update row offers **Reload for v0.1.141**. A reload loads the same bundl
 so rebuild Personal instead.
 
 Personal never updates itself, so a release cannot overwrite the fork.
+
+## Sidebar changes
+
+The sidebar's top row has no "Show your computers" button. Akbar never uses
+it. The rail of places still shows and hides from **Settings → Show your
+computers**, and from the small button in the top bar when **Settings → Window
+frame** is on. The fork removes `ChromeRailToggle` from `src/components/Sidebar.tsx`
+and keeps it in `WindowFrameBar.tsx`. The sidebar still calls
+`useOfferChromeRail()`. Main shows a hidden rail again 5 seconds after a page
+loads unless the page offers a way back, so without that call the Settings
+switch could not keep the rail hidden. `Sidebar.header.test.ts` fails if a
+merge puts the button back in the sidebar or drops the offer.
