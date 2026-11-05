@@ -20,6 +20,7 @@ Before starting Personal development or packaging, read
 - Build and install Personal with `corepack pnpm package:personal --install`; use `dev:personal` while editing.
 - Before reporting a UI change as installed, confirm the running Personal window shows it, not only that the bundle contains it.
 - Merge upstream release tags, not upstream `main`, so the fork's UI matches the version bb-1 runs.
+- Before merging a tag that touches `src/components/bot-panel/` or another file listed in [`docs/personal-bot-panel.md`](docs/personal-bot-panel.md), read that doc.
 - Test a Personal UI change with only the test files named after the changed files, for example `corepack pnpm exec vitest run WorkingRing ChatView.controls`, plus `typecheck` and `lint`. This takes seconds.
 - Do not run the full `vitest run` or `pnpm test` for a Personal UI change; the full suite takes about 30 minutes. Do not use `vitest related` either: it follows imports and pulls in hundreds of files.
 - Show a UI change to Akbar in `dev:personal` and wait for his OK before `package:personal --install`.
