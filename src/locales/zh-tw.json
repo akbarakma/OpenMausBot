@@ -4703,5 +4703,17 @@
   "botApi.call.failed": "機器人無法回答",
   "botApi.starter": "Bot API 包含在更高的方案中。",
   "botApi.password": "金鑰就像密碼:持有它的人可以讀取此機器人能讀取的內容。",
+  "composer.context.title": "上下文",
+  "composer.context.ofWindow": "{tokens} / {window}",
+  "composer.context.tokens": "{tokens} 個 token",
+  "composer.context.total": "總計",
+  "composer.context.lastMessage": "最後一則訊息",
+  "composer.context.uncached": "未快取輸入",
+  "composer.context.cached": "快取輸入",
+  "composer.context.input": "輸入",
+  "composer.context.output": "輸出",
+  "composer.context.cache": "快取",
+  "composer.context.cacheWarm": "保持中",
+  "composer.context.cacheStopped": "已停止",
   "botApi.cantTake": "此機器人的 AI 無法接收 Bot API 呼叫。請選擇其他 AI 來使用。"
 }

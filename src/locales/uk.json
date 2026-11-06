@@ -3321,5 +3321,17 @@
   "botApi.call.failed": "Бот не зміг відповісти",
   "botApi.starter": "Bot API входить до вищого плану.",
   "botApi.password": "Ключ — як пароль: хто його має, може читати те, що може читати цей бот.",
+  "composer.context.title": "Контекст",
+  "composer.context.ofWindow": "{tokens} / {window}",
+  "composer.context.tokens": "{tokens} токенів",
+  "composer.context.total": "Усього",
+  "composer.context.lastMessage": "Останнє повідомлення",
+  "composer.context.uncached": "Вхід без кешу",
+  "composer.context.cached": "Вхід із кешу",
+  "composer.context.input": "Вхід",
+  "composer.context.output": "Вихід",
+  "composer.context.cache": "Кеш",
+  "composer.context.cacheWarm": "Активний",
+  "composer.context.cacheStopped": "Зупинено",
   "botApi.cantTake": "ШІ цього бота не може приймати виклики Bot API. Виберіть інший ШІ, щоб ними користуватися."
 }

@@ -3027,5 +3027,17 @@
   "teamMemory.you": "vous",
   "teamSettings.general": "Général",
   "canvas.botCount": "{count} bots",
+  "composer.context.title": "Contexte",
+  "composer.context.ofWindow": "{tokens} / {window}",
+  "composer.context.tokens": "{tokens} jetons",
+  "composer.context.total": "Total",
+  "composer.context.lastMessage": "Dernier message",
+  "composer.context.uncached": "Entrée hors cache",
+  "composer.context.cached": "Entrée en cache",
+  "composer.context.input": "Entrée",
+  "composer.context.output": "Sortie",
+  "composer.context.cache": "Cache",
+  "composer.context.cacheWarm": "Actif",
+  "composer.context.cacheStopped": "Arrêté",
   "canvas.botCountOne": "1 bot"
 }

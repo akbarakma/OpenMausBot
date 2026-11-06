@@ -65,7 +65,7 @@ import {
 import { goalCoordinatorForComposer, jevRoomRoutingOn, openTaskWorking, roomRouteForComposer } from "@/lib/group-routing";
 import { composerPlaceholder, sendLabels, SIMPLE_COMPOSER, SIMPLE_CONTROL, slotColors } from "./composer-simple"; import { ComposerSendButton } from "./ComposerSendButton";
 import { PendingApprovalActions, PendingApprovalPanel, pendingApprovals } from "./PendingApproval";
-import { CallButton } from "./CallView";
+import { CallButton } from "./CallView"; import { ComposerContextMeter } from "./ComposerContextMeter";
 import { GroupCallButton } from "./GroupCallView";
 import { ApprovalChip, ComposerPlusMenu, GoalToggle, TeachTaskButton } from "./ComposerPlusMenu";
 import { PhonePlus } from "./PhonePlus";
@@ -97,7 +97,6 @@ import { randomUuid } from "@/lib/random-uuid";
 
 const supportsAgents = (instances: InstanceInfo[], candidate?: Bot) =>
   Boolean(candidate && instances.find((instance) => instance.instanceId === candidate.modelSelection.instanceId)?.capabilities?.agentsMcp);
-
 interface ComposerDraftSnapshot extends ComposerSendSnapshot {
   reply: Message | null;
 }
@@ -979,6 +978,7 @@ export function Composer({
             <Mic size={16} strokeWidth={1.75} absoluteStrokeWidth className="[&_rect]:fill-current" />
           </button>
         )}
+        {bot && !group && !locked && <ComposerContextMeter bot={bot} compact={simpleDock} />}
         {callShown && bot && !group && <CallButton bot={bot} placement="composer" fill={advanced || singleRow ? undefined : slot.fill} ink={slot.ink} inverse={singleRow} />}
         {callShown && group && !advanced && <GroupCallButton group={group} members={members ?? []} placement="composer" fill={slot.fill} ink={slot.ink} />}
         {hasContent && !locked && (

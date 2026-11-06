@@ -1,10 +1,9 @@
 import { useMemo, useState, type JSX } from "react";
-import { Bug, Copy, Cpu, Download, Gauge, ListChecks, MessagesSquare, Monitor, MoreHorizontal, Search, Share, SquarePen, UserRound } from "lucide-react";
+import { Bug, Copy, Cpu, Download, ListChecks, MessagesSquare, Monitor, MoreHorizontal, Search, Share, SquarePen, UserRound } from "lucide-react";
 import { currentTaskBot, openBotThread, useStore, visibleMessages, type Bot } from "@/state/store";
 import { useAdvancedMode } from "@/lib/interface-mode";
 import { useShowThreads } from "@/lib/thread-preferences";
 import { requestChatFind, useChatFindOpen } from "@/lib/chat-find";
-import { usageSummary } from "@/lib/chat-usage-summary";
 import {
   copyTranscriptToClipboard,
   downloadMarkdownTranscript,
@@ -33,7 +32,6 @@ export function useChatMoreItems(profile: Bot, phoneHeader = false): { items: Si
   const findOpen = useChatFindOpen(bot.threadId);
   const [copyStatus, setCopyStatus] = useState<"copied" | "failed" | null>(null);
   const remoteClient = window.ogb?.remoteClient?.active === true;
-  const usage = usageSummary(bot, state.instances);
   const hasMessages = messages.length > 0;
   const transcript = () => formatTranscriptMarkdown({ title: bot.name, messages, botName: bot.name, isGroup: false });
   const threads = showThreads ? [] : orderedThreadList((profile.tasks ?? []).filter((task) => !task.routineRunId));
@@ -118,20 +116,12 @@ export function useChatMoreItems(profile: Bot, phoneHeader = false): { items: Si
       disabled: !hasMessages,
       onSelect: () => downloadMarkdownTranscript(slugifyTranscriptFilename(bot.name), transcript()),
     },
-    ...(usage ? [{
-      key: "usage",
-      label: t("chat.usage.menu"),
-      icon: <Gauge size={16} />,
-      separatorBefore: true,
-      trailing: <span title={usage.detail} data-testid="usage-chip" className={cn("tabular-nums text-[12px]", usage.tone === "danger" ? "text-danger" : usage.tone === "warning" ? "text-warning" : "text-ink-secondary")}>{usage.short}</span>,
-      onSelect: () => advanced ? openBotSettings(dispatch, "usage") : dispatch({ type: "toggleAppSettings", open: true, section: "usage" }),
-    } satisfies SidebarMenuItem] : []),
     ...(remoteClient ? [] : [{
       key: "activity",
       label: t("activity.panel.title"),
       icon: <ListChecks size={16} />,
       active: state.activityOpen,
-      separatorBefore: !usage,
+      separatorBefore: true,
       onSelect: () => dispatch({ type: "toggleActivity" }),
     } satisfies SidebarMenuItem, {
       key: "inspector",
@@ -174,7 +164,7 @@ function RoundChatMoreMenu({ bot, phoneHeader }: { bot: Bot; phoneHeader: boolea
 
 /**
  * The chat's ⋯ menu as a round button, for a spot outside the chat such as the bot panel's top bar: find in
- * conversation (opens the chat's find bar), threads the sidebar hides, share, usage, activity and the inspector.
+ * conversation (opens the chat's find bar), threads the sidebar hides, share, activity and the inspector.
  */
 export function ChatMoreMenu({ bot, phoneHeader = false }: { bot: Bot; phoneHeader?: boolean }): JSX.Element {
   // Keyed by thread so a "Copied" note never follows the panel into another conversation.

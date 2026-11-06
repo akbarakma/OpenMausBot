@@ -3113,5 +3113,17 @@
   "teamMemory.you": "du",
   "teamSettings.general": "Allgemein",
   "canvas.botCount": "{count} Bots",
+  "composer.context.title": "Kontext",
+  "composer.context.ofWindow": "{tokens} / {window}",
+  "composer.context.tokens": "{tokens} Tokens",
+  "composer.context.total": "Gesamt",
+  "composer.context.lastMessage": "Letzte Nachricht",
+  "composer.context.uncached": "Nicht zwischengespeicherte Eingabe",
+  "composer.context.cached": "Zwischengespeicherte Eingabe",
+  "composer.context.input": "Eingabe",
+  "composer.context.output": "Ausgabe",
+  "composer.context.cache": "Cache",
+  "composer.context.cacheWarm": "Warm",
+  "composer.context.cacheStopped": "Gestoppt",
   "canvas.botCountOne": "1 Bot"
 }

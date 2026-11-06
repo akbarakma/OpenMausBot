@@ -127,15 +127,13 @@ describe("ChatMoreMenu, the round ⋯ for the bot panel", () => {
     expect(fixture.find).toHaveBeenCalledWith("side");
   });
 
-  it("shows Usage when the thread has some, and opens the inspector from Simple mode", () => {
+  it("leaves usage to the composer's context ring, and opens the inspector from Simple mode", () => {
     fixture.inspectorOpen = true;
     const withUsage: Bot = { ...bot, tasks: bot.tasks!.map((entry) => entry.threadId === "side"
       ? { ...entry, usage: { input: 1200, output: 300, costUsd: null, turns: 2 } }
       : entry) };
     const menu = menuOf(createElement(ChatMoreMenu, { bot: withUsage }));
-    const usage = menu.items.find((item) => item.key === "usage");
-    expect(usage?.disabled).toBeFalsy();
-    expect(usage?.heading).toBeUndefined();
+    expect(keys(menu.items)).not.toContain("usage");
     const inspector = menu.items.find((item) => item.key === "inspector")!;
     expect(inspector.active).toBe(true);
     inspector.onSelect();

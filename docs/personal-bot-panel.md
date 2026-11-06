@@ -13,7 +13,8 @@ the title, a value on the right and a chevron on one line. The title and value
 share one baseline, and a picker spans its card's full width.
 
 - **Details:** one card with Model and Routines, then the conversation list,
-  then This conversation (Find, Usage, Activity). The list has no New
+  then This conversation (Find, Activity). Usage is not in the panel
+  or the chat's ⋯ menu; the composer's context ring shows it. The list has no New
   conversation button and shows only once the bot has 2 or more conversations;
   New thread stays in the chat header's ⋯ menu. Upstream's "Try asking" card is
   removed. The hero avatar shows the working ring, like the sidebar.
@@ -56,9 +57,14 @@ Delete on a note and Remove on a skill confirm in `ConfirmDialog` first.
 | `src/components/bot-panel/BackupAis.tsx` | Only the list and Add; the page intro holds the explanation |
 | `src/components/bot-panel/PanelShell.tsx` | `detail` state: the note or skill open in place of its list |
 | `src/components/bot-panel/pages.tsx` | Memory note and skill pages, confirm dialogs, Backup AIs and Bot API pages |
+| `src/components/ComposerContextMeter.tsx` | New: the composer's context ring, left of the call and Send slot, with a card on hover or click; Compact now from 80%, as the header pill |
+| `src/lib/context-meter.ts` | New: the ring's reading (red above 90%) and the Advanced card's token rows |
+| `src/components/Composer.tsx` | Renders `ComposerContextMeter` in one-to-one chats; stays at 1,000 lines for the size ratchet |
+| `src/components/ChatMoreMenu.tsx` | No Usage item |
+| `src/components/ContextWarning.tsx` | `useCompact` is exported for the ring's card |
 | `src/components/bot-panel/memory-notes.ts` | `memoryNoteParts` splits `YYYY-MM-DD · from <source> · text` and marks struck or expired notes inactive; `memoryNoteKey` includes the text |
 
-`TryAsking.tsx` and its test are deleted. `SwitchRow` in `rows.tsx` is deleted too,
+`TryAsking.tsx` and its test are deleted, and so is `src/lib/chat-usage-summary.ts`. `SwitchRow` in `rows.tsx` is deleted too,
 because no page uses it.
 
 ## Strings
@@ -66,15 +72,18 @@ because no page uses it.
 New keys sit after `botPanel.memory.addPlaceholder` in `src/locales/en.json`,
 translated in every language pack. `botPanel.memoryRow` reads "Memories" and
 `botPanel.memory.intro` no longer says "Tap one to remove it".
+The ring's `composer.context.*` keys sit after `contextWarning.roomRequested`,
+also in every language pack.
 
 ## Merging an upstream release
 
 1. List upstream's changes to the files above:
-   `git diff <old-tag> <new-tag> -- src/components/bot-panel/ src/components/ModelPicker.tsx src/components/ModelTrigger.tsx src/components/DefaultBotControls.tsx src/components/bot-settings/BotApiCard.tsx src/components/ComputerPanel.tsx src/state/store.tsx`.
+   `git diff <old-tag> <new-tag> -- src/components/bot-panel/ src/components/Composer.tsx src/components/ChatMoreMenu.tsx src/components/ContextWarning.tsx src/lib/usage.ts src/components/ModelPicker.tsx src/components/ModelTrigger.tsx src/components/DefaultBotControls.tsx src/components/bot-settings/BotApiCard.tsx src/components/ComputerPanel.tsx src/state/store.tsx`.
 2. Keep upstream's new rows, settings and behaviour. Place each new row in the
    card it belongs to, with a `RowIcon` and no icon tile.
 3. If upstream changes the memory entry grammar in
    `server/memory-entries.ts`, update `memoryNoteParts` and its tests.
 4. If upstream brings back an example-asks card, leave it out of `DetailsTab`.
-5. Run `corepack pnpm exec vitest run BotSettingsDialog.simple MemoryPage.team memory-notes PanelShell.dom page-registry Conversations.dom BackupAis.dom ModelPicker ComputerPanel.android`,
+   If upstream brings back a Usage item in `useChatMoreItems`, leave it out.
+5. Run `corepack pnpm exec vitest run BotSettingsDialog.simple MemoryPage.team memory-notes PanelShell.dom page-registry Conversations.dom BackupAis.dom ModelPicker ComputerPanel.android ComposerContextMeter context-meter ChatMoreMenu`,
    `corepack pnpm i18n:check`, `typecheck` and `lint`.
