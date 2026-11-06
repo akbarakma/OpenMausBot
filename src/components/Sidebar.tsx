@@ -1259,7 +1259,7 @@ export function Sidebar({ open, onClose, collapseToIcons = false }: {
       )}
     >
       <GlassScrollFrame className="flex-1" fade><PlaceTint />
-      <GlassBar edge="top">
+      <GlassBar edge="top" data-glass-band={band ? "" : undefined}>
       <div
         data-sidebar-top-row={corner ? "corner" : true}
         className={cn(

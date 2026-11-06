@@ -92,6 +92,10 @@ calls `useTopBandLayout` itself. Framed windows, Advanced mode, the icon rail
 (chosen, or forced when a side panel leaves no room), phones and Windows keep
 upstream's layout.
 
+Behind the band's row, the chat header's and the sidebar head's glass layer
+(`data-glass-band` in `src/styles.css`) is a 40% tint of the surface with no
+blur, so what scrolls under it stays sharp and dimmed.
+
 ## Strings
 
 New keys sit after `botPanel.memory.addPlaceholder` in `src/locales/en.json`,
@@ -103,7 +107,7 @@ also in every language pack.
 ## Merging an upstream release
 
 1. List upstream's changes to the files above:
-   `git diff <old-tag> <new-tag> -- src/components/bot-panel/ src/components/Composer.tsx src/components/ChatMoreMenu.tsx src/components/ContextWarning.tsx src/lib/usage.ts src/components/ModelPicker.tsx src/components/ModelTrigger.tsx src/components/DefaultBotControls.tsx src/components/bot-settings/BotApiCard.tsx src/components/ComputerPanel.tsx src/state/store.tsx src/components/Sidebar.tsx src/components/SidebarSimpleTop.tsx src/components/SidebarInboxRow.tsx src/components/ChatHeadPill.tsx src/components/ChatView.tsx src/components/bot-access/ShareBotButton.tsx src/App.tsx`.
+   `git diff <old-tag> <new-tag> -- src/components/bot-panel/ src/components/Composer.tsx src/components/ChatMoreMenu.tsx src/components/ContextWarning.tsx src/lib/usage.ts src/components/ModelPicker.tsx src/components/ModelTrigger.tsx src/components/DefaultBotControls.tsx src/components/bot-settings/BotApiCard.tsx src/components/ComputerPanel.tsx src/state/store.tsx src/components/Sidebar.tsx src/components/SidebarSimpleTop.tsx src/components/SidebarInboxRow.tsx src/components/ChatHeadPill.tsx src/components/ChatView.tsx src/components/bot-access/ShareBotButton.tsx src/App.tsx src/styles.css`.
 2. Keep upstream's new rows, settings and behaviour. Place each new row in the
    card it belongs to, with a `RowIcon` and no icon tile.
 3. If upstream changes the memory entry grammar in

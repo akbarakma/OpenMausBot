@@ -1587,6 +1587,11 @@ body {
   -webkit-backdrop-filter: blur(24px) saturate(180%);
   backdrop-filter: blur(24px) saturate(180%);
 }
+.glass-bar[data-glass-band]::before {
+  background: color-mix(in srgb, var(--glass-tint, var(--color-panel)) 40%, transparent);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
 .glass-bar[data-glass-bar="top"]::before {
   mask-image: linear-gradient(to bottom, black calc(100% - var(--glass-edge)), transparent);
 }

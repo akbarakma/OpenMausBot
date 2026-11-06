@@ -110,6 +110,7 @@ describe("the header's right side", () => {
       const computer = markup.match(/<button[^>]*data-tour="computer"[^>]*>/)![0];
       expect(computer.split(" ")).toEqual(expect.arrayContaining(["size-9", "before:-inset-0.5"]));
       expect(markup.match(/<button[^>]*data-chathead-pill="true"[^>]*>/)![0].split(" ")).toContain("h-9");
+      expect(markup.match(/<div[^>]*data-glass-bar="top"[^>]*>/)![0], "the band's lighter glass").toContain('data-glass-band=""');
     } finally {
       fixture.advanced = true;
     }
