@@ -6,7 +6,6 @@ import { t } from "@/lib/i18n";
 import type { Bot, BotSettingsSection } from "@/state/store";
 import { ChatShareMenu } from "@/components/ChatMoreMenu";
 import { useCaptionChrome } from "../DesktopCapabilities";
-import { TOP_BAND_HIT, TOP_BAND_PAD, useTopBand } from "../SidebarSimpleTop";
 import type { useBotSettingsDerived } from "../bot-settings/useBotSettingsDerived";
 import { AvatarEditorCard } from "./AvatarEditorCard";
 import { ComputerTab } from "./ComputerTab";
@@ -29,9 +28,6 @@ export function BotPanel({ bot, derived, linkedSection, onClose }: {
   onClose: () => void;
 }) {
   const { dragProps } = useCaptionChrome();
-  const band = useTopBand();
-  const buttonCls = band ? cn(roundButtonCls, "size-9", TOP_BAND_HIT) : roundButtonCls;
-  const icon = band ? { size: 18, strokeWidth: 1.5 } : { size: 16 };
   const link = usePanelLink();
   const [tab, setTab] = useState<PanelTab>(() => initialTarget(linkedSection, link).tab);
   const [stack, setStack] = useState<SimplePageId[]>(() => {
@@ -109,8 +105,8 @@ export function BotPanel({ bot, derived, linkedSection, onClose }: {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col" onKeyDown={onKeyDown}>
-      <div {...dragProps} className={cn("flex shrink-0 items-start justify-end", band ? `gap-2 px-3 ${TOP_BAND_PAD}` : "h-[50px] gap-2.5 px-[13px] pt-[13px]")}>
-        <ChatShareMenu bot={bot} className={buttonCls} icon={icon} />
+      <div {...dragProps} className="flex h-[50px] shrink-0 items-start justify-end gap-2.5 px-[13px] pt-[13px]">
+        <ChatShareMenu bot={bot} className={roundButtonCls} />
         <button
           type="button"
           data-panel-gear
@@ -118,12 +114,12 @@ export function BotPanel({ bot, derived, linkedSection, onClose }: {
           title={t("botPanel.page.settings")}
           aria-current={page === "settings" ? "page" : undefined}
           onClick={() => go({ tab: "details", page: "settings" })}
-          className={buttonCls}
+          className={roundButtonCls}
         >
-          <Settings {...icon} className="pointer-events-none" />
+          <Settings size={16} className="pointer-events-none" />
         </button>
-        <button type="button" onClick={onClose} aria-label={t("botSettings.simple.close")} className={buttonCls}>
-          <X {...icon} className="pointer-events-none" />
+        <button type="button" onClick={onClose} aria-label={t("botSettings.simple.close")} className={roundButtonCls}>
+          <X size={16} className="pointer-events-none" />
         </button>
       </div>
 

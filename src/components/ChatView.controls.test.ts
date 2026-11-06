@@ -12,7 +12,7 @@ import { en } from "@/locales";
 const fixture = vi.hoisted(() => {
   vi.stubGlobal("window", {});
   vi.stubGlobal("localStorage", { getItem: () => null, setItem: () => {} });
-  return { showThreads: true, advanced: true, menus: [] as { ariaLabel: string; items: { key: string; disabled?: boolean; heading?: string; active?: boolean }[] }[], dispatch: vi.fn(), canWrite: null as boolean | null, showToolCalls: false, platform: "other", localReasonCode: "cua-driver-unavailable", localMessage: "", model: null as ComponentProps<typeof ModelPicker> | null,
+  return { showThreads: true, advanced: true, menus: [] as { ariaLabel: string; items: { key: string; disabled?: boolean; heading?: string; active?: boolean }[] }[], dispatch: vi.fn(), canWrite: null as boolean | null, showToolCalls: false, platform: "other", windowChrome: undefined as string | undefined, localReasonCode: "cua-driver-unavailable", localMessage: "", model: null as ComponentProps<typeof ModelPicker> | null,
     approval: null as ComponentProps<typeof ApprovalModeSelector> | null };
 });
 vi.mock("@/state/store", async (importOriginal) => {
@@ -26,7 +26,7 @@ vi.mock("@/state/store", async (importOriginal) => {
 // The real useCaptionChrome rides along: it only asks this module for the window chrome.
 vi.mock("./DesktopCapabilities", async (importOriginal) => ({
   ...await importOriginal<typeof import("./DesktopCapabilities")>(),
-  useDesktopCapabilities: () => ({ capabilities: { dictation: { available: false }, host: { packaged: true, platform: fixture.platform }, localComputer: { available: false, reasonCode: fixture.localReasonCode, message: fixture.localMessage } }, ready: true }),
+  useDesktopCapabilities: () => ({ capabilities: { windowChrome: fixture.windowChrome, windowFrame: false, dictation: { available: false }, host: { packaged: true, platform: fixture.platform }, localComputer: { available: false, reasonCode: fixture.localReasonCode, message: fixture.localMessage } }, ready: true }),
 }));
 vi.mock("@/lib/analytics", () => ({ track: vi.fn() }));
 vi.mock("@/lib/thread-preferences", async (importOriginal) => ({
@@ -94,25 +94,17 @@ describe("the header's right side", () => {
     }
   });
 
-  it("keeps the pill, the model and the computer on one 36px row under the traffic lights in the top band, at any width", async () => {
-    const { TopBandContext } = await import("./SidebarSimpleTop");
+  it("tints the header's glass with no blur in Simple mode on macOS with the frame off, where the sidebar's row sits beside the traffic lights", () => {
+    const glass = () => header().markup.match(/<div[^>]*data-glass-bar="top"[^>]*>/)?.[0] ?? "";
     fixture.advanced = false;
-    fixture.menus = [];
-    fixture.model = null;
+    fixture.windowChrome = "mac-inset";
     try {
-      const markup = renderToStaticMarkup(createElement(TopBandContext, { value: true }, createElement(ChatView, { bot })));
-      const classes = (attribute: string) => markup.match(new RegExp(`${attribute}(?:="[^"]*")? class="([^"]*)"`))![1].split(" ");
-      expect(classes("data-chathead-row")).toEqual(expect.arrayContaining(["grid", "gap-x-2"]));
-      expect(classes("data-chathead-row").some((name) => name.includes("flex-wrap"))).toBe(false);
-      expect(classes("data-chathead-identity")).toEqual(expect.arrayContaining(["col-start-2", "justify-self-center"]));
-      expect(classes("data-chathead-controls")).toEqual(expect.arrayContaining(["col-start-3", "justify-self-end"]));
-      expect(fixture.model).toMatchObject({ size: "lg" });
-      const computer = markup.match(/<button[^>]*data-tour="computer"[^>]*>/)![0];
-      expect(computer.split(" ")).toEqual(expect.arrayContaining(["size-9", "before:-inset-0.5"]));
-      expect(markup.match(/<button[^>]*data-chathead-pill="true"[^>]*>/)![0].split(" ")).toContain("h-9");
-      expect(markup.match(/<div[^>]*data-glass-bar="top"[^>]*>/)![0], "the band's lighter glass").toContain('data-glass-band=""');
+      expect(glass()).toContain('data-glass-band=""');
+      fixture.advanced = true;
+      expect(glass()).not.toContain("data-glass-band");
     } finally {
       fixture.advanced = true;
+      fixture.windowChrome = undefined;
     }
   });
 

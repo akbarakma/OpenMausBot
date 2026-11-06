@@ -181,7 +181,7 @@ describe("sidebar top row", () => {
     fixture.rail = { available: true, hidden: false };
     desktop();
     const advanced = topRow(render());
-    expect(advanced).toMatch(/^data-sidebar-top-row="true" class="[^"]*" style="-webkit-app-region:drag;height:46px"/);
+    expect(advanced).toMatch(/^data-sidebar-top-row="true" class="[^"]*" style="-webkit-app-region:drag;height:60px"/);
     expect(classesOf(advanced, "data-traffic-light-space")).toEqual(["w-[72px]", "shrink-0", "md:w-[calc(72px_-_var(--rail-beside,0px))]"]);
     fixture.advanced = false;
     const simple = topRow(render());
@@ -190,23 +190,19 @@ describe("sidebar top row", () => {
     expect(classesOf(render(), "data-traffic-light-space"), "the column of avatars keeps a strip above for them").toEqual(["h-5", "w-full"]);
   });
 
-  it("in Simple mode with the frame off on macOS, puts the Inbox button, a search field and New on one row under the traffic lights", () => {
+  it("in Simple mode with the frame off on macOS, puts round Inbox, Search and New beside the traffic lights, on their line", () => {
     fixture.windowChrome = "mac-inset";
     fixture.windowFrame = false;
     fixture.advanced = false;
     desktop();
     const html = render();
     const row = topRow(html);
-    expect(row).not.toContain("data-traffic-light-space");
-    expect(classesOf(row, 'data-sidebar-top-row="true"')).toContain("pt-[38px]");
     const inbox = row.indexOf("data-sidebar-inbox");
     expect(inbox, "Inbox sits in the top row").toBeGreaterThan(-1);
-    expect(inbox).toBeLessThan(row.indexOf("data-sidebar-search-field"));
-    expect(row.match(/<input[^>]*>/)![0]).toContain('placeholder="Search"');
-    expect(html, "the field replaces the round Search button").not.toContain("data-sidebar-search-toggle");
+    expect(row.indexOf("data-traffic-light-space"), "beside the traffic lights, on their line").toBeLessThan(inbox);
+    expect(inbox).toBeLessThan(row.indexOf("data-sidebar-search-toggle"));
+    expect(row).toMatch(/data-sidebar-inbox="\d+"[^>]*class="[^"]*\bsize-9\b[^"]*\brounded-full\b/);
     expect(html.match(/data-sidebar-inbox=/g), "no second Inbox row below").toHaveLength(1);
-    fixture.density = "icons";
-    expect(classesOf(render(), 'data-sidebar-top-row="true"'), "the avatar rail keeps its own top").not.toContain("pt-[38px]");
   });
 
   it("with the frame turned off on Windows, its own title bar is back: nothing makes room and nothing drags", () => {
@@ -239,7 +235,7 @@ describe("sidebar top row", () => {
     expect(top).not.toContain("data-workspace-switcher");
     expect(top).not.toMatch(/<button[^>]*aria-label="Search bots and messages"/);
     expect(top).not.toContain("data-sidebar-inbox");
-    expect(classesOf(top, 'data-sidebar-top-row="true"'), "the first bot starts 8px under the traffic lights").toContain("pt-2.5");
+    expect(classesOf(top, 'data-sidebar-top-row="true"'), "the first bot starts 7px under the traffic lights").toContain("pt-4");
     const foot = html.slice(html.indexOf("data-sidebar-rail-footer"));
     const at = (marker: string) => {
       const index = foot.indexOf(marker);

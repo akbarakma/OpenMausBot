@@ -216,7 +216,7 @@ export function ModelPicker({
   contained?: boolean;
   label?: ReactNode;
   row?: boolean;
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md";
 }) {
   const { state, dispatch: storeDispatch, refreshInstances, refreshModels: refreshInstanceModels } = useStore();
   const [open, setOpen] = useState(false);
@@ -665,7 +665,7 @@ export function ModelPicker({
           : contained
             ? "min-w-0 max-w-[58%] rounded-full transition-colors duration-150 hover:bg-ink/[0.06] hover:text-ink aria-expanded:bg-ink/[0.08] aria-expanded:text-ink disabled:hover:bg-transparent"
             : cn("shrink-0 rounded-full", ELEVATED_FLOAT, ELEVATED_HOVER, "hover:text-ink aria-expanded:text-ink disabled:hover:bg-composer"),
-        !wholeRow && (size === "sm" ? "h-7 pl-2 pr-1.5" : size === "lg" ? "h-9 pl-3 pr-2.5" : "h-8 pl-2.5 pr-2"),
+        !wholeRow && (size === "sm" ? "h-7 pl-2 pr-1.5" : "h-8 pl-2.5 pr-2"),
       )}
     />
   );

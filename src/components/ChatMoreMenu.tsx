@@ -18,7 +18,7 @@ import { ShortcutHint } from "./ShortcutHint";
 import { SidebarPopoverMenu, type SidebarMenuItem } from "./SidebarPopoverMenu";
 import { orderedThreadList } from "./SidebarThreadRow";
 import { openBotSettings } from "./bot-panel/panel-link";
-import { ShareBotButton, useTeamName, type ShareIcon } from "./bot-access/ShareBotButton";
+import { ShareBotButton, useTeamName } from "./bot-access/ShareBotButton";
 import { UsageBars } from "./EngineUsage";
 
 /** One item list for the chat's ⋯ menu wherever it sits; it lists the threads whenever the sidebar hides them. The
@@ -175,9 +175,9 @@ export const EXPORT_ITEMS = ["copy", "download"];
 
 /** The bot panel's round Share button: on a team who has access, with copying or downloading this conversation under
  * the ⋯ of its header; anywhere else a menu of those two. */
-export function ChatShareMenu({ bot, className, icon = { size: 16 } }: { bot: Bot; className: string; icon?: ShareIcon }): JSX.Element {
-  return useTeamName() ? <ShareBotButton bot={bot} className={className} icon={icon} headerMenu={<ExportMore key={bot.threadId} bot={bot} />} />
-    : <ShareMenu key={bot.threadId} bot={bot} className={className} icon={icon} />;
+export function ChatShareMenu({ bot, className }: { bot: Bot; className: string }): JSX.Element {
+  return useTeamName() ? <ShareBotButton bot={bot} className={className} headerMenu={<ExportMore key={bot.threadId} bot={bot} />} />
+    : <ShareMenu key={bot.threadId} bot={bot} className={className} />;
 }
 
 const exportItems = (items: SidebarMenuItem[]): SidebarMenuItem[] => items.filter((item) => EXPORT_ITEMS.includes(item.key)).map((item) => ({
@@ -193,7 +193,7 @@ function ExportMore({ bot }: { bot: Bot }) {
   );
 }
 
-function ShareMenu({ bot, className, icon }: { bot: Bot; className: string; icon: ShareIcon }) {
+function ShareMenu({ bot, className }: { bot: Bot; className: string }) {
   const { items } = useChatMoreItems(bot);
   return (
     <SidebarPopoverMenu
@@ -203,7 +203,7 @@ function ShareMenu({ bot, className, icon }: { bot: Bot; className: string; icon
       triggerTitle={t("chat.export.heading")}
       renderTrigger={({ open }) => (
         <span data-panel-share className={cn(className, open && ELEVATED_OPEN)}>
-          <Share {...icon} aria-hidden="true" />
+          <Share size={16} aria-hidden="true" />
         </span>
       )}
     />

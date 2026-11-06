@@ -51,7 +51,7 @@ import { approvalModeFor } from "../../shared/approval-mode";
 import { openPlaceAction, placeBlocked, placeFacts, placeHasIssue, placeViewFor, usePlaceSeat, worksOnSimpleLabel } from "@/lib/place-view";
 import { cloudRefusal, type PlaceActionId, type PlaceFacts, type PlaceView } from "../../shared/place-view";
 import { t } from "@/lib/i18n";
-import { LocalizedPanelError, panelErrorText } from "@/lib/computer-messages"; import { TOP_BAND_BUTTON, TOP_BAND_PAD, useTopBand } from "./SidebarSimpleTop";
+import { LocalizedPanelError, panelErrorText } from "@/lib/computer-messages";
 
 interface VpsComputerStatus {
   configured: boolean;
@@ -120,7 +120,7 @@ export function ComputerPanel({
   bot: Bot;
   onOpenVmWorkspace?: (botId: string) => void;
 }) {
-  const { dragProps } = useCaptionChrome(), band = useTopBand();
+  const { dragProps } = useCaptionChrome();
   const { panelWidth, separatorRef, separatorWidth, onSeparatorKeyDown, onResizeStart, onResizeMove, onResizeEnd } = useComputerPanelResize();
   const { state, dispatch, flushBotPatches } = useStore();
   const liveTask = profileBot.tasks?.find((task) => task.threadId === profileBot.threadId);
@@ -1152,7 +1152,7 @@ export function ComputerPanel({
   const heldPin = livePin && profileBot.computer !== "off" && livePin !== profileBot.computer ? livePin : undefined;
 
   const tabClass = (active: boolean) => cn(
-    "flex shrink-0 items-center gap-1.5 rounded-full px-3 text-[13px] transition-colors", band ? "h-7" : "py-1", "@max-[28rem]/paneltabs:[&>svg]:hidden @max-[22rem]/paneltabs:px-2",
+    "flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1 text-[13px] transition-colors @max-[28rem]/paneltabs:[&>svg]:hidden @max-[22rem]/paneltabs:px-2",
     active ? "bg-raised text-ink shadow-sm" : "text-ink-secondary hover:text-ink",
   );
 
@@ -1211,7 +1211,7 @@ export function ComputerPanel({
         className="absolute inset-y-0 left-0 z-10 w-1.5 cursor-col-resize hover:bg-accent/40 focus-visible:bg-accent/60 max-md:hidden"
       />
       {/* ml-1.5 keeps the drag region clear of the resize handle: a later drag region in the DOM wins. */}
-      <div {...dragProps} className={cn("@container/paneltabs ml-1.5 pl-2.5 pr-4", band ? `pb-3 ${TOP_BAND_PAD}` : "py-3")}>
+      <div {...dragProps} className="@container/paneltabs ml-1.5 py-3 pl-2.5 pr-4">
         <div className="relative flex min-h-7 items-center justify-center">
           {advanced && (
             <button
@@ -1226,7 +1226,7 @@ export function ComputerPanel({
               <Settings size={18} />
             </button>
           )}
-          <div className={`${band ? "mx-11" : "mx-9"} flex min-w-0 touch-pan-x gap-0.5 overflow-x-auto whitespace-nowrap rounded-full bg-inset p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden`} data-tour="computer-tabs" data-testid="computer-tabs" role="tablist" aria-label={t("computer.tabsAria")} onWheel={scrollTabsWithWheel} onKeyDown={(event) => moveBetweenTabs(event, panelTabs, chooseTab)}>
+          <div className="mx-9 flex min-w-0 touch-pan-x gap-0.5 overflow-x-auto whitespace-nowrap rounded-full bg-inset p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" data-tour="computer-tabs" data-testid="computer-tabs" role="tablist" aria-label={t("computer.tabsAria")} onWheel={scrollTabsWithWheel} onKeyDown={(event) => moveBetweenTabs(event, panelTabs, chooseTab)}>
             {panelTabs.map((view) => {
               const { Icon, label, tour } = PANEL_TABS[view];
               const live = !placeLive ? undefined
@@ -1246,11 +1246,11 @@ export function ComputerPanel({
               releaseComputerPanelFocus(panelRef.current, bot.id);
               dispatch({ type: "toggleComputer", open: false });
             }}
-            className={cn(band ? TOP_BAND_BUTTON : "rounded-md p-1 text-ink-secondary hover:bg-control hover:text-ink", "absolute right-0 top-1/2 -translate-y-1/2")}
+            className="absolute right-0 top-1/2 -translate-y-1/2 rounded-md p-1 text-ink-secondary hover:bg-control hover:text-ink"
             aria-label={t("computer.close")}
             title={t("computer.close")}
           >
-            <X size={18} strokeWidth={band ? 1.5 : 2} />
+            <X size={18} />
           </button>
         </div>
       </div>

@@ -1,5 +1,5 @@
 import { Search, X } from "lucide-react";
-import { createContext, useContext, useRef, type Ref } from "react";
+import type { Ref } from "react";
 
 import { cn } from "@/lib/cn";
 import { t } from "@/lib/i18n";
@@ -14,15 +14,6 @@ export function useTopBandLayout(): boolean {
   const phone = useMediaQuery(PHONE_LAYOUT);
   return capabilities.windowChrome === "mac-inset" && !windowFramed(capabilities) && !advanced && !phone;
 }
-
-export const TopBandContext = createContext(false);
-
-export function useTopBand(): boolean {
-  return useContext(TopBandContext);
-}
-
-/** The top band's row starts 8px under the traffic lights, which Electron draws from y=16 to y=30. */
-export const TOP_BAND_PAD = "pt-[38px]";
 
 export const TOP_BAND_HIT = "relative before:absolute before:-inset-0.5 before:rounded-full before:content-[''] before:[-webkit-app-region:no-drag]";
 
@@ -45,7 +36,7 @@ export const PHONE_TOP_BUTTON = "flex size-10 shrink-0 items-center justify-cent
 
 export const SIMPLE_RAIL_BUTTON = "flex size-9 shrink-0 items-center justify-center rounded-xl text-ink-secondary hover:bg-raised/60 hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus";
 
-export function SidebarSearchToggle({ open, onToggle, corner = false, ref }: { open: boolean; onToggle: () => void; corner?: boolean; ref?: Ref<HTMLButtonElement> }) {
+export function SidebarSearchToggle({ open, onToggle, corner = false, band = false, ref }: { open: boolean; onToggle: () => void; corner?: boolean; band?: boolean; ref?: Ref<HTMLButtonElement> }) {
   return (
     <button
       ref={ref}
@@ -55,7 +46,7 @@ export function SidebarSearchToggle({ open, onToggle, corner = false, ref }: { o
       aria-label={t("sidebar.searchAria")}
       aria-expanded={open}
       title={t("sidebar.searchAria")}
-      className={corner ? SIMPLE_CORNER_BUTTON : SIMPLE_TOP_BUTTON}
+      className={corner ? SIMPLE_CORNER_BUTTON : band ? TOP_BAND_BUTTON : SIMPLE_TOP_BUTTON}
     >
       <Search size={corner ? 17 : 18} strokeWidth={1.5} aria-hidden="true" />
     </button>
@@ -91,40 +82,5 @@ export function SidebarSearchPill({ query, onQuery, onClose }: { query: string; 
         </button>
       </div>
     </div>
-  );
-}
-
-export function SidebarSearchField({ query, onQuery, autoFocus }: { query: string; onQuery: (query: string) => void; autoFocus: boolean }) {
-  const input = useRef<HTMLInputElement>(null);
-  return (
-    <label data-sidebar-search-field className={cn("flex h-9 min-w-0 flex-1 cursor-text items-center gap-2 rounded-full pl-3 pr-1.5 text-ink-secondary focus-within:ring-focus", ELEVATED_CONTROL)}>
-      <Search size={16} strokeWidth={1.5} aria-hidden="true" className="shrink-0" />
-      <input
-        ref={input}
-        autoFocus={autoFocus}
-        value={query}
-        onChange={(event) => onQuery(event.target.value)}
-        onKeyDown={(event) => {
-          if (event.key !== "Escape") return;
-          event.preventDefault();
-          if (query) onQuery("");
-          else input.current?.blur();
-        }}
-        placeholder={t("sidebar.search")}
-        aria-label={t("sidebar.searchAria")}
-        className="min-w-0 flex-1 bg-transparent text-[13px] text-ink placeholder:text-ink-tertiary focus:outline-none"
-      />
-      {query && (
-        <button
-          type="button"
-          onClick={() => { onQuery(""); input.current?.focus(); }}
-          aria-label={t("sidebar.searchClose")}
-          title={t("sidebar.searchClose")}
-          className="flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-full text-ink-tertiary hover:bg-raised hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
-        >
-          <X size={14} aria-hidden="true" />
-        </button>
-      )}
-    </label>
   );
 }
