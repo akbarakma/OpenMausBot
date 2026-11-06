@@ -1,14 +1,17 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { FolderOpen, Plus } from "lucide-react";
+import { FolderOpen, Plus, Server } from "lucide-react";
 
 import { appSwitchPatch } from "@/lib/bot-app-access";
 import { cn } from "@/lib/cn";
 import { skillsLibraryEnabled } from "@/lib/feature-flags";
 import { activeLocale, t } from "@/lib/i18n";
+import { mcpServersForBot, mcpServersOfBot, mcpSwitch, useMcpServers } from "@/lib/mcp-servers";
 import { deleteMemoryDoc, MEMORY_INDEX, saveMemoryDoc, type MemoryDoc } from "@/lib/memory";
 import { openExternalLink } from "@/lib/app-links";
 import type { Routine } from "@/lib/routines";
+import type { SkillImportSummary } from "../../../shared/skill-import";
 import { shortPath } from "@/lib/short-path";
+import { skillImportLines } from "@/lib/skill-import";
 import { useStore, type Bot } from "@/state/store";
 import { ConfirmDialog } from "../ConfirmDialog";
 import { useDesktopCapabilities } from "../DesktopCapabilities";
@@ -27,7 +30,7 @@ import { useOpenComputer, WherePage } from "./ComputerTab";
 import { SettingsPage } from "./SettingsPage";
 import { memoryNoteKey, memoryNoteParts, panelMemoryNotes, withMemoryNote, withoutMemoryNote, type PanelMemoryNote } from "./memory-notes";
 import type { SimplePageId } from "./page-registry";
-import { BotSwitch, buttonCls, Card, LinkRow, NavRow, NoteRow, RadioRow, rowCls, RowText, TextRow } from "./rows";
+import { BotSwitch, buttonCls, Card, LinkRow, NavRow, NoteRow, RadioRow, RowIcon, rowCls, RowText, TextRow } from "./rows";
 import { useMemoryDoc } from "./use-memory-doc";
 
 type Derived = ReturnType<typeof useBotSettingsDerived>;
@@ -59,11 +62,18 @@ function errorText(error: unknown, fallback: string): string {
 export function AppsPage({ bot, derived }: PageContext) {
   const { dispatch } = useStore();
   const apps = useBotApps(bot);
+  const { servers: allServers, error: mcpError } = useMcpServers();
   const { patch, canUseConnectedApps } = derived;
+  const servers = allServers ? mcpServersOfBot(allServers, bot.id) : [];
+  const mounted = new Set(mcpServersForBot(servers, bot.mcpServers, bot.id).map((server) => server.name));
 
   const toggle = (app: BotApp) => {
     const next = appSwitchPatch(bot, apps.connectedSlugs, app.slug, app.scope === null);
     if (Object.keys(next).length > 0) patch(next);
+  };
+  const toggleServer = (name: string) => {
+    if (bot.busy || mcpError) return;
+    patch({ mcpServers: mcpSwitch(servers, bot.mcpServers, name) });
   };
   const note = !canUseConnectedApps
     ? t("botSettings.simple.appsCannot", { name: bot.name })
@@ -94,6 +104,28 @@ export function AppsPage({ bot, derived }: PageContext) {
           </div>
         ))}
       </Card>
+      {(servers.length > 0 || mcpError) && (
+        <Card label={t("connectors.tab.mcp")}>
+          {mcpError && <NoteRow>{t("botAccess.mcpRefreshError")}</NoteRow>}
+          {servers.map((server) => (
+            <div key={server.name} data-simple-mcp={server.name} className={rowCls}>
+              <RowIcon icon={Server} />
+              <RowText
+                title={<span className="block truncate">{server.name}</span>}
+                hint={!server.enabled ? t("botAccess.mcpDisabled") : server.offFor?.includes(bot.id) ? t("mcp.offFor", { bots: bot.name }) : undefined}
+              />
+              <BotSwitch
+                color={bot.color}
+                checked={mounted.has(server.name)}
+                aria-label={t("botSettings.simple.appToggle", { name: bot.name, app: server.name })}
+                disabled={!server.enabled || Boolean(bot.busy) || mcpError}
+                onClick={() => toggleServer(server.name)}
+                className="disabled:cursor-not-allowed"
+              />
+            </div>
+          ))}
+        </Card>
+      )}
       <Card>
         <LinkRow
           data-panel-link="add-app"
@@ -283,6 +315,7 @@ export function SkillsPage({ bot, detail, onDetail }: PageContext & DetailContex
   const [source, setSource] = useState("");
   const [importing, setImporting] = useState(false);
   const [confirming, setConfirming] = useState<ManagedSkill | null>(null);
+  const [imported, setImported] = useState<string[]>([]);
   const libraryOn = skillsLibraryEnabled(state.config);
   const open = detail === null || skills.loading ? null : skills.skills.find((skill) => skill.name === detail) ?? null;
   const gone = detail !== null && !skills.loading && open === null;
@@ -379,8 +412,10 @@ export function SkillsPage({ bot, detail, onDetail }: PageContext & DetailContex
     if (!trimmed || importing) return;
     setImporting(true);
     skills.setError("");
+    setImported([]);
     try {
-      await api(`/api/bots/${bot.id}/skills`, { method: "POST", body: JSON.stringify({ source: trimmed }) });
+      const result = await api<{ imported?: SkillImportSummary[] }>(`/api/bots/${bot.id}/skills`, { method: "POST", body: JSON.stringify({ source: trimmed }) });
+      setImported(skillImportLines(result.imported ?? []));
       setSource("");
       await skills.refresh();
     } catch (cause) {
@@ -432,6 +467,7 @@ export function SkillsPage({ bot, detail, onDetail }: PageContext & DetailContex
           onChange={setSource}
           onSubmit={() => void importSkill()}
         />
+        {imported.map((line) => <NoteRow key={line}>{line}</NoteRow>)}
         <LinkRow data-panel-link="browse-skills" onClick={browse}>{t("botPanel.skills.browse")}</LinkRow>
       </Card>
       {reviewDialog}
