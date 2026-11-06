@@ -190,7 +190,7 @@ describe("sidebar top row", () => {
     expect(classesOf(render(), "data-traffic-light-space"), "the column of avatars keeps a strip above for them").toEqual(["h-5", "w-full"]);
   });
 
-  it("in Simple mode with the frame off on macOS, puts Inbox beside Search and New on one row under the traffic lights", () => {
+  it("in Simple mode with the frame off on macOS, puts the Inbox button, a search field and New on one row under the traffic lights", () => {
     fixture.windowChrome = "mac-inset";
     fixture.windowFrame = false;
     fixture.advanced = false;
@@ -201,7 +201,9 @@ describe("sidebar top row", () => {
     expect(classesOf(row, 'data-sidebar-top-row="true"')).toContain("pt-[38px]");
     const inbox = row.indexOf("data-sidebar-inbox");
     expect(inbox, "Inbox sits in the top row").toBeGreaterThan(-1);
-    expect(inbox).toBeLessThan(row.indexOf("data-sidebar-search-toggle"));
+    expect(inbox).toBeLessThan(row.indexOf("data-sidebar-search-field"));
+    expect(row.match(/<input[^>]*>/)![0]).toContain('placeholder="Search"');
+    expect(html, "the field replaces the round Search button").not.toContain("data-sidebar-search-toggle");
     expect(html.match(/data-sidebar-inbox=/g), "no second Inbox row below").toHaveLength(1);
     fixture.density = "icons";
     expect(topRow(render()), "the avatar rail keeps its own top").not.toContain("pt-[38px]");

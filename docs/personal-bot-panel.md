@@ -62,10 +62,10 @@ Delete on a note and Remove on a skill confirm in `ConfirmDialog` first.
 | `src/components/Composer.tsx` | Renders `ComposerContextMeter` in one-to-one chats; stays at 1,000 lines for the size ratchet |
 | `src/components/ChatMoreMenu.tsx` | No Usage item |
 | `src/components/ContextWarning.tsx` | `useCompact` is exported for the ring's card |
-| `src/components/SidebarSimpleTop.tsx` | `useTopBandLayout`, `TopBandContext`, `useTopBand`, `TOP_BAND_PAD`, `TOP_BAND_HIT`, `TOP_BAND_BUTTON`; `SidebarSearchToggle` takes `band` |
+| `src/components/SidebarSimpleTop.tsx` | `useTopBandLayout`, `TopBandContext`, `useTopBand`, `TOP_BAND_PAD`, `TOP_BAND_HIT`, `TOP_BAND_BUTTON`; `SidebarSearchField`, the search field in the band's row |
 | `src/App.tsx` | Computes the band once and provides `TopBandContext` |
-| `src/components/Sidebar.tsx` | In the top band, the top row holds the Inbox pill, Search and New, and the Inbox row below is gone |
-| `src/components/SidebarInboxRow.tsx` | `pill` variant: icon, "Inbox" and the count in one 36px pill |
+| `src/components/Sidebar.tsx` | In the top band, the top row holds the Inbox button, the search field and New; the Inbox row, the round Search button and the search field below the row are gone |
+| `src/components/SidebarInboxRow.tsx` | `band` variant: a 36px round Inbox button with its count and running dot; "Inbox" is its tooltip and label |
 | `src/components/ChatHeadPill.tsx` | `band` prop: 36px tall |
 | `src/components/ChatView.tsx` | In the top band, the header's top padding, one row at every width, a `lg` model picker and a round computer button |
 | `src/components/bot-panel/PanelShell.tsx` | In the top band, the header's top padding and 36px share, gear and close buttons with 18px icons |
@@ -82,7 +82,7 @@ because no page uses it.
 
 In Simple mode, in a macOS window with the frame off, the traffic lights sit
 alone in a strip at the top. Every top control sits on one row below them.
-This covers the sidebar's Inbox pill, Search and New, the chat's bot pill,
+This covers the sidebar's Inbox button, search field and New, the chat's bot pill,
 model picker and computer button, the bot panel's share, gear and close
 buttons, and the computer panel's tabs and close button. Each control is 36px
 tall, with its top at y=38 and its center at y=56. Round buttons take clicks

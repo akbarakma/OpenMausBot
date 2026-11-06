@@ -7,10 +7,11 @@ import { closeInbox, openInbox, useInboxPanel, useInboxSupport, useInboxView } f
 import { useTeamPeople } from "@/state/team-people";
 import { inboxFixes, waitingCount } from "./inbox/inbox-view";
 import { ELEVATED_CONTROL, ELEVATED_HOVER, ELEVATED_OPEN } from "./elevated";
+import { TOP_BAND_HIT } from "./SidebarSimpleTop";
 
-export function SidebarInboxRow({ icons, large, pill = false, running, onOpened }: {
+export function SidebarInboxRow({ icons, large, band = false, running, onOpened }: {
   icons: boolean;
-  pill?: boolean;
+  band?: boolean;
   /** Simple's row, sized as its bots' rows are. */
   large: boolean;
   running: boolean;
@@ -29,16 +30,13 @@ export function SidebarInboxRow({ icons, large, pill = false, running, onOpened 
     else { openInbox(); onOpened?.(); }
   };
   const dot = running && <span data-inbox-running="" aria-hidden="true" className={cn("absolute -bottom-0.5 -right-0.5 rounded-full border-2 border-panel bg-success", icons ? "size-3" : "size-2.5")} />;
-  if (pill) {
+  if (band) {
     return (
       <button type="button" data-sidebar-inbox={count} aria-label={label} title={label} aria-pressed={open} onClick={toggle}
-        className={cn("flex h-9 min-w-0 items-center gap-2 rounded-full pl-3 pr-3.5 text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus", ELEVATED_CONTROL, open ? ELEVATED_OPEN : ELEVATED_HOVER)}>
-        <span className="relative flex shrink-0 text-ink/90">
-          <Inbox size={18} strokeWidth={1.5} aria-hidden="true" />
-          {running && <span data-inbox-running="" aria-hidden="true" className="absolute -bottom-1 -right-1 size-2.5 rounded-full border-2 border-composer bg-success" />}
-        </span>
-        <span className="truncate text-[14px] font-medium leading-5">{t("inbox.panel.title")}</span>
-        {count > 0 && <span aria-hidden="true" data-inbox-count className="shrink-0 rounded-full bg-warning px-1.5 text-[11px] font-semibold leading-4 tabular-nums text-panel">{shown}</span>}
+        className={cn("relative flex size-9 shrink-0 items-center justify-center rounded-full text-ink/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus", TOP_BAND_HIT, ELEVATED_CONTROL, open ? ELEVATED_OPEN : ELEVATED_HOVER)}>
+        <Inbox size={18} strokeWidth={1.5} aria-hidden="true" />
+        {count > 0 && <span aria-hidden="true" data-inbox-count className="absolute -right-1 -top-1 flex min-w-4 items-center justify-center rounded-full bg-warning px-1 text-[10px] font-semibold leading-4 tabular-nums text-panel">{shown}</span>}
+        {running && <span data-inbox-running="" aria-hidden="true" className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full border-2 border-composer bg-success" />}
       </button>
     );
   }
