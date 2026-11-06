@@ -88,7 +88,8 @@ try {
   throw error;
 }
 run("codesign", ["--verify", "--deep", "--strict", INSTALLED]);
-// Launch Services keeps the build folder's record after the move, and each one shows as another app icon.
-run(LSREGISTER, ["-u", built]);
+// Launch Services keeps the build folder's record after the move, and each one shows as another app icon. A folder it
+// never recorded fails with -10814, which already is the state this wants.
+spawnSync(LSREGISTER, ["-u", built], { stdio: "ignore" });
 if (existsSync(previous)) run("/usr/bin/trash", [previous]);
 process.stdout.write(`Installed ${INSTALLED} from ${commit.slice(0, 9)}. The previous copy is in the Trash.\n`);

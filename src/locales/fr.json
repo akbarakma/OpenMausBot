@@ -3089,5 +3089,17 @@
   "remote.devices.removed": "{name} retiré.",
   "remote.e2e.anywhere": "Accessible de partout · chiffré de bout en bout",
   "remote.e2e.connecting": "Connexion à MausBot Relay…",
-  "remote.e2e.local": "Sur ce Wi-Fi et Tailscale · chiffré de bout en bout"
+  "remote.e2e.local": "Sur ce Wi-Fi et Tailscale · chiffré de bout en bout",
+  "composer.context.title": "Contexte",
+  "composer.context.ofWindow": "{tokens} / {window}",
+  "composer.context.tokens": "{tokens} jetons",
+  "composer.context.total": "Total",
+  "composer.context.lastMessage": "Dernier message",
+  "composer.context.uncached": "Entrée hors cache",
+  "composer.context.cached": "Entrée en cache",
+  "composer.context.input": "Entrée",
+  "composer.context.output": "Sortie",
+  "composer.context.cache": "Cache",
+  "composer.context.cacheWarm": "Actif",
+  "composer.context.cacheStopped": "Arrêté"
 }

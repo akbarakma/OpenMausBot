@@ -4764,5 +4764,17 @@
   "remote.devices.removed": "已移除 {name}。",
   "remote.e2e.anywhere": "隨時隨地可存取 · 端對端加密",
   "remote.e2e.connecting": "正在連線 MausBot Relay…",
-  "remote.e2e.local": "在此 Wi-Fi 和 Tailscale 上 · 端對端加密"
+  "remote.e2e.local": "在此 Wi-Fi 和 Tailscale 上 · 端對端加密",
+  "composer.context.title": "上下文",
+  "composer.context.ofWindow": "{tokens} / {window}",
+  "composer.context.tokens": "{tokens} 個 token",
+  "composer.context.total": "總計",
+  "composer.context.lastMessage": "最後一則訊息",
+  "composer.context.uncached": "未快取輸入",
+  "composer.context.cached": "快取輸入",
+  "composer.context.input": "輸入",
+  "composer.context.output": "輸出",
+  "composer.context.cache": "快取",
+  "composer.context.cacheWarm": "保持中",
+  "composer.context.cacheStopped": "已停止"
 }

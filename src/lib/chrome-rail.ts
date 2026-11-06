@@ -33,6 +33,12 @@ export function useChromeRail(): ChromeRailState | null {
   return state;
 }
 
+/** Offers main a way back to a hidden rail without drawing a button: main shows the rail again beside a page that
+ * offers none. Settings' switch is that way back. */
+export function useOfferChromeRail(): void {
+  useEffect(start, []);
+}
+
 /** On the rail's own page: whether the page beside it draws the window's frame, as main hears from each of its documents.
  * The window opens framed. */
 export function useBesideFramed(): boolean {

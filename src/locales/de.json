@@ -3223,5 +3223,17 @@
   "remote.devices.removed": "{name} entfernt.",
   "remote.e2e.anywhere": "Von überall erreichbar · Ende-zu-Ende-verschlüsselt",
   "remote.e2e.connecting": "Verbindung zu MausBot Relay…",
-  "remote.e2e.local": "In diesem WLAN und über Tailscale · Ende-zu-Ende-verschlüsselt"
+  "remote.e2e.local": "In diesem WLAN und über Tailscale · Ende-zu-Ende-verschlüsselt",
+  "composer.context.title": "Kontext",
+  "composer.context.ofWindow": "{tokens} / {window}",
+  "composer.context.tokens": "{tokens} Tokens",
+  "composer.context.total": "Gesamt",
+  "composer.context.lastMessage": "Letzte Nachricht",
+  "composer.context.uncached": "Nicht zwischengespeicherte Eingabe",
+  "composer.context.cached": "Zwischengespeicherte Eingabe",
+  "composer.context.input": "Eingabe",
+  "composer.context.output": "Ausgabe",
+  "composer.context.cache": "Cache",
+  "composer.context.cacheWarm": "Warm",
+  "composer.context.cacheStopped": "Gestoppt"
 }

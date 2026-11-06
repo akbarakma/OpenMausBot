@@ -17,8 +17,9 @@ const fixture = vi.hoisted(() => ({
   frameDrawn: vi.fn(),
   notifications: [] as Array<{ read: boolean }>,
   notificationsOpen: false,
+  offerRail: vi.fn(),
 }));
-vi.mock("@/lib/chrome-rail", () => ({ useChromeRail: () => fixture.rail, setChromeRailHidden: () => {}, sayFrameDrawn: fixture.frameDrawn }));
+vi.mock("@/lib/chrome-rail", () => ({ useChromeRail: () => fixture.rail, setChromeRailHidden: () => {}, sayFrameDrawn: fixture.frameDrawn, useOfferChromeRail: fixture.offerRail }));
 vi.mock("@/lib/updater", () => ({ useUpdaterState: () => fixture.update }));
 vi.mock("@/lib/place-look", () => ({ usePlaceLook: () => fixture.look }));
 vi.mock("@/state/store", () => ({ useStore: () => ({ state: { config: fixture.config, notifications: fixture.notifications, notificationsOpen: fixture.notificationsOpen }, dispatch: fixture.dispatch }) }));
@@ -50,6 +51,7 @@ beforeEach(() => {
   fixture.frameDrawn.mockClear();
   fixture.notifications = [];
   fixture.notificationsOpen = false;
+  fixture.offerRail.mockClear();
   place = { local: false, name: "My Cloud", origin: "https://cloud.example", color: "blue" };
   Object.assign(window, { ogb: { workspaces: { state: async () => place, onChanged: () => () => {}, menu: async () => {} } } });
 });
@@ -144,6 +146,13 @@ describe("the window frame's top bar", () => {
     await act(async () => root!.render(createElement(WindowFrameBar)));
     expect(bar()).not.toBeNull();
     expect(fixture.frameDrawn).toHaveBeenLastCalledWith(true);
+  });
+
+  it("offers the rail a way back with the frame off too, so a rail hidden in Settings stays hidden", async () => {
+    fixture.windowFrame = false;
+    await mount(createElement(WindowFrameBar));
+    expect(bar()).toBeNull();
+    expect(fixture.offerRail).toHaveBeenCalled();
   });
 
   it("opens the app's settings", async () => {
