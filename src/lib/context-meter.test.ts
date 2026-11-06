@@ -41,6 +41,17 @@ describe("contextTokenRows", () => {
     ]);
   });
 
+  it("leaves the last message's split blank when only the totals know cache reads", () => {
+    expect(contextTokenRows(usage({
+      input: 1_138_000, cachedInput: 1_100_000, output: 52_000,
+      lastTurn: { input: 800, output: 40, costUsd: null },
+    }))).toEqual([
+      { key: "uncached", total: 38_000, last: undefined },
+      { key: "cached", total: 1_100_000, last: undefined },
+      { key: "output", total: 52_000, last: 40 },
+    ]);
+  });
+
   it("shows one input row when cache reads are unknown, and no last column without a last turn", () => {
     expect(contextTokenRows(usage({ input: 40_000, output: 5_000 }))).toEqual([
       { key: "input", total: 40_000, last: undefined },

@@ -35,8 +35,8 @@ export function contextTokenRows(usage: TaskUsage): TokenRow[] {
   const last = usage.lastTurn && hasFiniteCost(usage.lastTurn.input) ? usage.lastTurn : undefined;
   const input: TokenRow[] = cachedKnown(usage)
     ? [
-      { key: "uncached", total: uncachedInput(usage), last: last && uncachedInput(last) },
-      { key: "cached", total: cachedInput(usage), last: last && cachedInput(last) },
+      { key: "uncached", total: uncachedInput(usage), last: last && cachedKnown(last) ? uncachedInput(last) : undefined },
+      { key: "cached", total: cachedInput(usage), last: last && cachedKnown(last) ? cachedInput(last) : undefined },
     ]
     : [{ key: "input", total: usage.input, last: last?.input }];
   return [...input, { key: "output", total: usage.output, last: last?.output }];

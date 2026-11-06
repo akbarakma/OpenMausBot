@@ -5,7 +5,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Bot, Message, TaskUsage } from "@/state/store";
 
-const fixture = vi.hoisted(() => ({ advanced: false, api: vi.fn() }));
+const fixture = vi.hoisted(() => ({ advanced: false, api: vi.fn(), resized: [] as Array<() => void> }));
 vi.mock("@/state/store", async (importOriginal) => {
   const original = await importOriginal<typeof import("@/state/store")>();
   return {
@@ -43,6 +43,12 @@ const hover = () => {
 
 beforeEach(() => {
   vi.useFakeTimers();
+  fixture.resized = [];
+  vi.stubGlobal("ResizeObserver", class {
+    constructor(private readonly callback: () => void) {}
+    observe() { fixture.resized.push(this.callback); }
+    disconnect() { fixture.resized = fixture.resized.filter((callback) => callback !== this.callback); }
+  });
   fixture.advanced = false;
   fixture.api.mockReset().mockResolvedValue({});
   host = document.createElement("div");
@@ -52,6 +58,7 @@ beforeEach(() => {
 afterEach(() => {
   flushSync(() => root.unmount());
   host.remove();
+  vi.unstubAllGlobals();
   vi.useRealTimers();
 });
 
@@ -99,6 +106,41 @@ describe("ComposerContextMeter", () => {
     expect(card()!.querySelector("button")).toBeNull();
     render(botWith(usage(176_000), { busy: true }));
     expect(card()!.querySelector("button")!.disabled).toBe(true);
+  });
+
+  it("moves the card up when Compact now appears while it is pinned open", () => {
+    const triggerTop = 500, gap = 14;
+    let height = 80;
+    vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockImplementation(function (this: HTMLElement) {
+      return this.matches("[data-composer-context-card]") ? height : 0;
+    });
+    render(botWith(usage(120_000)));
+    vi.spyOn(ring()!, "getBoundingClientRect").mockReturnValue({ top: triggerTop, bottom: triggerTop + 28, left: 900, right: 928 } as DOMRect);
+    flushSync(() => ring()!.click());
+    expect(card()!.style.top).toBe(`${triggerTop - gap - 80}px`);
+    height = 120;
+    render(botWith(usage(176_000)));
+    flushSync(() => fixture.resized.forEach((callback) => callback()));
+    expect(card()!.style.top).toBe(`${triggerTop - gap - 120}px`);
+  });
+
+  it("takes keyboard focus into the card and gives it back to the ring on Escape", () => {
+    render(botWith(usage(176_000)));
+    ring()!.focus();
+    flushSync(() => ring()!.dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 0 })));
+    flushSync(() => vi.advanceTimersByTime(0));
+    expect(document.activeElement?.textContent).toBe("Compact now");
+    flushSync(() => window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" })));
+    expect(document.activeElement).toBe(ring());
+  });
+
+  it("returns focus to the ring when Tab leaves the card", () => {
+    render(botWith(usage(176_000)));
+    flushSync(() => ring()!.dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 0 })));
+    const compact = document.activeElement as HTMLElement;
+    flushSync(() => compact.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", bubbles: true })));
+    expect(document.activeElement).toBe(ring());
+    expect(ring()!.getAttribute("aria-expanded")).toBe("false");
   });
 
   it("pins the card open on click and closes it on Escape", () => {

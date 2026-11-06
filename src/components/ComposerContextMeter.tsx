@@ -149,6 +149,7 @@ export function ComposerContextMeter({ bot, compact }: { bot: Bot; compact: bool
   const triggerRef = useRef<HTMLButtonElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const focusCard = useRef(false);
   const cardId = useId();
   const motion = useMenuMotion(open && reading !== null);
 
@@ -161,8 +162,10 @@ export function ComposerContextMeter({ bot, compact }: { bot: Bot; compact: bool
     clearTimer();
     timer.current = setTimeout(() => setOpen(next), delay);
   };
-  const close = () => {
+  const close = (refocus = false) => {
     clearTimer();
+    focusCard.current = false;
+    if (refocus || cardRef.current?.contains(document.activeElement)) triggerRef.current?.focus();
     setPinned(false);
     setOpen(false);
   };
@@ -170,7 +173,13 @@ export function ComposerContextMeter({ bot, compact }: { bot: Bot; compact: bool
   const leave = (event: React.PointerEvent) => { if (event.pointerType !== "touch" && !pinned) later(false, CLOSE_DELAY_MS); };
 
   const inside = useRef({ contains: (target: unknown) => [triggerRef.current, cardRef.current].some((node) => node?.contains(target as Node)) });
-  usePopoverDismiss(open, inside, close);
+  usePopoverDismiss(open, inside, () => close());
+
+  useEffect(() => {
+    if (!open || !position || !focusCard.current) return;
+    focusCard.current = false;
+    cardRef.current?.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus();
+  }, [open, position]);
 
   useLayoutEffect(() => {
     if (!motion.shown) return;
@@ -183,9 +192,12 @@ export function ComposerContextMeter({ bot, compact }: { bot: Bot; compact: bool
       setPosition({ left, top: above >= EDGE ? above : box.bottom + GAP });
     };
     place();
+    const resized = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(place);
+    if (cardRef.current) resized?.observe(cardRef.current);
     window.addEventListener("resize", place);
     window.addEventListener("scroll", place, true);
     return () => {
+      resized?.disconnect();
       window.removeEventListener("resize", place);
       window.removeEventListener("scroll", place, true);
     };
@@ -205,10 +217,15 @@ export function ComposerContextMeter({ bot, compact }: { bot: Bot; compact: bool
         aria-controls={open ? cardId : undefined}
         onPointerEnter={enter}
         onPointerLeave={leave}
-        onClick={() => {
+        onClick={(event) => {
           clearTimer();
           if (open && pinned) close();
-          else { setPinned(true); setOpen(true); }
+          else {
+            // event.detail is 0 for a click from Enter or Space: the card sits at the end of <body>, out of Tab order.
+            focusCard.current = event.detail === 0;
+            setPinned(true);
+            setOpen(true);
+          }
         }}
         className={cn(
           "relative flex shrink-0 cursor-pointer items-center justify-center rounded-full animate-[slot-fade-in_200ms_ease-out] before:absolute before:-inset-1.5 before:content-[''] hover:bg-ink/[0.06]",
@@ -228,6 +245,11 @@ export function ComposerContextMeter({ bot, compact }: { bot: Bot; compact: bool
           {...motion.exitProps}
           onPointerEnter={enter}
           onPointerLeave={leave}
+          onKeyDown={(event) => {
+            if (event.key !== "Tab") return;
+            event.preventDefault();
+            close(true);
+          }}
           style={{ position: "fixed", left: position?.left ?? 0, top: position?.top ?? 0, visibility: position ? undefined : "hidden" }}
           className={cn(
             "popover-surface z-[60] rounded-[var(--radius-menu)] border border-hairline/50 bg-menu px-3.5 py-3 shadow-lg",
