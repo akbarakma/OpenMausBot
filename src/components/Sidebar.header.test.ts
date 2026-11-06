@@ -65,13 +65,13 @@ describe("sidebar header", () => {
     expect(html).not.toMatch(collapse);
   });
 
-  it.each(["comfortable", "icons"] as const)("keeps the Inbox and add, no activity menu and no collapse button in Simple mode at %s density: its edge is dragged instead", (density) => {
+  it.each(["comfortable", "icons"] as const)("keeps the Inbox, no activity menu and no collapse button in Simple mode at %s density, with add only when expanded: its edge is dragged instead", (density) => {
     fixture.advanced = false;
     fixture.density = density;
     const html = render();
     expect(html).toContain('aria-label="Inbox"');
     expect(html).not.toContain('aria-label="Active Threads"');
-    expect(html).toContain('aria-label="New or share"');
+    expect(html.includes('aria-label="New or share"')).toBe(density === "comfortable");
     expect(html).not.toMatch(collapse);
     expect(html, "the edge that is dragged, open or as avatars, so the avatars are never a dead end").toMatch(/role="separator" aria-label="Resize sidebar"/);
   });
@@ -206,7 +206,7 @@ describe("sidebar top row", () => {
     expect(html, "the field replaces the round Search button").not.toContain("data-sidebar-search-toggle");
     expect(html.match(/data-sidebar-inbox=/g), "no second Inbox row below").toHaveLength(1);
     fixture.density = "icons";
-    expect(topRow(render()), "the avatar rail keeps its own top").not.toContain("pt-[38px]");
+    expect(classesOf(render(), 'data-sidebar-top-row="true"'), "the avatar rail keeps its own top").not.toContain("pt-[38px]");
   });
 
   it("with the frame turned off on Windows, its own title bar is back: nothing makes room and nothing drags", () => {
@@ -227,7 +227,7 @@ describe("sidebar top row", () => {
     expect(buttons).toBeGreaterThan(spacer);
   });
 
-  it("collapses Simple mode to a rail: round search and + on top (the frame's top bar holds the lights), nothing on the edge, and Apps and the account at the foot", () => {
+  it("collapses Simple mode to a rail: bots from the top (the frame's top bar holds the lights), nothing on the edge, and Apps, the Inbox and the account at the foot", () => {
     fixture.advanced = false;
     fixture.density = "icons";
     fixture.windowChrome = "mac-inset";
@@ -237,9 +237,9 @@ describe("sidebar top row", () => {
     expect(top).not.toContain("data-traffic-light-space");
     expect(top).not.toContain("data-sidebar-top-buttons");
     expect(top).not.toContain("data-workspace-switcher");
-    expect(top.indexOf('aria-label="Search bots and messages"')).toBeLessThan(top.indexOf('aria-label="New or share"'));
-    expect(top).toMatch(/data-sidebar-rail-top="true" class="flex flex-col items-center gap-2 pt-1"/);
-    expect(top).toMatch(/aria-label="New or share" class="[^"]*\bsize-9\b[^"]*\brounded-full\b/);
+    expect(top).not.toMatch(/<button[^>]*aria-label="Search bots and messages"/);
+    expect(top).not.toContain("data-sidebar-inbox");
+    expect(classesOf(top, 'data-sidebar-top-row="true"'), "the first bot starts 8px under the traffic lights").toContain("pt-2.5");
     const foot = html.slice(html.indexOf("data-sidebar-rail-footer"));
     const at = (marker: string) => {
       const index = foot.indexOf(marker);
@@ -250,6 +250,7 @@ describe("sidebar top row", () => {
     expect(foot).not.toContain('aria-label="Search bots and messages"');
     const positions = [
       at('data-sidebar-nav="apps"'),
+      at("data-sidebar-inbox"),
       at("data-sidebar-account"),
     ];
     expect(positions).toEqual([...positions].sort((a, b) => a - b));
@@ -258,7 +259,9 @@ describe("sidebar top row", () => {
     expect(foot).not.toContain('data-sidebar-nav="automations"');
     expect(foot).not.toContain('data-sidebar-nav="team-map"');
     expect(html).not.toContain("Switch server:");
-    expect(html.match(/aria-label="New or share"/g)).toHaveLength(1);
+    expect(foot).toMatch(/data-sidebar-inbox="0" aria-label="Inbox"[^>]*class="[^"]*\bsize-9\b[^"]*\brounded-full\b/);
+    expect(html).not.toContain('aria-label="New or share"');
+    expect(html.match(/data-sidebar-inbox=/g)).toHaveLength(1);
   });
 
   it("stacks the icons rail unchanged and keeps the icon-only switcher beneath it", () => {

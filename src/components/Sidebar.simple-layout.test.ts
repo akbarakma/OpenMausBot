@@ -81,6 +81,7 @@ const sectionOrder = (tree: ReactElement<Props>[]) => tree.map((node) => node.pr
 const headers = (tree: ReactElement<Props>[]) => tree.filter((node) => node.type === SidebarSectionHeader) as ReactElement<Parameters<typeof SidebarSectionHeader>[0]>[];
 const listedBots = (tree: ReactElement<Props>[]) => tree.map((node) => (node.props.bot as Bot | undefined)?.id).filter(Boolean);
 const labelled = (tree: ReactElement<Props>[], label: string) => tree.some((node) => node.props["aria-label"] === label);
+const button = (tree: ReactElement<Props>[], label: string) => tree.some((node) => node.type === "button" && node.props["aria-label"] === label);
 
 beforeEach(() => {
   fixture.values = [];
@@ -308,24 +309,15 @@ describe("Simple-mode sidebar layout", () => {
     expect(tree.some((node) => node.props["data-sidebar-top-buttons"] !== undefined)).toBe(false);
   });
 
-  it("puts round search and the same + menu at the top of the rail, and dragging its edge out opens it again", () => {
+  it("keeps no search and no + in the rail, and dragging its edge out brings both back", () => {
     setSidebarDensity("icons");
-    const top = () => render().tree.find((node) => node.props["data-sidebar-rail-top"] !== undefined)!;
-    const plus = () => nodes(top().props.children).find((node) => node.type === "button" && node.props["aria-label"] === "New or share")!;
-    expect(plus().props.className).toEqual(expect.stringContaining("size-9"));
-    (plus().props.onClick as () => void)();
-    const menu = nodes(top().props.children).find((node) => /\bmin-w-\[200px\]/.test(node.props.className ?? ""))!;
-    expect(menu.props.className).toEqual(expect.stringContaining("left-full top-0"));
-    expect(menu.props.className).toEqual(expect.stringContaining("rounded-[var(--radius-menu)]"));
-    const item = (label: string) => nodes(top().props.children).find((node) => node.type === "button" && nodes(node.props.children).concat(node).some((part) => Children.toArray(part.props.children).includes(label)));
-    expect(item("Create department"), "Simple makes a department from its bots, by dragging one onto another or from a bot's menu").toBeUndefined();
-    expect(item("New chat"), "a new conversation starts from the bot panel").toBeUndefined();
-    expect(item("New bot")).toBeDefined();
-    expect(item("New group chat")).toBeDefined();
-    expect(item("Templates")).toBeDefined();
+    expect(button(render().tree, "Search bots and messages")).toBe(false);
+    expect(button(render().tree, "New or share")).toBe(false);
     edge(render().tree)!.onAvatars(false);
     expect(fixture.storage.get(SIDEBAR_DENSITY_KEY)).toBe("comfortable");
     expect(render().tree.some((node) => node.type === SimpleRailFooter)).toBe(false);
+    expect(render().tree.some((node) => node.type === SidebarSearchToggle)).toBe(true);
+    expect(button(render().tree, "New or share")).toBe(true);
   });
 
   it("New Bot makes a bot at once in both modes, Chief of Staff or not; Advanced keeps Create department and Templates", () => {
@@ -348,24 +340,11 @@ describe("Simple-mode sidebar layout", () => {
     expect(fixture.dispatch.mock.calls.map(([action]) => action)).toEqual([{ type: "newBot" }]);
   });
 
-  const railSearch = (tree: ReactElement<Props>[]) => tree.find((node) => node.type === "button" && node.props["aria-label"] === "Search bots and messages")!.props.onClick as () => void;
-
-  it("opens the search pill from the rail's search button by expanding the sidebar", () => {
-    setSidebarDensity("icons");
-    expect(render().tree.some((node) => node.type === SidebarSearchPill)).toBe(false);
-    railSearch(render().tree)();
-    const { tree } = render();
-    expect(tree.some((node) => node.type === SimpleRailFooter)).toBe(false);
-    expect(tree.some((node) => node.type === SidebarSearchPill)).toBe(true);
-  });
-
-  it("opens the command palette instead when a side panel holds the sidebar collapsed", () => {
-    const opened = vi.fn();
-    window.addEventListener("omb:open-command-palette", opened);
-    const search = railSearch(render(true).tree);
-    expect(edge(render(true).tree), "no edge to drag while a side panel holds it collapsed").toBeUndefined();
-    search();
-    expect(opened).toHaveBeenCalledOnce();
-    expect(render(true).tree.some((node) => node.type === SimpleRailFooter)).toBe(true);
+  it("keeps the rail without search or + when a side panel holds the sidebar collapsed", () => {
+    const { tree } = render(true);
+    expect(edge(tree), "no edge to drag while a side panel holds it collapsed").toBeUndefined();
+    expect(tree.some((node) => node.type === SimpleRailFooter)).toBe(true);
+    expect(button(tree, "Search bots and messages")).toBe(false);
+    expect(button(tree, "New or share")).toBe(false);
   });
 });

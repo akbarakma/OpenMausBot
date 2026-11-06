@@ -64,8 +64,9 @@ Delete on a note and Remove on a skill confirm in `ConfirmDialog` first.
 | `src/components/ContextWarning.tsx` | `useCompact` is exported for the ring's card |
 | `src/components/SidebarSimpleTop.tsx` | `useTopBandLayout`, `TopBandContext`, `useTopBand`, `TOP_BAND_PAD`, `TOP_BAND_HIT`, `TOP_BAND_BUTTON`; `SidebarSearchField`, the search field in the band's row |
 | `src/App.tsx` | Computes the band once and provides `TopBandContext` |
-| `src/components/Sidebar.tsx` | In the top band, the top row holds the Inbox button, the search field and New; the Inbox row, the round Search button and the search field below the row are gone |
-| `src/components/SidebarInboxRow.tsx` | `band` variant: a 36px round Inbox button with its count and running dot; "Inbox" is its tooltip and label |
+| `src/components/Sidebar.tsx` | In the top band, the top row holds the Inbox button, the search field and New; the Inbox row, the round Search button and the search field below the row are gone. In Simple's icon rail, Search, New and the Inbox square are gone from the top, and the first bot starts 8px under the traffic lights |
+| `src/components/SidebarInboxRow.tsx` | `circle` variant: a 36px round Inbox button with its count and running dot; "Inbox" is its tooltip and label |
+| `src/components/SidebarSimpleRail.tsx` | The rail's foot holds Apps, the round Inbox button and the account, in that order |
 | `src/components/ChatHeadPill.tsx` | `band` prop: 36px tall |
 | `src/components/ChatView.tsx` | In the top band, the header's top padding, one row at every width, a `lg` model picker and a round computer button |
 | `src/components/bot-panel/PanelShell.tsx` | In the top band, the header's top padding and 36px share, gear and close buttons with 18px icons |
@@ -88,13 +89,21 @@ buttons, and the computer panel's tabs and close button. Each control is 36px
 tall, with its top at y=38 and its center at y=56. Round buttons take clicks
 2px past their edge, so the target is 40px. `App.tsx` decides once with
 `useTopBandLayout` and shares the answer through `TopBandContext`; the sidebar
-calls `useTopBandLayout` itself. Framed windows, Advanced mode, the icon rail
-(chosen, or forced when a side panel leaves no room), phones and Windows keep
-upstream's layout.
+calls `useTopBandLayout` itself. When the sidebar is the icon rail (chosen, or
+forced when a side panel leaves no room), the chat and the panels keep the
+band and the rail keeps its own top. Framed windows, Advanced mode, phones and
+Windows get no band.
 
 Behind the band's row, the chat header's and the sidebar head's glass layer
 (`data-glass-band` in `src/styles.css`) is a 40% tint of the surface with no
 blur, so what scrolls under it stays sharp and dimmed.
+
+## Simple icon rail
+
+Simple's icon rail has no Search or New. Search is ⌘K, and New is in the
+expanded sidebar. The Inbox is a round button at the rail's foot, between
+Apps and the account. This applies in every window, framed or not, and when a
+side panel forces the rail.
 
 ## Strings
 
@@ -107,7 +116,7 @@ also in every language pack.
 ## Merging an upstream release
 
 1. List upstream's changes to the files above:
-   `git diff <old-tag> <new-tag> -- src/components/bot-panel/ src/components/Composer.tsx src/components/ChatMoreMenu.tsx src/components/ContextWarning.tsx src/lib/usage.ts src/components/ModelPicker.tsx src/components/ModelTrigger.tsx src/components/DefaultBotControls.tsx src/components/bot-settings/BotApiCard.tsx src/components/ComputerPanel.tsx src/state/store.tsx src/components/Sidebar.tsx src/components/SidebarSimpleTop.tsx src/components/SidebarInboxRow.tsx src/components/ChatHeadPill.tsx src/components/ChatView.tsx src/components/bot-access/ShareBotButton.tsx src/App.tsx src/styles.css`.
+   `git diff <old-tag> <new-tag> -- src/components/bot-panel/ src/components/Composer.tsx src/components/ChatMoreMenu.tsx src/components/ContextWarning.tsx src/lib/usage.ts src/components/ModelPicker.tsx src/components/ModelTrigger.tsx src/components/DefaultBotControls.tsx src/components/bot-settings/BotApiCard.tsx src/components/ComputerPanel.tsx src/state/store.tsx src/components/Sidebar.tsx src/components/SidebarSimpleTop.tsx src/components/SidebarInboxRow.tsx src/components/SidebarSimpleRail.tsx src/components/ChatHeadPill.tsx src/components/ChatView.tsx src/components/bot-access/ShareBotButton.tsx src/App.tsx src/styles.css`.
 2. Keep upstream's new rows, settings and behaviour. Place each new row in the
    card it belongs to, with a `RowIcon` and no icon tile.
 3. If upstream changes the memory entry grammar in

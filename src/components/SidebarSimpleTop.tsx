@@ -8,11 +8,11 @@ import { PHONE_LAYOUT, useMediaQuery } from "@/lib/use-media-query";
 import { useDesktopCapabilities, windowFramed } from "./DesktopCapabilities";
 import { ELEVATED_CONTROL, ELEVATED_HOVER, ELEVATED_TINT } from "./elevated";
 
-export function useTopBandLayout(sidebarIcons: boolean): boolean {
+export function useTopBandLayout(): boolean {
   const { capabilities } = useDesktopCapabilities();
   const advanced = useAdvancedMode();
   const phone = useMediaQuery(PHONE_LAYOUT);
-  return capabilities.windowChrome === "mac-inset" && !windowFramed(capabilities) && !advanced && !phone && !sidebarIcons;
+  return capabilities.windowChrome === "mac-inset" && !windowFramed(capabilities) && !advanced && !phone;
 }
 
 export const TopBandContext = createContext(false);

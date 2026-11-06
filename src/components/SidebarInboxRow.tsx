@@ -1,5 +1,6 @@
-// The one Inbox row at the top of the sidebar, on every plan and with no account: shaped like a bot's row, with what waits
-// on the person as its count and a dot while any bot is at work. It stays when nothing waits, with no count.
+// The one Inbox button of the sidebar, on every plan and with no account: shaped like a bot's row, or a circle in the top band
+// and at the rail's foot, with what waits on the person as its count and a dot while any bot is at work. It stays when nothing
+// waits, with no count.
 import { Inbox } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { t } from "@/lib/i18n";
@@ -9,9 +10,9 @@ import { inboxFixes, waitingCount } from "./inbox/inbox-view";
 import { ELEVATED_CONTROL, ELEVATED_HOVER, ELEVATED_OPEN } from "./elevated";
 import { TOP_BAND_HIT } from "./SidebarSimpleTop";
 
-export function SidebarInboxRow({ icons, large, band = false, running, onOpened }: {
+export function SidebarInboxRow({ icons, large, circle = false, running, onOpened }: {
   icons: boolean;
-  band?: boolean;
+  circle?: boolean;
   /** Simple's row, sized as its bots' rows are. */
   large: boolean;
   running: boolean;
@@ -30,7 +31,7 @@ export function SidebarInboxRow({ icons, large, band = false, running, onOpened 
     else { openInbox(); onOpened?.(); }
   };
   const dot = running && <span data-inbox-running="" aria-hidden="true" className={cn("absolute -bottom-0.5 -right-0.5 rounded-full border-2 border-panel bg-success", icons ? "size-3" : "size-2.5")} />;
-  if (band) {
+  if (circle) {
     return (
       <button type="button" data-sidebar-inbox={count} aria-label={label} title={label} aria-pressed={open} onClick={toggle}
         className={cn("relative flex size-9 shrink-0 items-center justify-center rounded-full text-ink/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus", TOP_BAND_HIT, ELEVATED_CONTROL, open ? ELEVATED_OPEN : ELEVATED_HOVER)}>
