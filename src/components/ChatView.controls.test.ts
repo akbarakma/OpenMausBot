@@ -94,6 +94,27 @@ describe("the header's right side", () => {
     }
   });
 
+  it("keeps the pill, the model and the computer on one 36px row under the traffic lights in the top band, at any width", async () => {
+    const { TopBandContext } = await import("./SidebarSimpleTop");
+    fixture.advanced = false;
+    fixture.menus = [];
+    fixture.model = null;
+    try {
+      const markup = renderToStaticMarkup(createElement(TopBandContext, { value: true }, createElement(ChatView, { bot })));
+      const classes = (attribute: string) => markup.match(new RegExp(`${attribute}(?:="[^"]*")? class="([^"]*)"`))![1].split(" ");
+      expect(classes("data-chathead-row")).toEqual(expect.arrayContaining(["grid", "gap-x-2"]));
+      expect(classes("data-chathead-row").some((name) => name.includes("flex-wrap"))).toBe(false);
+      expect(classes("data-chathead-identity")).toEqual(expect.arrayContaining(["col-start-2", "justify-self-center"]));
+      expect(classes("data-chathead-controls")).toEqual(expect.arrayContaining(["col-start-3", "justify-self-end"]));
+      expect(fixture.model).toMatchObject({ size: "lg" });
+      const computer = markup.match(/<button[^>]*data-tour="computer"[^>]*>/)![0];
+      expect(computer.split(" ")).toEqual(expect.arrayContaining(["size-9", "before:-inset-0.5"]));
+      expect(markup.match(/<button[^>]*data-chathead-pill="true"[^>]*>/)![0].split(" ")).toContain("h-9");
+    } finally {
+      fixture.advanced = true;
+    }
+  });
+
   it("keeps the model, the computer and ⋯ in a remote client's Simple header, whose settings panel has no room for them", () => {
     fixture.advanced = false;
     window.ogb = { remoteClient: { active: true } } as NonNullable<Window["ogb"]>;

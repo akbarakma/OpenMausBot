@@ -1,9 +1,30 @@
 import { Search, X } from "lucide-react";
-import type { Ref } from "react";
+import { createContext, useContext, type Ref } from "react";
 
 import { cn } from "@/lib/cn";
 import { t } from "@/lib/i18n";
+import { useAdvancedMode } from "@/lib/interface-mode";
+import { PHONE_LAYOUT, useMediaQuery } from "@/lib/use-media-query";
+import { useDesktopCapabilities, windowFramed } from "./DesktopCapabilities";
 import { ELEVATED_CONTROL, ELEVATED_HOVER, ELEVATED_TINT } from "./elevated";
+
+export function useTopBandLayout(sidebarIcons: boolean): boolean {
+  const { capabilities } = useDesktopCapabilities();
+  const advanced = useAdvancedMode();
+  const phone = useMediaQuery(PHONE_LAYOUT);
+  return capabilities.windowChrome === "mac-inset" && !windowFramed(capabilities) && !advanced && !phone && !sidebarIcons;
+}
+
+export const TopBandContext = createContext(false);
+
+export function useTopBand(): boolean {
+  return useContext(TopBandContext);
+}
+
+/** The top band's row starts 8px under the traffic lights, which Electron draws from y=16 to y=30. */
+export const TOP_BAND_PAD = "pt-[38px]";
+
+export const TOP_BAND_HIT = "relative before:absolute before:-inset-0.5 before:rounded-full before:content-[''] before:[-webkit-app-region:no-drag]";
 
 /** Keyboard focus on a Simple row or tile: the focus ring drawn inside its edge. */
 export const SIMPLE_ROW_FOCUS = "focus-visible:outline-2 focus-visible:-outline-offset-2! focus-visible:outline-focus";
@@ -11,6 +32,7 @@ export const SIMPLE_ROW_FOCUS = "focus-visible:outline-2 focus-visible:-outline-
 const SIMPLE_TOP = "flex size-9 shrink-0 items-center justify-center rounded-full text-ink/90";
 const SIMPLE_TOP_FOCUS = "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus";
 export const SIMPLE_TOP_BUTTON = `${SIMPLE_TOP} ${ELEVATED_CONTROL} ${ELEVATED_HOVER} ${SIMPLE_TOP_FOCUS}`;
+export const TOP_BAND_BUTTON = `${SIMPLE_TOP_BUTTON} ${TOP_BAND_HIT}`;
 /** The same round control for the button of the window's rail, which is shown most of the time: its aria-expanded never
  * wears the tint of an open menu. */
 export const SIMPLE_TOP_TOGGLE = `${SIMPLE_TOP} ${ELEVATED_CONTROL} ${ELEVATED_TINT} ${SIMPLE_TOP_FOCUS}`;
@@ -23,7 +45,7 @@ export const PHONE_TOP_BUTTON = "flex size-10 shrink-0 items-center justify-cent
 
 export const SIMPLE_RAIL_BUTTON = "flex size-9 shrink-0 items-center justify-center rounded-xl text-ink-secondary hover:bg-raised/60 hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus";
 
-export function SidebarSearchToggle({ open, onToggle, corner = false, ref }: { open: boolean; onToggle: () => void; corner?: boolean; ref?: Ref<HTMLButtonElement> }) {
+export function SidebarSearchToggle({ open, onToggle, corner = false, band = false, ref }: { open: boolean; onToggle: () => void; corner?: boolean; band?: boolean; ref?: Ref<HTMLButtonElement> }) {
   return (
     <button
       ref={ref}
@@ -33,7 +55,7 @@ export function SidebarSearchToggle({ open, onToggle, corner = false, ref }: { o
       aria-label={t("sidebar.searchAria")}
       aria-expanded={open}
       title={t("sidebar.searchAria")}
-      className={corner ? SIMPLE_CORNER_BUTTON : SIMPLE_TOP_BUTTON}
+      className={corner ? SIMPLE_CORNER_BUTTON : band ? TOP_BAND_BUTTON : SIMPLE_TOP_BUTTON}
     >
       <Search size={corner ? 17 : 18} strokeWidth={1.5} aria-hidden="true" />
     </button>

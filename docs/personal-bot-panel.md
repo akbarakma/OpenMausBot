@@ -62,10 +62,35 @@ Delete on a note and Remove on a skill confirm in `ConfirmDialog` first.
 | `src/components/Composer.tsx` | Renders `ComposerContextMeter` in one-to-one chats; stays at 1,000 lines for the size ratchet |
 | `src/components/ChatMoreMenu.tsx` | No Usage item |
 | `src/components/ContextWarning.tsx` | `useCompact` is exported for the ring's card |
+| `src/components/SidebarSimpleTop.tsx` | `useTopBandLayout`, `TopBandContext`, `useTopBand`, `TOP_BAND_PAD`, `TOP_BAND_HIT`, `TOP_BAND_BUTTON`; `SidebarSearchToggle` takes `band` |
+| `src/App.tsx` | Computes the band once and provides `TopBandContext` |
+| `src/components/Sidebar.tsx` | In the top band, the top row holds the Inbox pill, Search and New, and the Inbox row below is gone |
+| `src/components/SidebarInboxRow.tsx` | `pill` variant: icon, "Inbox" and the count in one 36px pill |
+| `src/components/ChatHeadPill.tsx` | `band` prop: 36px tall |
+| `src/components/ChatView.tsx` | In the top band, the header's top padding, one row at every width, a `lg` model picker and a round computer button |
+| `src/components/bot-panel/PanelShell.tsx` | In the top band, the header's top padding and 36px share, gear and close buttons with 18px icons |
+| `src/components/ChatMoreMenu.tsx`, `src/components/bot-access/ShareBotButton.tsx` | `ChatShareMenu` and `ShareBotButton` take an `icon` size and stroke |
 | `src/components/bot-panel/memory-notes.ts` | `memoryNoteParts` splits `YYYY-MM-DD · from <source> · text` and marks struck or expired notes inactive; `memoryNoteKey` includes the text |
+
+In the top band, `ModelPicker.tsx` has a `lg` size (36px), and `ComputerPanel.tsx` gives its tabs and close
+button the band's padding and 36px height.
 
 `TryAsking.tsx` and its test are deleted, and so is `src/lib/chat-usage-summary.ts`. `SwitchRow` in `rows.tsx` is deleted too,
 because no page uses it.
+
+## Top band
+
+In Simple mode, in a macOS window with the frame off, the traffic lights sit
+alone in a strip at the top. Every top control sits on one row below them.
+This covers the sidebar's Inbox pill, Search and New, the chat's bot pill,
+model picker and computer button, the bot panel's share, gear and close
+buttons, and the computer panel's tabs and close button. Each control is 36px
+tall, with its top at y=38 and its center at y=56. Round buttons take clicks
+2px past their edge, so the target is 40px. `App.tsx` decides once with
+`useTopBandLayout` and shares the answer through `TopBandContext`; the sidebar
+calls `useTopBandLayout` itself. Framed windows, Advanced mode, the icon rail
+(chosen, or forced when a side panel leaves no room), phones and Windows keep
+upstream's layout.
 
 ## Strings
 
@@ -78,12 +103,12 @@ also in every language pack.
 ## Merging an upstream release
 
 1. List upstream's changes to the files above:
-   `git diff <old-tag> <new-tag> -- src/components/bot-panel/ src/components/Composer.tsx src/components/ChatMoreMenu.tsx src/components/ContextWarning.tsx src/lib/usage.ts src/components/ModelPicker.tsx src/components/ModelTrigger.tsx src/components/DefaultBotControls.tsx src/components/bot-settings/BotApiCard.tsx src/components/ComputerPanel.tsx src/state/store.tsx`.
+   `git diff <old-tag> <new-tag> -- src/components/bot-panel/ src/components/Composer.tsx src/components/ChatMoreMenu.tsx src/components/ContextWarning.tsx src/lib/usage.ts src/components/ModelPicker.tsx src/components/ModelTrigger.tsx src/components/DefaultBotControls.tsx src/components/bot-settings/BotApiCard.tsx src/components/ComputerPanel.tsx src/state/store.tsx src/components/Sidebar.tsx src/components/SidebarSimpleTop.tsx src/components/SidebarInboxRow.tsx src/components/ChatHeadPill.tsx src/components/ChatView.tsx src/components/bot-access/ShareBotButton.tsx src/App.tsx`.
 2. Keep upstream's new rows, settings and behaviour. Place each new row in the
    card it belongs to, with a `RowIcon` and no icon tile.
 3. If upstream changes the memory entry grammar in
    `server/memory-entries.ts`, update `memoryNoteParts` and its tests.
 4. If upstream brings back an example-asks card, leave it out of `DetailsTab`.
    If upstream brings back a Usage item in `useChatMoreItems`, leave it out.
-5. Run `corepack pnpm exec vitest run BotSettingsDialog.simple MemoryPage.team memory-notes PanelShell.dom page-registry Conversations.dom BackupAis.dom ModelPicker ComputerPanel.android ComposerContextMeter context-meter ChatMoreMenu`,
+5. Run `corepack pnpm exec vitest run BotSettingsDialog.simple MemoryPage.team memory-notes PanelShell.dom page-registry Conversations.dom BackupAis.dom ModelPicker ComputerPanel.android ComposerContextMeter context-meter ChatMoreMenu Sidebar.header ChatHeadPill ChatView.controls`,
    `corepack pnpm i18n:check`, `typecheck` and `lint`.
