@@ -10,6 +10,7 @@ import type { SidebarMenuItem } from "../SidebarPopoverMenu";
 import { useBotAutomations } from "./AutomationsPage";
 import { BotConversations } from "./Conversations";
 import { ComputerCard } from "./ComputerTab";
+import { PanelContextCard } from "./ContextCard";
 import { chatFolder, KnowsCard, libraryItems } from "./LibraryTab";
 import type { SimplePageId } from "./page-registry";
 import { Card, NavRow, RowIcon, rowCls } from "./rows";
@@ -72,6 +73,8 @@ export function PanelHome({ bot, onOpen }: { bot: Bot; onOpen: (page: SimplePage
         {find && <ItemRow item={find} />}
         <NavRow data-panel-page="activity" icon={History} title={t("activity.panel.title")} onClick={() => onOpen("activity")} />
       </Card>
+
+      <PanelContextCard bot={bot} />
 
       <BotConversations bot={bot} />
     </div>

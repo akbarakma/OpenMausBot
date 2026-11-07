@@ -1106,7 +1106,7 @@ export function ChatView({ bot: profile }: { bot: Bot }) {
               <span className="@max-4xl/chathead:hidden">{t("chat.stop")}</span>
             </button>
           )}
-          <ThreadContextWarning bot={bot} messages={messages} />
+          {advanced && <ThreadContextWarning bot={bot} messages={messages} />}
           {phone && <UsageAlert engine={bot.modelSelection?.instanceId} />}
           {/* The model stays in view in both modes; Simple mode moves the computer and ⋯ into the bot panel. */}
           {!phone && <ModelPicker key={bot.threadId} bot={bot} threadId={bot.threadId} />}

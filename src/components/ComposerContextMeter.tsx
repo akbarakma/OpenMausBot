@@ -6,7 +6,6 @@ import { cn } from "@/lib/cn";
 import { threadContextWarning } from "@/lib/context-warning";
 import { contextMeterReading, contextTokenRows, type ContextMeterReading } from "@/lib/context-meter";
 import { t } from "@/lib/i18n";
-import { useAdvancedMode } from "@/lib/interface-mode";
 import { formatTokens } from "@/lib/usage";
 import { usePopoverDismiss } from "@/hooks/use-popover-dismiss";
 import { visibleMessages, type Bot, type TaskUsage } from "@/state/store";
@@ -88,16 +87,40 @@ function TokenTable({ usage }: { usage: TaskUsage }) {
   );
 }
 
-function ContextCard({ bot, usage, reading, keepWarm, advanced }: {
+export function ContextBar({ reading }: { reading: ContextMeterReading }) {
+  return (
+    <div className="mt-2.5 h-1 overflow-hidden rounded-full bg-ink/[0.08]" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={reading.fill}>
+      <div
+        className={cn("h-full rounded-full transition-[width,background-color] duration-500 ease-out motion-reduce:transition-none", reading.danger ? "bg-danger" : "bg-ink-secondary")}
+        style={{ width: `${reading.fill}%` }}
+      />
+    </div>
+  );
+}
+
+export function CompactButton({ bot, usage }: { bot: Bot; usage: TaskUsage }) {
+  const { pending, run } = useCompact();
+  if (threadContextWarning(usage, visibleMessages(bot)) === null) return null;
+  const busy = Boolean(bot.busy);
+  return (
+    <button
+      type="button"
+      disabled={busy || pending}
+      title={busy ? t("contextWarning.busy") : undefined}
+      onClick={() => run(`/api/bots/${bot.id}/compact`, { threadId: bot.threadId })}
+      className="mt-3 flex h-[30px] w-full cursor-pointer items-center justify-center rounded-[9px] bg-ink/[0.08] text-[13px] font-medium text-ink hover:bg-ink/[0.12] disabled:cursor-not-allowed disabled:opacity-50"
+    >
+      {pending ? t("contextWarning.compacting") : t("contextWarning.compactNow")}
+    </button>
+  );
+}
+
+function ContextCard({ bot, usage, reading, keepWarm }: {
   bot: Bot;
   usage: TaskUsage;
   reading: ContextMeterReading;
   keepWarm?: CacheKeepWarmStatus;
-  advanced: boolean;
 }) {
-  const { pending, run } = useCompact();
-  const canCompact = threadContextWarning(usage, visibleMessages(bot)) !== null;
-  const busy = Boolean(bot.busy);
   return (
     <>
       <div className="flex items-baseline justify-between gap-4">
@@ -108,38 +131,16 @@ function ContextCard({ bot, usage, reading, keepWarm, advanced }: {
             : t("composer.context.tokens", { tokens: formatTokens(reading.tokens) })}
         </span>
       </div>
-      {reading.percent !== undefined && (
-        <div className="mt-2.5 h-1 overflow-hidden rounded-full bg-ink/[0.08]" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={reading.fill}>
-          <div
-            className={cn("h-full rounded-full transition-[width,background-color] duration-500 ease-out motion-reduce:transition-none", reading.danger ? "bg-danger" : "bg-ink-secondary")}
-            style={{ width: `${reading.fill}%` }}
-          />
-        </div>
-      )}
-      {advanced && (
-        <>
-          <div className="-mx-3.5 my-3 h-px bg-ink/[0.06]" />
-          <TokenTable usage={usage} />
-          {keepWarm && <><div className="-mx-3.5 my-3 h-px bg-ink/[0.06]" /><CacheState status={keepWarm} /></>}
-        </>
-      )}
-      {canCompact && (
-        <button
-          type="button"
-          disabled={busy || pending}
-          title={busy ? t("contextWarning.busy") : undefined}
-          onClick={() => run(`/api/bots/${bot.id}/compact`, { threadId: bot.threadId })}
-          className="mt-3 flex h-[30px] w-full cursor-pointer items-center justify-center rounded-[9px] bg-ink/[0.08] text-[13px] font-medium text-ink hover:bg-ink/[0.12] disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {pending ? t("contextWarning.compacting") : t("contextWarning.compactNow")}
-        </button>
-      )}
+      {reading.percent !== undefined && <ContextBar reading={reading} />}
+      <div className="-mx-3.5 my-3 h-px bg-ink/[0.06]" />
+      <TokenTable usage={usage} />
+      {keepWarm && <><div className="-mx-3.5 my-3 h-px bg-ink/[0.06]" /><CacheState status={keepWarm} /></>}
+      <CompactButton bot={bot} usage={usage} />
     </>
   );
 }
 
-export function ComposerContextMeter({ bot, compact }: { bot: Bot; compact: boolean }) {
-  const advanced = useAdvancedMode();
+export function ComposerContextMeter({ bot }: { bot: Bot }) {
   const task = bot.tasks?.find((entry) => entry.threadId === bot.threadId);
   const usage = task?.usage;
   const reading = contextMeterReading(usage);
@@ -201,7 +202,7 @@ export function ComposerContextMeter({ bot, compact }: { bot: Bot; compact: bool
       window.removeEventListener("resize", place);
       window.removeEventListener("scroll", place, true);
     };
-  }, [motion.shown, advanced]);
+  }, [motion.shown]);
 
   if (!reading || !usage) return null;
   const label = t("chat.usage.contextShort", { value: reading.percent === undefined ? formatTokens(reading.tokens) : `${reading.percent}%` });
@@ -228,8 +229,7 @@ export function ComposerContextMeter({ bot, compact }: { bot: Bot; compact: bool
           }
         }}
         className={cn(
-          "relative flex shrink-0 cursor-pointer items-center justify-center rounded-full animate-[slot-fade-in_200ms_ease-out] before:absolute before:-inset-1.5 before:content-[''] hover:bg-ink/[0.06]",
-          compact ? "size-7" : "size-8",
+          "relative flex shrink-0 cursor-pointer items-center justify-center rounded-full animate-[slot-fade-in_200ms_ease-out] before:absolute before:-inset-1.5 before:content-[''] hover:bg-ink/[0.06] size-8",
           open && "bg-ink/[0.06]",
         )}
       >
@@ -252,12 +252,11 @@ export function ComposerContextMeter({ bot, compact }: { bot: Bot; compact: bool
           }}
           style={{ position: "fixed", left: position?.left ?? 0, top: position?.top ?? 0, visibility: position ? undefined : "hidden" }}
           className={cn(
-            "popover-surface z-[60] rounded-[var(--radius-menu)] border border-hairline/50 bg-menu px-3.5 py-3 shadow-lg",
-            advanced ? "w-[300px]" : "w-[260px]",
+            "popover-surface z-[60] w-[300px] rounded-[var(--radius-menu)] border border-hairline/50 bg-menu px-3.5 py-3 shadow-lg",
             motion.className,
           )}
         >
-          <ContextCard bot={bot} usage={usage} reading={reading} keepWarm={task?.cacheKeepWarm} advanced={advanced} />
+          <ContextCard bot={bot} usage={usage} reading={reading} keepWarm={task?.cacheKeepWarm} />
         </div>,
         document.body,
       )}

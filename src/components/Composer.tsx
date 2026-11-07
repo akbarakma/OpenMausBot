@@ -937,7 +937,7 @@ export function Composer({
             <Mic size={16} strokeWidth={1.75} absoluteStrokeWidth className="[&_rect]:fill-current" />
           </button>
         )}
-        {bot && !group && !locked && <ComposerContextMeter bot={bot} compact={simpleDock} />}
+        {bot && !group && !locked && advanced && <ComposerContextMeter bot={bot} />}
           {(simpleDock ? stoppable : busy) && !locked && (
           <button
             onClick={interruptTurn}

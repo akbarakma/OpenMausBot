@@ -5,7 +5,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Bot, Message, TaskUsage } from "@/state/store";
 
-const fixture = vi.hoisted(() => ({ advanced: false, api: vi.fn(), resized: [] as Array<() => void> }));
+const fixture = vi.hoisted(() => ({ api: vi.fn(), resized: [] as Array<() => void> }));
 vi.mock("@/state/store", async (importOriginal) => {
   const original = await importOriginal<typeof import("@/state/store")>();
   return {
@@ -14,10 +14,6 @@ vi.mock("@/state/store", async (importOriginal) => {
     useStore: () => ({ state: original.initialState, dispatch: vi.fn() }),
   };
 });
-vi.mock("@/lib/interface-mode", async (importOriginal) => ({
-  ...await importOriginal<typeof import("@/lib/interface-mode")>(),
-  useAdvancedMode: () => fixture.advanced,
-}));
 
 const { ComposerContextMeter } = await import("./ComposerContextMeter");
 
@@ -32,7 +28,7 @@ const usage = (tokens: number, extra: Partial<TaskUsage> = {}): TaskUsage =>
 
 let host: HTMLDivElement;
 let root: Root;
-const render = (bot: Bot) => flushSync(() => root.render(createElement(ComposerContextMeter, { bot, compact: true })));
+const render = (bot: Bot) => flushSync(() => root.render(createElement(ComposerContextMeter, { bot })));
 const ring = () => host.querySelector<HTMLButtonElement>("[data-composer-context]");
 const card = () => document.querySelector<HTMLElement>("[data-composer-context-card]");
 const hover = () => {
@@ -49,7 +45,6 @@ beforeEach(() => {
     observe() { fixture.resized.push(this.callback); }
     disconnect() { fixture.resized = fixture.resized.filter((callback) => callback !== this.callback); }
   });
-  fixture.advanced = false;
   fixture.api.mockReset().mockResolvedValue({});
   host = document.createElement("div");
   document.body.append(host);
@@ -70,20 +65,13 @@ describe("ComposerContextMeter", () => {
     expect(ring()).toBeNull();
   });
 
-  it("opens a card with only the context reading on hover in Simple mode", () => {
-    render(botWith(usage(26_000)));
+  it("opens a card with the reading, its bar and the token table on hover", () => {
+    render(botWith(usage(26_000, { lastTurn: { input: 26_000, cachedInput: 24_800, output: 860, costUsd: null } })));
     expect(ring()!.getAttribute("aria-label")).toBe("13% context used");
     expect(card()).toBeNull();
     hover();
-    expect(card()!.textContent).toBe("Context13% · 26k / 200k");
+    expect(card()!.textContent).toMatch(/^Context13% · 26k \/ 200k/);
     expect(card()!.querySelector("[role=progressbar]")!.getAttribute("aria-valuenow")).toBe("13");
-    expect(card()!.querySelector("table")).toBeNull();
-  });
-
-  it("adds the token table in Advanced mode", () => {
-    fixture.advanced = true;
-    render(botWith(usage(26_000, { lastTurn: { input: 26_000, cachedInput: 24_800, output: 860, costUsd: null } })));
-    hover();
     const rows = [...card()!.querySelectorAll("tbody tr")].map((row) => [...row.children].map((cell) => cell.textContent));
     expect(rows).toEqual([
       ["Uncached input", "38k", "1.2k"],
