@@ -124,8 +124,8 @@ export function TriggersPage({ onBack, onOpenRoom }: { onBack: () => void; onOpe
                           </span>
                         ) : <StatusMark status={status} className="mt-[5px]" />}
                         <div className="min-w-0 flex-1">
-                          <button type="button" onClick={() => setOpenId(automation.id)} className="block text-left text-[15px] font-medium leading-snug text-ink hover:text-accent-text">{name || sentenceOf(automation)}</button>
-                          {name && <div className="mt-0.5 text-[13px] text-ink">{sentenceOf(automation)}</div>}
+                          <button type="button" onClick={() => setOpenId(automation.id)} title={name || sentenceOf(automation)} className="block max-w-full cursor-pointer truncate text-left text-[15px] font-medium leading-snug text-ink hover:text-accent-text">{name || sentenceOf(automation)}</button>
+                          {name && <div title={sentenceOf(automation)} className="mt-0.5 truncate text-[13px] text-ink">{sentenceOf(automation)}</div>}
                           {status.state === "needs-you"
                             ? <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[13px] text-warning">{t("automations.needsYou", { reason: status.reason ?? "" })}<FixButton automation={automation} status={status} actions={actions} onEdit={() => setEditing({ kind: automation.kind, id: automation.id })} /></div>
                             : <div className="mt-0.5 text-[13px] text-ink-secondary">{owner && <><span className="font-medium text-ink">{owner.name}</span> · </>}{statusLine(automation)}</div>}
