@@ -129,9 +129,10 @@ app.whenReady().then(async () => {
   handle("desktop:unread", count => { if (Number.isSafeInteger(count) && count >= 0) app.setBadgeCount(count); });
   handle("window:minimize", () => window.minimize());
   handle("window:toggle-maximize", () => window.isMaximized() ? window.unmaximize() : window.maximize());
-  handle("window:state", () => ({ maximized: window.isMaximized() }));
+  handle("window:state", () => ({ maximized: window.isMaximized(), focused: window.isFocused() }));
   handle("window:close", () => window.close());
   for (const name of ["maximize", "unmaximize"]) window.on(name, () => window.webContents.send("window:maximized-changed", window.isMaximized()));
+  for (const name of ["focus", "blur"]) window.on(name, () => window.webContents.send("window:focus-changed", window.isFocused()));
   window.on("close", () => writeFileSync(stateFile, JSON.stringify({ bounds: window.getBounds(), maximized: window.isMaximized() }), { mode: 0o600 }));
   if (state.maximized) window.maximize();
   Menu.setApplicationMenu(Menu.buildFromTemplate([

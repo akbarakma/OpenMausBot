@@ -46,6 +46,7 @@ if (location.origin === origin) {
       close: () => ipcRenderer.invoke("window:close"),
       state: () => ipcRenderer.invoke("window:state"),
       onMaximizedChanged: listener => subscribe("window:maximized-changed", listener),
+      onFocusChanged: listener => subscribe("window:focus-changed", listener),
     },
   });
 }

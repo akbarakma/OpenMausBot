@@ -32,8 +32,8 @@ function fakeEnvironment(refreshHz = 60) {
       visibility = onChange;
       return { observe() {}, unobserve() {} };
     },
-    documentHidden: () => hidden,
-    onDocumentVisibility: (listener) => visibilityListeners.push(listener),
+    asleep: () => hidden,
+    onAsleepChange: (listener) => visibilityListeners.push(listener),
   };
   const vsync = 1000 / refreshHz;
   let tick = 0;
@@ -193,6 +193,21 @@ describe("mascot clock", () => {
     fake.setHidden(false);
     fake.advance(200);
     expect(draws).toBeGreaterThan(before + 2);
+  });
+
+  it("draws a mascot added while asleep once, so its face shows, then waits", () => {
+    const fake = fakeEnvironment();
+    const clock = createMascotClock(fake.env);
+    clock.add((now) => now + 50);
+    fake.setHidden(true);
+    let draws = 0;
+    clock.add((now) => { draws++; return now + 50; });
+    fake.advance(2000);
+    expect(draws).toBe(1);
+    expect(fake.pendingFrames() + fake.pendingTimers()).toBe(0);
+    fake.setHidden(false);
+    fake.advance(200);
+    expect(draws).toBeGreaterThan(2);
   });
 
   it("forgets a removed mascot", () => {

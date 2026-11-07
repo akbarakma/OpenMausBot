@@ -364,6 +364,11 @@ const bridge = {
       ipcRenderer.on("window:maximized-changed", handler);
       return () => ipcRenderer.removeListener("window:maximized-changed", handler);
     },
+    onFocusChanged: (cb) => {
+      const handler = (_event, focused) => cb(focused);
+      ipcRenderer.on("window:focus-changed", handler);
+      return () => ipcRenderer.removeListener("window:focus-changed", handler);
+    },
   },
   onPackageInstall: (cb) => {
     packageInstallListeners.add(cb);

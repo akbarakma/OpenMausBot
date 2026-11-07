@@ -2346,7 +2346,7 @@ for (const [channel, act] of [
 }
 ipcMain.handle("window:state", (event) => {
   const win = BrowserWindow.fromWebContents(event.sender) ?? mainWindow;
-  return { maximized: Boolean(win && !win.isDestroyed() && win.isMaximized()) };
+  return { maximized: Boolean(win && !win.isDestroyed() && win.isMaximized()), focused: Boolean(win && !win.isDestroyed() && win.isFocused()) };
 });
 
 // Links resolved after Chromium's click gesture ended would be blocked as popups via window.open.

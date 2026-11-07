@@ -2100,6 +2100,14 @@ html[data-cloud-intent-morph] [data-tour="composer"] { view-transition-name: clo
   .panel-zzz > span { animation: none; }
   .panel-zzz > span:nth-child(3) { opacity: 0.6; }
 }
+[data-unfocused-paused],
+[data-unfocused-paused]::before,
+[data-unfocused-paused]::after {
+  animation-play-state: paused !important;
+}
+/* A paused loop can stop on a blank frame, so the Zs show their still frame instead. */
+.panel-zzz > span[data-unfocused-paused] { animation: none !important; }
+.panel-zzz > span[data-unfocused-paused]:nth-child(3) { opacity: 0.6; }
 /* Simple mode's typing row is quieter: the sheen runs from tertiary ink up to secondary. */
 .turn-phrase-quiet .thinking-shimmer { color: var(--color-ink-tertiary); }
 .turn-phrase-quiet .thinking-sheen > span::before { color: var(--color-ink-secondary); }

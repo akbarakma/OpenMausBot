@@ -363,14 +363,16 @@ const __APP_VERSION__: string;
         /** From the person's click on another server's page. */
         set(on: boolean): Promise<import("../../electron/desktop-prefs.mjs").WindowFrameState>;
       };
-      /** The renderer-drawn Windows caption buttons; absent outside the
-       * frameless Windows shell (macOS/Linux/browser keep native chrome). */
+      /** The window's state, and the renderer-drawn Windows caption buttons; absent in a browser. */
       windowControls?: {
         minimize(): Promise<boolean>;
         toggleMaximize(): Promise<boolean>;
         close(): Promise<boolean>;
-        state(): Promise<{ maximized: boolean }>;
+        /** `focused` is absent on an older app. */
+        state(): Promise<{ maximized: boolean; focused?: boolean }>;
         onMaximizedChanged(cb: (maximized: boolean) => void): () => void;
+        /** Absent on an older app. */
+        onFocusChanged?(cb: (focused: boolean) => void): () => void;
       };
       /** Receives a GitHub package URL opened through openmausbot://install. */
       onPackageInstall?(cb: (url: string) => void): () => void;

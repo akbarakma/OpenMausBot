@@ -15,6 +15,7 @@ import { PairPage } from "./pair/PairPage";
 import { HomeScreen, SignedOutAtHome } from "./components/HomeScreen";
 import { PageBoundary } from "./components/PageBoundary";
 import { endedBeforeReload, forgetEndedSession } from "./lib/session-ended";
+import { pauseLoopsWhileUnfocused } from "./lib/window-focus";
 import "./styles.css";
 
 // Before first paint; settleAdvancedModeDefault must run before applySkin writes omb-skin.
@@ -22,6 +23,7 @@ settleAdvancedModeDefault();
 applySkinChoice(readSkinChoice());
 applyFont(readFont());
 applyChatWidth(readChatWidth());
+pauseLoopsWhileUnfocused();
 const pageLanguage = loadPageLanguage();
 
 // The app is its own chunk, so these pages don't parse it. Everywhere else its fetch starts now, alongside the session

@@ -1,5 +1,7 @@
 import { useSyncExternalStore } from "react";
 
+import { onWindowFocusChange, windowFocused } from "@/lib/window-focus";
+
 import { FRAME_SLACK_MS, FULL_FRAME_MS } from "./mascot-motion";
 
 export type MascotFrame = (now: number) => number;
@@ -21,8 +23,9 @@ export interface ClockEnvironment {
   setTimer(callback: () => void, ms: number): unknown;
   clearTimer(handle: unknown): void;
   watchVisibility(onChange: (changes: Array<{ target: Element; isIntersecting: boolean }>) => void): VisibilityWatch | null;
-  documentHidden(): boolean;
-  onDocumentVisibility(listener: () => void): void;
+  /** True while the clock should draw nothing: the page is hidden or the window is not focused. */
+  asleep(): boolean;
+  onAsleepChange(listener: () => void): void;
 }
 
 export interface MascotClock {
@@ -34,6 +37,7 @@ interface Entry {
   frame: MascotFrame;
   due: number;
   onScreen: boolean;
+  painted: boolean;
 }
 
 const TIMER_LEAD_MS = 1;
@@ -43,7 +47,7 @@ export function createMascotClock(env: ClockEnvironment): MascotClock {
   const byElement = new Map<Element, Entry>();
   let frameHandle: number | null = null;
   let timerHandle: unknown = null;
-  let hidden = false;
+  let asleep = false;
   let watch: VisibilityWatch | null | undefined;
 
   const schedule = () => {
@@ -51,7 +55,12 @@ export function createMascotClock(env: ClockEnvironment): MascotClock {
       env.clearTimer(timerHandle);
       timerHandle = null;
     }
-    if (frameHandle !== null || hidden) return;
+    if (frameHandle !== null) return;
+    // Asleep, a mascot still gets its first frame: its face is drawn by the frame, not by its markup.
+    if (asleep) {
+      for (const entry of entries) if (entry.onScreen && !entry.painted) { frameHandle = env.requestFrame(run); return; }
+      return;
+    }
     let next = Infinity;
     for (const entry of entries) if (entry.onScreen && entry.due < next) next = entry.due;
     if (next === Infinity) return;
@@ -62,12 +71,13 @@ export function createMascotClock(env: ClockEnvironment): MascotClock {
     }
     timerHandle = env.setTimer(() => {
       timerHandle = null;
-      if (frameHandle === null && !hidden && entries.size) frameHandle = env.requestFrame(run);
+      if (frameHandle === null && !asleep && entries.size) frameHandle = env.requestFrame(run);
     }, wait - TIMER_LEAD_MS);
   };
 
   const draw = (entry: Entry, now: number) => {
     let due = Infinity;
+    entry.painted = true;
     try {
       due = entry.frame(now);
     } finally {
@@ -78,17 +88,17 @@ export function createMascotClock(env: ClockEnvironment): MascotClock {
   const run = (now: number) => {
     frameHandle = null;
     try {
-      for (const entry of entries) if (entry.onScreen && entry.due <= now + FRAME_SLACK_MS) draw(entry, now);
+      for (const entry of entries) if (entry.onScreen && (asleep ? !entry.painted : entry.due <= now + FRAME_SLACK_MS)) draw(entry, now);
     } finally {
       schedule();
     }
   };
 
   const start = () => {
-    hidden = env.documentHidden();
-    env.onDocumentVisibility(() => {
-      hidden = env.documentHidden();
-      if (!hidden) return schedule();
+    asleep = env.asleep();
+    env.onAsleepChange(() => {
+      asleep = env.asleep();
+      if (!asleep) return schedule();
       if (frameHandle !== null) env.cancelFrame(frameHandle);
       if (timerHandle !== null) env.clearTimer(timerHandle);
       frameHandle = null;
@@ -106,7 +116,7 @@ export function createMascotClock(env: ClockEnvironment): MascotClock {
   return {
     add(frame, element) {
       if (watch === undefined) start();
-      const entry: Entry = { frame, due: -Infinity, onScreen: true };
+      const entry: Entry = { frame, due: -Infinity, onScreen: true, painted: false };
       entries.add(entry);
       if (element && watch) {
         byElement.set(element, entry);
@@ -146,8 +156,11 @@ function browserEnvironment(): ClockEnvironment {
     watchVisibility: (onChange) => typeof IntersectionObserver === "function"
       ? new IntersectionObserver(onChange, { rootMargin: "64px" })
       : null,
-    documentHidden: () => document.visibilityState === "hidden",
-    onDocumentVisibility: (listener) => document.addEventListener("visibilitychange", listener),
+    asleep: () => document.visibilityState === "hidden" || !windowFocused(),
+    onAsleepChange: (listener) => {
+      document.addEventListener("visibilitychange", listener);
+      onWindowFocusChange(listener);
+    },
   };
 }
 
