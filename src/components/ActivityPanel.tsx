@@ -1,5 +1,5 @@
 import { routineLineText } from "@/lib/activity-text";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ListChecks, RefreshCw, X } from "lucide-react";
 import { useStore, type Bot } from "@/state/store";
 import { cn } from "@/lib/cn";
@@ -29,6 +29,56 @@ const TONE_CLASS: Record<ChipTone, string> = {
 export function ActivityPanel({ bot }: { bot: Bot }) {
   const { dispatch } = useStore();
   const { dragProps } = useCaptionChrome();
+  return (
+    <aside aria-label={t("activity.panel.aria", { name: bot.name })} className="animate-panel-in flex h-full w-[400px] max-w-full shrink-0 flex-col border-l border-hairline/40 bg-panel max-md:absolute max-md:inset-y-0 max-md:right-0 max-md:z-30">
+      <ActivityList
+        bot={bot}
+        className="min-h-0 flex-1 overflow-y-auto"
+        toolbar={(reload) => (
+          <>
+            <div {...dragProps} className="flex items-center justify-between px-4 py-3">
+              <span className="flex items-center gap-2 text-[15px] font-semibold text-ink">
+                <ListChecks size={16} className="text-ink-secondary" /> {t("activity.panel.title")}
+              </span>
+              <span className="flex items-center gap-1">
+                <button
+                  onClick={reload}
+                  className="rounded-md p-1 text-ink-secondary hover:bg-raised hover:text-ink"
+                  title={t("activity.panel.reload")}
+                  aria-label={t("activity.panel.reload")}
+                >
+                  <RefreshCw size={14} />
+                </button>
+                <button
+                  onClick={() => dispatch({ type: "toggleActivity", open: false })}
+                  aria-label={t("activity.panel.close")}
+                  title={t("activity.panel.close")}
+                  className="rounded-md p-1 text-ink-secondary hover:bg-raised hover:text-ink"
+                >
+                  <X size={18} />
+                </button>
+              </span>
+            </div>
+
+            <p className="border-b border-hairline/40 px-4 pb-3 text-[12px] text-ink-secondary">
+              {t("activity.panel.subtitle", { name: bot.name })}
+            </p>
+          </>
+        )}
+      />
+    </aside>
+  );
+}
+
+export function ActivityList({ bot, toolbar, className, refresh = 0, dayBg = "bg-panel" }: {
+  bot: Bot;
+  toolbar: (reload: () => void) => ReactNode;
+  className?: string;
+  refresh?: number;
+  /** The sticky day heading's fill, which must match the surface behind the list. */
+  dayBg?: string;
+}) {
+  const { dispatch } = useStore();
   const [rows, setRows] = useState<ActivityRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const loadAbort = useRef<AbortController | null>(null);
@@ -58,6 +108,9 @@ export function ActivityPanel({ bot }: { bot: Bot }) {
     void load();
     return () => loadAbort.current?.abort();
   }, [load]);
+  useEffect(() => {
+    if (refresh > 0) void load();
+  }, [refresh, load]);
 
   const threadKey = [bot.threadId, ...(bot.tasks ?? []).map((task) => task.threadId)].join("\n");
   const threadIds = useMemo(() => new Set(threadKey.split("\n")), [threadKey]);
@@ -102,36 +155,9 @@ export function ActivityPanel({ bot }: { bot: Bot }) {
   };
 
   return (
-    <aside aria-label={t("activity.panel.aria", { name: bot.name })} className="animate-panel-in flex h-full w-[400px] max-w-full shrink-0 flex-col border-l border-hairline/40 bg-panel max-md:absolute max-md:inset-y-0 max-md:right-0 max-md:z-30">
-      <div {...dragProps} className="flex items-center justify-between px-4 py-3">
-        <span className="flex items-center gap-2 text-[15px] font-semibold text-ink">
-          <ListChecks size={16} className="text-ink-secondary" /> {t("activity.panel.title")}
-        </span>
-        <span className="flex items-center gap-1">
-          <button
-            onClick={() => void load()}
-            className="rounded-md p-1 text-ink-secondary hover:bg-raised hover:text-ink"
-            title={t("activity.panel.reload")}
-            aria-label={t("activity.panel.reload")}
-          >
-            <RefreshCw size={14} />
-          </button>
-          <button
-            onClick={() => dispatch({ type: "toggleActivity", open: false })}
-            aria-label={t("activity.panel.close")}
-            title={t("activity.panel.close")}
-            className="rounded-md p-1 text-ink-secondary hover:bg-raised hover:text-ink"
-          >
-            <X size={18} />
-          </button>
-        </span>
-      </div>
-
-      <p className="border-b border-hairline/40 px-4 pb-3 text-[12px] text-ink-secondary">
-        {t("activity.panel.subtitle", { name: bot.name })}
-      </p>
-
-      <div ref={list} className="min-h-0 flex-1 overflow-y-auto">
+    <>
+      {toolbar(() => void load())}
+      <div ref={list} className={className}>
         {error && <div className="px-4 py-3 text-[13px] text-danger">{t("activity.panel.error", { message: error })}</div>}
         {rows && rows.length === 0 && !error && (
           <div className="px-4 py-6 text-[13px] text-ink-secondary">
@@ -141,7 +167,7 @@ export function ActivityPanel({ bot }: { bot: Bot }) {
         {!rows && !error && <div className="px-4 py-6 text-[13px] text-ink-secondary">{t("activity.panel.loading")}</div>}
         {days.map((day) => (
           <section key={day.key}>
-            <h3 className="sticky top-0 bg-panel px-4 pt-3 pb-1 text-[11px] font-semibold tracking-wide text-ink-secondary uppercase">
+            <h3 className={cn("sticky top-0 px-4 pt-3 pb-1 text-[11px] font-semibold tracking-wide text-ink-secondary uppercase", dayBg)}>
               {day.label}
             </h3>
             {day.rows.map((row) => (
@@ -150,7 +176,7 @@ export function ActivityPanel({ bot }: { bot: Bot }) {
           </section>
         ))}
       </div>
-    </aside>
+    </>
   );
 }
 

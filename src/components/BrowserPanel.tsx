@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Globe, Hand, Loader2, LockKeyhole, Moon, X } from "lucide-react";
 import { browserUnavailableReason } from "@/lib/feature-flags";
 import { t } from "@/lib/i18n";
 import { usePageVisible } from "@/lib/page-visible";
 import { api, useStore, type Bot } from "@/state/store";
 import { BrowserProfilesManager } from "./BrowserProfilesManager";
+import { useCaptionChrome, useDesktopCapabilities } from "./DesktopCapabilities";
 import { ChromeRow, type BrowserNav, type BrowserTab } from "./browser/ChromeRow";
 import { MoreMenu } from "./browser/MoreMenu";
 import { PasskeyNotice } from "./browser/PasskeyNotice";
@@ -17,6 +18,7 @@ import { createLiveStreamClient, type LiveResume, type LiveStreamClient } from "
 import { BROWSER_HELD_ELSEWHERE } from "../../shared/browser-held";
 import { passkeyWallAt } from "../../shared/passkey-wall";
 import { browserScope, withBrowserScope } from "@/lib/team-browser";
+import { browserWindowClosed } from "./bot-panel/browser-window";
 
 const button = "rounded-md p-1.5 text-ink-secondary hover:bg-inset hover:text-ink disabled:opacity-40 disabled:cursor-not-allowed";
 const NO_NAV: BrowserNav = { url: "", loading: false, canGoBack: false, canGoForward: false };
@@ -37,8 +39,16 @@ function tabsOf(value: unknown): BrowserTab[] {
  * it, else over the v1 live view. Security: a new connection never replays old input. Only the server gives this view a
  * hold: one of the same person's, when none of their views uses it or when they take it over here.
  */
-export function LiveBrowser({ bot, signIn, page }: { bot: Bot; signIn?: BrowserSignIn; page?: BrowserPage }) {
+export function LiveBrowser({ bot, signIn, page, window: windowed }: {
+  bot: Bot;
+  signIn?: BrowserSignIn;
+  page?: BrowserPage;
+  /** The browser fills the app window, with `banner` under its bar, until `onBack`. */
+  window?: { onBack: () => void; banner?: ReactNode };
+}) {
   const { state } = useStore();
+  const { dragProps } = useCaptionChrome();
+  const macInset = useDesktopCapabilities().capabilities.windowChrome === "mac-inset";
   const [fallback, setFallback] = useState(false);
   const stream = state.config?.browserEngine?.engine === "chrome" && !fallback;
   const [attempt, setAttempt] = useState(0);
@@ -85,6 +95,14 @@ export function LiveBrowser({ bot, signIn, page }: { bot: Bot; signIn?: BrowserS
   const profileName = bot.browserProfile === "guest" ? t("browser.panel.temporary")
     : state.config?.browserProfiles?.find((profile) => profile.id === bot.browserProfile)?.name ?? t("browser.panel.ownBrowser", { name: bot.name });
   useEffect(() => { if (showProfiles) profilesDialog.current?.showModal(); else profilesDialog.current?.close(); }, [showProfiles]);
+  const fillsWindow = windowed !== undefined;
+  useEffect(() => {
+    if (!fillsWindow) return;
+    return () => {
+      const held = controlRef.current?.controller === "you" || controlRef.current?.owned === true;
+      browserWindowClosed(bot.id, held);
+    };
+  }, [fillsWindow, bot.id]);
   useEffect(() => {
     browserControl.current?.hold(showTyping);
     if (showTyping) typingDialog.current?.showModal(); else typingDialog.current?.close();
@@ -236,7 +254,18 @@ export function LiveBrowser({ bot, signIn, page }: { bot: Bot; signIn?: BrowserS
   };
   // The maximized panel swallows its Escape (defaultPrevented) so the same press cannot close a dialog beneath.
   // Capture: listeners registered before this panel must see the key already refused.
+  const onBack = windowed?.onBack;
   useEffect(() => {
+    if (onBack) {
+      const onKey = (event: KeyboardEvent) => {
+        if (event.key !== "Escape" || event.defaultPrevented || panel.current?.querySelector("dialog[open]")) return;
+        if (event.target instanceof Element && event.target.closest("input, textarea, [contenteditable]")) return;
+        event.preventDefault();
+        onBack();
+      };
+      window.addEventListener("keydown", onKey, true);
+      return () => window.removeEventListener("keydown", onKey, true);
+    }
     if (!maximized) return;
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== "Escape" || event.defaultPrevented) return;
@@ -248,7 +277,7 @@ export function LiveBrowser({ bot, signIn, page }: { bot: Bot; signIn?: BrowserS
     };
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
-  }, [maximized, fullscreen]);
+  }, [maximized, fullscreen, onBack]);
 
   const restart = () => {
     if (!window.confirm(t("browser.panel.confirmRestart"))) return;
@@ -278,7 +307,7 @@ export function LiveBrowser({ bot, signIn, page }: { bot: Bot; signIn?: BrowserS
   const typingReady = connected && you;
   const pipSupported = stream && supportsBrowserPictureInPicture();
   const passkeyWall = passkeyWallAt(nav.url);
-  return <div ref={panel} className={maximized
+  return <div ref={panel} className={maximized || windowed
     ? "fixed inset-0 z-50 flex flex-col overflow-hidden bg-card text-ink"
     : "flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-hairline/40 bg-card text-ink"} data-browser-transport={stream ? "stream" : "live"}>
     <ChromeRow
@@ -305,6 +334,7 @@ export function LiveBrowser({ bot, signIn, page }: { bot: Bot; signIn?: BrowserS
       onFullscreen={toggleFullscreen}
       onMaximize={toggleMaximize}
       onProfiles={() => { browserControl.current?.handBack(); setShowProfiles(true); }}
+      {...(windowed ? { windowBar: { onBack: windowed.onBack, macInset, drag: dragProps } } : {})}
       menu={<MoreMenu
         stream={stream}
         ready={connected && you}
@@ -321,6 +351,7 @@ export function LiveBrowser({ bot, signIn, page }: { bot: Bot; signIn?: BrowserS
         onRestart={restart}
       />}
     />
+    {windowed?.banner && <div className="shrink-0 border-b border-hairline/30 px-3 pb-3">{windowed.banner}</div>}
     {error && <div role="alert" className="flex shrink-0 items-center justify-between gap-2 border-b border-hairline/30 px-3 py-2 text-[12px] text-danger"><span>{error}</span>{!connected && <button className="shrink-0 underline" onClick={reconnect}>{t("browser.panel.reconnect")}</button>}</div>}
     {takeStatus === "stale" && <div role="status" className="shrink-0 border-b border-hairline/30 px-3 py-1.5 text-[12px] text-accent-text">{t("browser.control.stale", { name: bot.name })}</div>}
     {passkeyWall && passkeyDismissed !== nav.url && <PasskeyNotice wall={passkeyWall} botName={bot.name} onDismiss={() => setPasskeyDismissed(nav.url)} />}

@@ -9,7 +9,7 @@ import { useStore } from "@/state/store";
 import { useAllAutomationActions } from "../automations/app-actions";
 import { StatusMark } from "../automations/parts";
 import type { PageContext } from "./pages";
-import { BotSwitch, Card, LinkRow, NoteRow, rowCls, RowText } from "./rows";
+import { BotSwitch, Card, LinkRow, NoteRow, openRowButtonCls, openRowCls, RowText } from "./rows";
 
 const GROUPS: readonly { kind: AutomationKind; title: LocaleKey; hint: LocaleKey }[] = [
   { kind: "schedule", title: "botSettings.simple.routines", hint: "automations.newBox.onSchedule" },
@@ -46,13 +46,13 @@ export function AutomationsPage({ bot }: PageContext) {
               const name = automation.name.trim() || t("automations.title");
               const hint = status.state === "needs-you" ? t("automations.needsYou", { reason: status.reason ?? "" }) : statusLine(automation);
               return (
-                <div key={automation.id} className={rowCls}>
+                <div key={automation.id} className={openRowCls}>
                   <button
                     type="button"
                     data-panel-open={automation.id}
                     title={`${name}\n${hint}`}
                     onClick={() => dispatch({ type: "showRoutines", view: "list", routineId: automation.id })}
-                    className="-my-[11px] -ml-3.5 flex min-w-0 flex-1 cursor-pointer items-center gap-2.5 py-[11px] pl-3.5 text-left hover:opacity-80"
+                    className={openRowButtonCls}
                   >
                     <StatusMark status={status} />
                     <RowText

@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from "react";
-import { Settings, X } from "lucide-react";
+import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent } from "react";
+import { RefreshCw, Settings, X } from "lucide-react";
 
 import { cn } from "@/lib/cn";
 import { t } from "@/lib/i18n";
@@ -8,17 +8,22 @@ import { ChatShareMenu } from "@/components/ChatMoreMenu";
 import { useCaptionChrome } from "../DesktopCapabilities";
 import type { useBotSettingsDerived } from "../bot-settings/useBotSettingsDerived";
 import { AvatarEditorCard } from "./AvatarEditorCard";
-import { ComputerTab } from "./ComputerTab";
-import { DetailsTab } from "./DetailsTab";
-import { LibraryTab } from "./LibraryTab";
-import { PANEL_TABS, PAGES, TAB_LABEL, type PanelTab, type PanelTarget, type SimplePageId } from "./page-registry";
+import { PAGES, type PanelTarget, type SimplePageId } from "./page-registry";
+import { PanelHome } from "./PanelHome";
 import { PageBody, pageSurfaceCls } from "./pages";
 import { linkTarget, usePanelLink, type PanelLink } from "./panel-link";
 import { PanelHero } from "./PanelHero";
-import { PageHeader, roundButtonCls } from "./rows";
+import { buttonCls, PageHeader, roundButtonCls } from "./rows";
 
-function initialTarget(section: BotSettingsSection | null, link: PanelLink | null): PanelTarget {
-  return section ? linkTarget(section, link) : { tab: "details" };
+/** The page stack each bot's panel last showed, and how far each of its pages was scrolled, so the panel comes back
+ * where it was after something covered it, and Back returns to the same spot. */
+const lastStack = new Map<string, SimplePageId[]>();
+const lastScroll = new Map<string, Map<string, number>>();
+
+const scrollKey = (page: SimplePageId | null, detail: string | null) => `${page ?? ""}\n${detail ?? ""}`;
+
+function initialTarget(section: BotSettingsSection | null, link: PanelLink | null): PanelTarget | null {
+  return section ? linkTarget(section, link) : null;
 }
 
 export function BotPanel({ bot, derived, linkedSection, onClose }: {
@@ -29,22 +34,24 @@ export function BotPanel({ bot, derived, linkedSection, onClose }: {
 }) {
   const { dragProps } = useCaptionChrome();
   const link = usePanelLink();
-  const [tab, setTab] = useState<PanelTab>(() => initialTarget(linkedSection, link).tab);
   const [stack, setStack] = useState<SimplePageId[]>(() => {
-    const page = initialTarget(linkedSection, link).page;
-    return page ? [page] : [];
+    const target = initialTarget(linkedSection, link);
+    return target ? (target.page ? [target.page] : []) : lastStack.get(bot.id) ?? [];
   });
-  const [anchor, setAnchor] = useState<string | null>(() => initialTarget(linkedSection, link).anchor ?? null);
+  const [anchor, setAnchor] = useState<string | null>(() => initialTarget(linkedSection, link)?.anchor ?? null);
   const [editorOpen, setEditorOpen] = useState(false);
-  const [editingInstructions, setEditingInstructions] = useState(() => Boolean(initialTarget(linkedSection, link).editInstructions));
+  const [editingInstructions, setEditingInstructions] = useState(() => Boolean(initialTarget(linkedSection, link)?.editInstructions));
   const [detail, setDetail] = useState<string | null>(null);
+  const [activityRefresh, setActivityRefresh] = useState(0);
   const bodyRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<HTMLDivElement>(null);
   const page = stack.at(-1) ?? null;
+  const scrolls = lastScroll.get(bot.id) ?? new Map<string, number>();
+  lastScroll.set(bot.id, scrolls);
+  const restoreTo = useRef<number | null>(scrolls.get(scrollKey(page, detail)) ?? null);
 
-  const scrollTop = () => bodyRef.current?.scrollTo({ top: 0 });
+  const scrollTop = () => { restoreTo.current = 0; };
   const go = (target: PanelTarget) => {
-    setTab(target.tab);
     setStack(target.page ? [target.page] : []);
     setAnchor(target.anchor ?? null);
     setEditorOpen(false);
@@ -52,7 +59,6 @@ export function BotPanel({ bot, derived, linkedSection, onClose }: {
     setDetail(null);
     scrollTop();
   };
-  const openTab = (next: PanelTab) => go({ tab: next });
   const openPage = (next: SimplePageId) => {
     setStack((current) => [...current, next]);
     setEditorOpen(false);
@@ -69,10 +75,17 @@ export function BotPanel({ bot, derived, linkedSection, onClose }: {
     scrollTop();
   };
   const back = () => {
+    const to = detail !== null ? scrollKey(page, null) : scrollKey(stack.at(-2) ?? null, null);
+    restoreTo.current = scrolls.get(to) ?? 0;
     if (detail !== null) setDetail(null);
     else setStack((current) => current.slice(0, -1));
-    scrollTop();
   };
+
+  useLayoutEffect(() => {
+    if (restoreTo.current === null) return;
+    bodyRef.current?.scrollTo({ top: restoreTo.current });
+    restoreTo.current = null;
+  }, [page, detail]);
 
   // A new link re-runs this even when it names the section already linked, so a repeated link lands there again.
   useEffect(() => {
@@ -80,10 +93,14 @@ export function BotPanel({ bot, derived, linkedSection, onClose }: {
   }, [linkedSection, link]);
 
   useEffect(() => {
+    lastStack.set(bot.id, stack);
+  }, [bot.id, stack]);
+
+  useEffect(() => {
     if (!anchor) return;
     bodyRef.current?.querySelector(`[data-panel-card="${anchor}"]`)?.scrollIntoView({ block: "start" });
     setAnchor(null);
-  }, [anchor, page, tab]);
+  }, [anchor, page]);
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key !== "Escape" || event.defaultPrevented) return;
@@ -101,7 +118,7 @@ export function BotPanel({ bot, derived, linkedSection, onClose }: {
   };
 
   const backLabel = page && detail !== null ? t(PAGES[page].title, { name: bot.name })
-    : stack.length > 1 ? t(PAGES[stack[stack.length - 2]!].title, { name: bot.name }) : t(TAB_LABEL[tab]);
+    : stack.length > 1 ? t(PAGES[stack[stack.length - 2]!].title, { name: bot.name }) : bot.name;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col" onKeyDown={onKeyDown}>
@@ -113,7 +130,7 @@ export function BotPanel({ bot, derived, linkedSection, onClose }: {
           aria-label={t("botPanel.page.settings")}
           title={t("botPanel.page.settings")}
           aria-current={page === "settings" ? "page" : undefined}
-          onClick={() => go({ tab: "details", page: "settings" })}
+          onClick={() => go({ page: "settings" })}
           className={roundButtonCls}
         >
           <Settings size={16} className="pointer-events-none" />
@@ -123,7 +140,12 @@ export function BotPanel({ bot, derived, linkedSection, onClose }: {
         </button>
       </div>
 
-      <div ref={bodyRef} className="@container relative min-h-0 flex-1 overflow-y-auto px-4 pb-7">
+      <div
+        ref={bodyRef}
+        data-panel-body
+        onScroll={(event) => scrolls.set(scrollKey(page, detail), event.currentTarget.scrollTop)}
+        className="@container relative min-h-0 flex-1 overflow-y-auto px-4 pb-7"
+      >
         {page === null ? (
           <>
             <div className="relative mt-3.5" ref={editorRef}>
@@ -140,33 +162,7 @@ export function BotPanel({ bot, derived, linkedSection, onClose }: {
                 </>
               )}
             </div>
-            <div
-              role="tablist"
-              aria-label={t("botSettings.simple.tabs")}
-              className="sticky top-0 z-[1] -mx-4 mt-[15px] flex justify-center gap-0.5 bg-app px-4 pb-2.5 pt-1 after:pointer-events-none after:absolute after:inset-x-0 after:top-full after:h-3 after:bg-linear-to-b after:from-app after:to-transparent"
-            >
-              {PANEL_TABS.map((id) => (
-                <button
-                  key={id}
-                  type="button"
-                  role="tab"
-                  aria-selected={tab === id}
-                  data-panel-tab={id}
-                  onClick={() => openTab(id)}
-                  className={cn(
-                    "h-[26px] min-w-0 shrink truncate rounded-full px-2 text-[13px] leading-[18px] transition-colors",
-                    tab === id ? "bg-ink/[0.07] text-ink" : "text-ink-secondary hover:text-ink",
-                  )}
-                >
-                  {t(TAB_LABEL[id])}
-                </button>
-              ))}
-            </div>
-            <div role="tabpanel">
-              {tab === "details" && <DetailsTab bot={bot} onOpen={openPage} />}
-              {tab === "library" && <LibraryTab bot={bot} onOpen={openPage} />}
-              {tab === "computer" && <ComputerTab bot={bot} derived={derived} onOpen={openPage} />}
-            </div>
+            <PanelHome bot={bot} onOpen={openPage} />
           </>
         ) : (
           <div data-panel-page-view={page}>
@@ -176,6 +172,12 @@ export function BotPanel({ bot, derived, linkedSection, onClose }: {
               title={detail === null ? t(PAGES[page].title, { name: bot.name }) : undefined}
               intro={detail === null && PAGES[page].intro ? t(PAGES[page].intro, { name: bot.name }) : undefined}
               onBack={back}
+              action={page === "activity" && detail === null ? (
+                <button type="button" data-panel-action="reload-activity" onClick={() => setActivityRefresh((count) => count + 1)} className={buttonCls}>
+                  <RefreshCw size={14} aria-hidden="true" />
+                  {t("activity.panel.reload")}
+                </button>
+              ) : undefined}
             />
             <div className={cn("mt-4", pageSurfaceCls)}>
               <PageBody
@@ -187,6 +189,7 @@ export function BotPanel({ bot, derived, linkedSection, onClose }: {
                 onDetail={openDetail}
                 editingInstructions={editingInstructions}
                 onEditInstructions={setEditingInstructions}
+                activityRefresh={activityRefresh}
               />
             </div>
           </div>

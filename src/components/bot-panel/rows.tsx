@@ -8,6 +8,11 @@ import { ELEVATED_CONTROL, ELEVATED_HOVER } from "../elevated";
 import { Switch } from "../SettingsPrimitives";
 
 export const rowCls = "flex min-h-[46px] items-center gap-2.5 px-3.5 py-[11px]";
+/** A row around one switch: a `<label>`, so a click anywhere in it flips the switch. */
+export const switchRowCls = cn(rowCls, "cursor-pointer hover:bg-ink/[0.03] has-[:disabled]:cursor-not-allowed has-[:disabled]:hover:bg-transparent");
+/** A row that opens something and also holds a switch: its button stretches over the row, under the switch. */
+export const openRowCls = cn(rowCls, "relative hover:bg-ink/[0.03]");
+export const openRowButtonCls = "flex min-w-0 flex-1 cursor-pointer items-center gap-2.5 text-left after:absolute after:inset-0 focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-inset focus-visible:after:ring-accent-border";
 export const roundButtonCls = `flex size-[34px] shrink-0 items-center justify-center rounded-full text-ink ${ELEVATED_CONTROL} ${ELEVATED_HOVER} [:root[data-skin=daylight]_&]:shadow-[0_1px_3px_rgb(28_28_28/0.12)]`;
 const titleCls = "text-[14px] font-medium text-ink";
 const hintCls = "mt-px text-[13px] leading-[1.35] text-ink-secondary";
@@ -73,8 +78,9 @@ export function RowIcon({ icon: Icon }: { icon: LucideIcon }) {
   return <Icon size={16} strokeWidth={1.75} className="shrink-0 text-ink-secondary" aria-hidden="true" />;
 }
 
-export function BotSwitch({ color, checked, ...props }: Parameters<typeof Switch>[0] & { color: MausColor }) {
-  return <Switch {...props} checked={checked} style={checked ? { backgroundColor: MAUS_COLORS[color] } : undefined} />;
+export function BotSwitch({ color, checked, className, ...props }: Parameters<typeof Switch>[0] & { color: MausColor }) {
+  // The margin lines its right edge up with the drawn edge of the rows' chevrons, whose glyph sits inside its box.
+  return <Switch {...props} checked={checked} className={cn("relative mr-[5px]", className)} style={checked ? { backgroundColor: MAUS_COLORS[color] } : undefined} />;
 }
 
 export function NavRow({ title, hint, value, icon, onClick, drill = true, danger = false, disabled, tooltip, ...rest }: {
@@ -108,7 +114,7 @@ export function NavRow({ title, hint, value, icon, onClick, drill = true, danger
           {hint && <div className={hintCls}>{hint}</div>}
         </div>
         {valued && (
-          <span className="min-w-0 flex-1 truncate text-right text-[13px] text-ink-secondary">{value}</span>
+          <span className="-mr-1.5 min-w-0 flex-1 truncate text-right text-[13px] text-ink-secondary">{value}</span>
         )}
       </div>
       {drill && <ChevronRight size={15} className="shrink-0 text-ink-tertiary" aria-hidden="true" />}
@@ -286,7 +292,7 @@ export function TextRow({ value, placeholder, label, action, disabled, onChange,
   );
 }
 
-export function PageHeader({ back, title, intro, onBack }: { back: string; title?: string; intro?: ReactNode; onBack: () => void }) {
+export function PageHeader({ back, title, intro, action, onBack }: { back: string; title?: string; intro?: ReactNode; action?: ReactNode; onBack: () => void }) {
   return (
     <div>
       <button
@@ -298,7 +304,12 @@ export function PageHeader({ back, title, intro, onBack }: { back: string; title
         <ChevronLeft size={15} aria-hidden="true" />
         <span>{back}</span>
       </button>
-      {title && <h3 className="mx-1 mt-1.5 text-[18px] font-semibold text-ink">{title}</h3>}
+      {title && (
+        <div className="mx-1 mt-1.5 flex items-center justify-between gap-3">
+          <h3 className="min-w-0 text-[18px] font-semibold text-ink">{title}</h3>
+          {action}
+        </div>
+      )}
       {intro && <p className="mx-1 mt-1.5 text-[13px] leading-normal text-ink-secondary">{intro}</p>}
     </div>
   );

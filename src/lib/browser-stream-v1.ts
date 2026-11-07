@@ -172,7 +172,7 @@ export function liveControl(value: { held?: unknown; owned?: unknown; controllin
  * The panel's size (`initialSize`, then each resize) goes with every connection and to the open view, so the page fills
  * the panel; a server without resizing refuses the action and its page keeps its own size.
  */
-export function createLiveStreamClient(botId: string, events: PreviewStreamEvents, post: LivePost, resume: LiveResume = { viewer: "" }, scope: Readonly<Record<string, string>> = {}, initialSize: { width: number; height: number } | null = null): LiveStreamClient {
+export function createLiveStreamClient(botId: string, events: PreviewStreamEvents, post: LivePost, resume: LiveResume = { viewer: "" }, scope: Readonly<Record<string, string>> = {}, initialSize: { width: number; height: number } | null = null, ackEveryMs = 0): LiveStreamClient {
   let stopped = false;
   /** Stopped because its retries ran out, not refused for good: coming back to the window tries again. */
   let revivable = false;
@@ -190,6 +190,24 @@ export function createLiveStreamClient(botId: string, events: PreviewStreamEvent
   let size = initialSize;
   /** The size on its way to the open view; a newer one waits for its answer. */
   let sizing: { width: number; height: number } | null = null;
+  let ackedAt = 0;
+  let ackTimer: ReturnType<typeof setTimeout> | null = null;
+  let ackSeq = 0;
+
+  // The server sends the next frames only after an ack, so acking the newest frame at most every `ackEveryMs` slows
+  // this view's stream alone; frames that arrive between acks still paint.
+  const sendAck = () => {
+    ackTimer = null;
+    ackedAt = Date.now();
+    if (viewerId) void post({ type: "ack", seq: ackSeq }, viewerId).catch(() => undefined);
+  };
+  const ack = (seq: number) => {
+    ackSeq = seq;
+    if (ackTimer !== null) return;
+    const wait = ackedAt + ackEveryMs - Date.now();
+    if (wait <= 0) sendAck();
+    else ackTimer = setTimeout(sendAck, wait);
+  };
 
   const dropped = (live: EventSource, retryable: boolean) => {
     live.close();
@@ -282,7 +300,7 @@ export function createLiveStreamClient(botId: string, events: PreviewStreamEvent
         }
       }
       events.onFrame(bytes.buffer);
-      void post({ type: "ack", seq: data.seq }, viewerId).catch(() => undefined);
+      ack(data.seq);
     });
     listen("tabs", (data) => { if (Array.isArray(data.tabs)) events.onMessage?.({ type: "tabs", tabs: data.tabs }); });
     listen("url", (data) => { if (typeof data.url === "string") events.onMessage?.({ type: "url", url: data.url }); });
@@ -360,6 +378,7 @@ export function createLiveStreamClient(botId: string, events: PreviewStreamEvent
       page?.removeEventListener("online", returned);
       if (page) document.removeEventListener("visibilitychange", returned);
       if (retry !== null) clearTimeout(retry);
+      if (ackTimer !== null) clearTimeout(ackTimer);
       source?.close();
       source = null;
       // A reconnect of the same panel carries on with this view's hold, as one after a dropped stream does.

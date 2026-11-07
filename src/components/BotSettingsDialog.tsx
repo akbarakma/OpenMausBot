@@ -24,6 +24,7 @@ import { VisibilitySection } from "./bot-settings/VisibilitySection";
 import { t } from "@/lib/i18n";
 import { useAdvancedMode } from "@/lib/interface-mode";
 import { BotPanel } from "./bot-panel/PanelShell";
+import { setBotPanelWanted, openedQuietly } from "./bot-panel/simple-side-panel";
 import { LibraryTab } from "./bot-panel/LibraryTab";
 import type { SimplePageId } from "./bot-panel/page-registry";
 import { BOT_PANEL_ID, sidePanelCls } from "./bot-panel/side-panel";
@@ -78,17 +79,19 @@ export function BotSettingsDialog({ bot, overlay = false }: {
   }, [collapsed, section, q]);
 
   useEffect(() => {
+    const quiet = openedQuietly();
     const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const dialog = dialogRef.current;
-    dialog?.focus();
+    if (!quiet) dialog?.focus();
 
     const onKey = (event: KeyboardEvent) => {
       const nested = dialog?.querySelector<HTMLElement>('[role="dialog"], [role="alertdialog"]');
       if (nested && nested.getClientRects().length > 0) return;
       // BotInstructionsDialog portals to document.body: a key pressed with focus outside this dialog is not ours.
       if (dialog && event.target instanceof Node && !dialog.contains(event.target)) return;
-      // A popover or field inside that already handled this Escape keeps the panel open.
-      if (event.key === "Escape" && !event.defaultPrevented) {
+      // A popover or field inside that already handled this Escape keeps the panel open. Simple mode's panel stays
+      // until its ✕.
+      if (event.key === "Escape" && !event.defaultPrevented && !simpleView) {
         event.preventDefault();
         dispatch({ type: "toggleSettings", open: false });
       }
@@ -97,9 +100,9 @@ export function BotSettingsDialog({ bot, overlay = false }: {
     window.addEventListener("keydown", onKey);
     return () => {
       window.removeEventListener("keydown", onKey);
-      previousFocus?.focus();
+      if (!quiet) previousFocus?.focus();
     };
-  }, [dispatch]);
+  }, [dispatch, simpleView]);
 
   const renderSectionBody = (id: (typeof BOT_SECTIONS)[number]["id"]) => {
     switch (id) {
@@ -184,7 +187,10 @@ export function BotSettingsDialog({ bot, overlay = false }: {
             bot={bot}
             derived={derived}
             linkedSection={linkedSection}
-            onClose={() => dispatch({ type: "toggleSettings", open: false })}
+            onClose={() => {
+              setBotPanelWanted(false);
+              dispatch({ type: "toggleSettings", open: false });
+            }}
           />
         ) : <>
         <div {...dragProps} className="flex shrink-0 items-center justify-between px-4 py-3">

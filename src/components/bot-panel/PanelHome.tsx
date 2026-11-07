@@ -1,4 +1,5 @@
-import { Sparkles, Zap } from "lucide-react";
+import { FolderOpen, History, Sparkles, Zap } from "lucide-react";
+import { useMemo } from "react";
 
 import { cn } from "@/lib/cn";
 import { t } from "@/lib/i18n";
@@ -8,10 +9,10 @@ import { ModelPicker } from "../ModelPicker";
 import type { SidebarMenuItem } from "../SidebarPopoverMenu";
 import { useBotAutomations } from "./AutomationsPage";
 import { BotConversations } from "./Conversations";
+import { ComputerCard } from "./ComputerTab";
+import { chatFolder, KnowsCard, libraryItems } from "./LibraryTab";
 import type { SimplePageId } from "./page-registry";
 import { Card, NavRow, RowIcon, rowCls } from "./rows";
-
-export const CONVERSATION_ITEMS = ["find", "activity"];
 
 /** A ⋯ menu item drawn as a panel row: the same label, icon, value and handler. */
 function ItemRow({ item }: { item: SidebarMenuItem }) {
@@ -33,18 +34,19 @@ function ItemRow({ item }: { item: SidebarMenuItem }) {
   );
 }
 
-export function DetailsTab({ bot, onOpen }: {
-  bot: Bot;
-  onOpen: (page: SimplePageId) => void;
-}) {
+export function PanelHome({ bot, onOpen }: { bot: Bot; onOpen: (page: SimplePageId) => void }) {
   const { items } = useChatMoreItems(bot);
   const automationState = useBotAutomations(bot.id);
   const automationsOn = automationState.automations.filter((automation) => automation.enabled).length;
-  const conversationItems = CONVERSATION_ITEMS.flatMap((key) => items.filter((item) => item.key === key));
+  const find = items.find((item) => item.key === "find");
+  const { pages, apps, shared, unshared } = useMemo(() => libraryItems(bot), [bot]);
+  const made = pages.length + apps.length + shared.length + unshared.length;
 
   return (
-    <div data-panel-tabpanel="details">
-      <Card anchor="model">
+    <div data-panel-home="">
+      <ComputerCard key={bot.id} bot={bot} onOpen={onOpen} />
+
+      <Card label={t("botPanel.computer.setup")} anchor="model">
         <div data-panel-row="model">
           <ModelPicker
             bot={bot}
@@ -63,13 +65,15 @@ export function DetailsTab({ bot, onOpen }: {
         />
       </Card>
 
-      <BotConversations bot={bot} />
+      <KnowsCard bot={bot} onOpen={onOpen} onData={() => onOpen("data")} folder={chatFolder(bot)} dataLabel="computer.tab.data" />
 
-      {conversationItems.length > 0 && (
-        <Card label={t("botPanel.section.conversation")} anchor="conversation">
-          {conversationItems.map((item) => <ItemRow key={item.key} item={item} />)}
-        </Card>
-      )}
+      <Card label={t("botPanel.section.conversation")} anchor="conversation">
+        <NavRow data-panel-page="files" icon={FolderOpen} title={t("computer.tab.files")} value={made > 0 ? made : t("botPanel.none")} onClick={() => onOpen("files")} />
+        {find && <ItemRow item={find} />}
+        <NavRow data-panel-page="activity" icon={History} title={t("activity.panel.title")} onClick={() => onOpen("activity")} />
+      </Card>
+
+      <BotConversations bot={bot} />
     </div>
   );
 }

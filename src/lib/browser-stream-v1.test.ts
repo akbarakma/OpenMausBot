@@ -117,6 +117,28 @@ describe("the v1 live client", () => {
     expect(handlers.onMessage).toHaveBeenCalledWith({ type: "url", url: "https://a.test/next" });
   });
 
+  it("acknowledges the newest frame at most once per interval when asked to watch slowly", () => {
+    vi.useFakeTimers();
+    try {
+      const post = vi.fn<(body: Record<string, unknown>, viewerId: string) => Promise<unknown>>().mockResolvedValue({ ok: true });
+      createLiveStreamClient("pepper", events({}), post, undefined, {}, null, 400);
+      const source = FixtureEventSource.instances.at(-1)!;
+      source.emit("ready", { viewerId: "v1" });
+      const frame = (seq: number) => source.emit("frame", { seq, data: base64(JPEG_2X1) });
+      const acks = () => post.mock.calls.filter(([body]) => body.type === "ack").map(([body]) => body.seq);
+      frame(1);
+      frame(2);
+      frame(3);
+      expect(acks()).toEqual([1]);
+      vi.advanceTimersByTime(399);
+      expect(acks()).toEqual([1]);
+      vi.advanceTimersByTime(1);
+      expect(acks()).toEqual([1, 3]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("opens at the panel's size and sends each new size to its view while it only watches, the newest once the last is answered", async () => {
     const post = vi.fn<(body: Record<string, unknown>, viewerId: string) => Promise<unknown>>().mockResolvedValue({ ok: true });
     const client = createLiveStreamClient("pepper", events(), post, { viewer: "" }, {}, { width: 365.4, height: 686 });

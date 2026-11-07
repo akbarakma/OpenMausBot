@@ -124,6 +124,17 @@ describe("the picture and the page", () => {
     expect(client.send).toHaveBeenCalledWith({ type: "resize", width: 1200, height: 900 });
   });
 
+  it("never sends its size while passive, even when it resizes or gets the hold, and fills its box from the top", async () => {
+    const { canvas, client, show } = await mount({ passive: true });
+    expect(canvas.className).toContain("object-cover object-top");
+    await show(control("agent"));
+    vi.mocked(HTMLElement.prototype.getBoundingClientRect).mockReturnValue({ left: 0, top: 0, x: 0, y: 0, right: 1200, bottom: 900, width: 1200, height: 900, toJSON() {} } as DOMRect);
+    await act(async () => { for (const observer of observers) observer(); });
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 200)); });
+    await show(control("you"));
+    expect(client.send.mock.calls.map(([message]) => message.type)).not.toContain("resize");
+  });
+
   it("raises its frame cap in place when the panel outgrows it, so the person keeps the browser they hold", async () => {
     const { client, connect, show } = await mount();
     await show(control("you"));

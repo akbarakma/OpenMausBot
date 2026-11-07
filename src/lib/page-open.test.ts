@@ -3,7 +3,9 @@ import { createElement } from "react";
 import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { isPublishedPageUrl, pagePanelBot, requestPanelPage, usePanelPage, withPageOpen, type PageOpenFacts, type PanelPage } from "./page-open";
+import { StoreRefContext, type StoreRef } from "@/state/store-ref-context";
+import { readComputerPanelView, writeComputerPanelView } from "./computer-panel-view";
+import { isPublishedPageUrl, pagePanelBot, requestPanelPage, usePageOpener, usePanelPage, withPageOpen, type PageOpenFacts, type PanelPage } from "./page-open";
 
 const PAGE = "https://abcdefghijklmnopqrstuvwxyz.mausbot.page/";
 const facts = (over: Partial<PageOpenFacts> = {}): PageOpenFacts => ({
@@ -75,6 +77,27 @@ describe("the panel's page requests", () => {
   it("are dropped once stale, so a panel opened much later opens nothing by itself", () => {
     requestPanelPage("thyme", PAGE, Date.now() - 60_000);
     expect(panel("thyme")).toEqual([]);
+  });
+});
+
+describe("a published page's Open in the app", () => {
+  it("shows the bot's browser, whatever tab its computer was left on", () => {
+    writeComputerPanelView("pepper", "files");
+    const actions: unknown[] = [];
+    const ref = { state: () => ({ selectedId: "pepper", bots: [{ id: "pepper" }], groups: [], config: facts().config }), dispatch: (action: unknown) => actions.push(action) } as unknown as StoreRef;
+    Object.defineProperty(window, "ogb", { configurable: true, value: {} });
+    const root = createRoot(document.createElement("div"));
+    let open: (url: string) => void = () => undefined;
+    function Opener() { open = usePageOpener(); return null; }
+    try {
+      flushSync(() => root.render(createElement(StoreRefContext.Provider, { value: ref }, createElement(Opener))));
+      open(PAGE);
+      expect(readComputerPanelView("pepper")).toBe("browser");
+      expect(actions).toContainEqual({ type: "toggleComputer", open: true });
+    } finally {
+      root.unmount();
+      Reflect.deleteProperty(window, "ogb");
+    }
   });
 });
 

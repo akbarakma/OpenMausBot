@@ -1,7 +1,8 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { lazy, Suspense, useEffect, useState, type ReactNode } from "react";
 import { FolderOpen, Plus, Server } from "lucide-react";
 
 import { appSwitchPatch } from "@/lib/bot-app-access";
+import { cn } from "@/lib/cn";
 import { skillsLibraryEnabled } from "@/lib/feature-flags";
 import { activeLocale, t } from "@/lib/i18n";
 import { mcpServersForBot, mcpServersOfBot, mcpSwitch, useMcpServers } from "@/lib/mcp-servers";
@@ -11,6 +12,7 @@ import type { SkillImportSummary } from "../../../shared/skill-import";
 import { shortPath } from "@/lib/short-path";
 import { skillImportLines } from "@/lib/skill-import";
 import { useStore, type Bot } from "@/state/store";
+import { ActivityList } from "../ActivityPanel";
 import { ConfirmDialog } from "../ConfirmDialog";
 import { useDesktopCapabilities } from "../DesktopCapabilities";
 import { ServiceIcon } from "../ServiceIcon";
@@ -24,13 +26,16 @@ import { AutomationsPage } from "./AutomationsPage";
 import { BackupAis } from "./BackupAis";
 import { BrowserLogins } from "./browser-logins";
 import { useOpenComputer, WherePage } from "./ComputerTab";
+import { MadeHere } from "./LibraryTab";
 import { SettingsPage } from "./SettingsPage";
 import { memoryNoteKey, memoryNoteParts, panelMemoryNotes, withMemoryNote, withoutMemoryNote, type PanelMemoryNote } from "./memory-notes";
 import type { SimplePageId } from "./page-registry";
-import { BotSwitch, buttonCls, Card, LinkRow, NavRow, NoteRow, RadioRow, RowIcon, rowCls, RowText, TextRow } from "./rows";
+import { BotSwitch, buttonCls, Card, LinkRow, NavRow, NoteRow, openRowButtonCls, openRowCls, RadioRow, RowIcon, rowCls, RowText, switchRowCls, TextRow } from "./rows";
 import { useMemoryDoc } from "./use-memory-doc";
 
 type Derived = ReturnType<typeof useBotSettingsDerived>;
+
+const DataPanel = lazy(() => import("../data/DataPanel").then((module) => ({ default: module.DataPanel })));
 
 export interface PageContext {
   bot: Bot;
@@ -87,7 +92,7 @@ export function AppsPage({ bot, derived }: PageContext) {
       <Card>
         {note && <NoteRow>{note}</NoteRow>}
         {canUseConnectedApps && apps.apps.map((app) => (
-          <div key={app.slug} data-simple-app={app.slug} className={rowCls}>
+          <label key={app.slug} data-simple-app={app.slug} className={switchRowCls}>
             <ServiceIcon key={`${app.card.logo}:${app.card.domain}`} card={app.card} className="size-7 shrink-0" />
             <div className="min-w-0 flex-1 truncate text-[14px] font-medium text-ink">{app.label}</div>
             <BotSwitch
@@ -98,14 +103,14 @@ export function AppsPage({ bot, derived }: PageContext) {
               onClick={() => toggle(app)}
               className="disabled:cursor-not-allowed"
             />
-          </div>
+          </label>
         ))}
       </Card>
       {(servers.length > 0 || mcpError) && (
         <Card label={t("connectors.tab.mcp")}>
           {mcpError && <NoteRow>{t("botAccess.mcpRefreshError")}</NoteRow>}
           {servers.map((server) => (
-            <div key={server.name} data-simple-mcp={server.name} className={rowCls}>
+            <label key={server.name} data-simple-mcp={server.name} className={switchRowCls}>
               <RowIcon icon={Server} />
               <RowText
                 title={<span className="block truncate">{server.name}</span>}
@@ -119,7 +124,7 @@ export function AppsPage({ bot, derived }: PageContext) {
                 onClick={() => toggleServer(server.name)}
                 className="disabled:cursor-not-allowed"
               />
-            </div>
+            </label>
           ))}
         </Card>
       )}
@@ -350,10 +355,10 @@ export function SkillsPage({ bot, detail, onDetail }: PageContext & DetailContex
         <h3 className="mx-1 break-words text-[18px] font-semibold text-ink">{open.name}</h3>
         {open.description && <p data-skill-description className="mx-1 -mt-1 whitespace-pre-wrap break-words text-[14px] leading-[1.5] text-ink-secondary">{open.description}</p>}
         <Card>
-          <div data-panel-row={`skill:${open.name}`} className={rowCls}>
+          <label data-panel-row={`skill:${open.name}`} className={switchRowCls}>
             <RowText title={t("botSettings.simple.skillToggle", { name: open.name })} hint={open.source && open.source !== open.description ? <span className="break-all">{open.source}</span> : undefined} />
             {switchFor(open)}
-          </div>
+          </label>
           {skills.error && !skills.reviewing && <NoteRow tone="warn">{skills.error}</NoteRow>}
         </Card>
         <div className="mx-1 mt-1">
@@ -406,17 +411,17 @@ export function SkillsPage({ bot, detail, onDetail }: PageContext & DetailContex
         ) : skills.skills.length === 0 ? (
           <NoteRow>{t("botSettings.simple.noSkills")}</NoteRow>
         ) : skills.skills.map((skill) => (
-          <div key={skill.name} data-panel-row={`skill:${skill.name}`} className="flex items-center">
+          <div key={skill.name} data-panel-row={`skill:${skill.name}`} className={openRowCls}>
             <button
               type="button"
               data-panel-open={`skill:${skill.name}`}
               onClick={() => { skills.setError(""); onDetail(skill.name); }}
-              className="flex min-h-[46px] min-w-0 flex-1 flex-col justify-center py-[11px] pl-3.5 pr-2.5 text-left hover:bg-ink/[0.03]"
+              className={cn(openRowButtonCls, "flex-col items-stretch gap-0")}
             >
               <span className="truncate text-[14px] font-medium text-ink">{skill.name}</span>
               {(skill.description || skill.source) && <span className="mt-px truncate text-[13px] leading-[1.35] text-ink-secondary">{skill.description || skill.source}</span>}
             </button>
-            <span className="flex shrink-0 items-center pr-3.5">{switchFor(skill)}</span>
+            {switchFor(skill)}
           </div>
         ))}
         {skills.error && !skills.reviewing && <NoteRow tone="warn">{skills.error}</NoteRow>}
@@ -447,6 +452,7 @@ export function FolderPage({ bot }: PageContext) {
   const { draft, setDraft, error, saving, canPick, save, pick } = useWorkingFolder(bot);
   const [choosing, setChoosing] = useState(false);
   const chosen = Boolean(bot.cwd) || choosing;
+  const pinned = bot.tasks?.find((task) => task.threadId === bot.threadId)?.cwd;
 
   const choose = () => {
     if (canPick) {
@@ -458,6 +464,14 @@ export function FolderPage({ bot }: PageContext) {
 
   return (
     <>
+      {pinned !== undefined && (
+        <Card>
+          <div data-panel-row="chat-folder" className={rowCls}>
+            <RowIcon icon={FolderOpen} />
+            <RowText title={pinned ? <span className="block truncate font-mono text-[13px]" title={pinned}>{shortPath(pinned, home)}</span> : t("computer.files.homeFolder")} hint={t("computer.files.pinnedFolderHint")} />
+          </div>
+        </Card>
+      )}
       <Card>
         <RadioRow
           data-panel-choice="private"
@@ -523,6 +537,33 @@ export function BrowserPage({ bot, derived }: PageContext) {
   return <BrowserLogins bot={bot} browserEnabled={derived.browserEnabled} onOpenBrowser={() => openComputer("browser")} />;
 }
 
+export function DataPage({ bot }: PageContext) {
+  const { state, dispatch } = useStore();
+  const focus = state.dataResultFocus?.botId === bot.id && !state.dataResultFocus.consumed ? state.dataResultFocus : null;
+  const [requested, setRequested] = useState<{ id: string; requestId: number } | undefined>(undefined);
+  useEffect(() => {
+    if (!focus) return;
+    setRequested(focus.id === undefined ? undefined : { id: focus.id, requestId: focus.requestId });
+    dispatch({ type: "dataResultFocusConsumed", requestId: focus.requestId });
+  }, [focus, dispatch]);
+  // shortcut: a fixed height under the page header, because the panel body scrolls and DataPanel fills its parent.
+  return (
+    <div className="flex h-[calc(100dvh-210px)] min-h-[360px] flex-col overflow-hidden rounded-[12px] ring-1 ring-inset ring-ink/[0.06]">
+      <Suspense fallback={<div className="flex flex-1 items-center justify-center text-[13px] text-ink-secondary" role="status">{t("data.loading")}</div>}>
+        <DataPanel key={bot.id} bot={bot} requestedCard={requested} />
+      </Suspense>
+    </div>
+  );
+}
+
+export function FilesPage({ bot }: PageContext) {
+  return <MadeHere bot={bot} folders />;
+}
+
+export function ActivityPage({ bot, refresh }: PageContext & { refresh: number }) {
+  return <ActivityList bot={bot} className="-mx-4" refresh={refresh} dayBg="bg-app" toolbar={() => null} />;
+}
+
 export function BackupsPage({ bot, derived }: PageContext) {
   return <BackupAis bot={bot} onChange={(fallback) => derived.patch({ fallback })} />;
 }
@@ -531,8 +572,10 @@ export function BotApiPage({ bot }: PageContext) {
   return <BotApiCard bot={bot} webhooksLink titled={false} className="mt-3.5" />;
 }
 
-export function PageBody({ page, onOpen, detail = null, onDetail = () => {}, editingInstructions, onEditInstructions, ...context }: PageContext & Partial<DetailContext> & {
+export function PageBody({ page, onOpen, detail = null, onDetail = () => {}, editingInstructions, onEditInstructions, activityRefresh = 0, ...context }: PageContext & Partial<DetailContext> & {
   page: SimplePageId;
+  /** Counts the Activity page header's Reload presses. */
+  activityRefresh?: number;
   onOpen?: (page: SimplePageId) => void;
   editingInstructions?: boolean;
   onEditInstructions?: (open: boolean) => void;
@@ -558,5 +601,11 @@ export function PageBody({ page, onOpen, detail = null, onDetail = () => {}, edi
       return <FolderPage {...context} />;
     case "browser":
       return <BrowserPage {...context} />;
+    case "data":
+      return <DataPage {...context} />;
+    case "files":
+      return <FilesPage {...context} />;
+    case "activity":
+      return <ActivityPage {...context} refresh={activityRefresh} />;
   }
 }

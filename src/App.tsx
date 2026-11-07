@@ -72,6 +72,8 @@ import { useChiefStepOpen } from "@/lib/default-bot";
 import { useSessionEnded } from "@/lib/session-ended";
 import { PairPage } from "./pair/PairPage";
 import { WebPanelPage } from "@/components/WebPanelPage";
+import { useSimpleSidePanel } from "@/components/bot-panel/simple-side-panel";
+import { SimpleBrowserWindow } from "@/components/bot-panel/SimpleBrowserWindow";
 
 function Shell({ viewer }: { viewer: WelcomeViewer | null }) {
   const { state, dispatch } = useStore();
@@ -151,6 +153,15 @@ function Shell({ viewer }: { viewer: WelcomeViewer | null }) {
   const roomPanelOpen = useRoomPanelShown({ group, state, simple: !advanced && !remoteClient });
   const sidePanelOpen = (Boolean(bot) && (state.settingsOpen || state.computerOpen || state.inspectorOpen || state.activityOpen)) || roomPanelOpen || (notificationFeed && state.notificationsOpen) || inboxShown;
   const collapseSidebar = sidePanelOpen && !sidebarAndPanelFit;
+  const simpleSide = useSimpleSidePanel({
+    active: !advanced && !remoteClient,
+    bot,
+    state,
+    dispatch,
+    inline: sidebarInline,
+    covered: state.activeView !== "chat" || state.computerOpen || state.inspectorOpen || state.activityOpen || state.appSettingsOpen
+      || state.pluginsOpen || inboxShown || (notificationFeed && state.notificationsOpen),
+  });
   const calendarFocus = state.activeView === "routines" && state.routinesFocus.view === "calendar";
   const notificationTray = notificationFeed && !calendarFocus;
 
@@ -403,7 +414,7 @@ function Shell({ viewer }: { viewer: WelcomeViewer | null }) {
           ? <RemoteAgentSettingsPanel bot={bot} overlay={state.computerOpen && !twoSidePanelsFit} />
           : <BotSettingsDialog key={`settings:${bot.id}`} bot={bot} overlay={(state.inspectorOpen || state.computerOpen || (notificationFeed && state.notificationsOpen)) && !twoSidePanelsFit} />
       )}
-      {state.computerOpen && bot && (
+      {state.computerOpen && bot && simpleSide.popup && (
         remoteClient ? (
           <RemoteDesktopPanel key={`computer:${bot.id}`} bot={bot} />
         ) : (
@@ -418,12 +429,13 @@ function Shell({ viewer }: { viewer: WelcomeViewer | null }) {
         <RoomPanel key={`room:${group.id}`} group={group} overlay={notificationFeed && state.notificationsOpen && !twoSidePanelsFit} />
       )}
       {!remoteClient && state.inspectorOpen && bot && <InspectorPanel key={bot.threadId} bot={bot} />}
-      {!remoteClient && state.activityOpen && bot && <ActivityPanel key={`activity:${bot.id}`} bot={bot} />}
+      {!remoteClient && state.activityOpen && bot && simpleSide.activity && <ActivityPanel key={`activity:${bot.id}`} bot={bot} />}
       {inboxShown && <InboxPanel />}
       {notificationTray && state.notificationsOpen && <NotificationsPanel />}
       {notificationTray && !framed && <NotificationRail />}
       </div>
       </div>
+      {!advanced && !remoteClient && <SimpleBrowserWindow />}
       {state.appSettingsOpen && <SettingsModal />}
       {cloudAddOpened.current && <CloudAddDialog />}
       <CloudHowTo />

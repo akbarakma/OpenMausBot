@@ -33,4 +33,14 @@ describe("browser window controls", () => {
     expect(html).toContain(`title="${restore}" aria-label="${restore}"`);
     expect(html).toContain(`title="${exit}" aria-label="${exit}"`);
   });
+
+  it("fills the app window with a bar that clears the traffic lights and goes back to the chat, with no maximize or full screen", () => {
+    const onBack = vi.fn();
+    const html = renderToStaticMarkup(createElement(ChromeRow, { ...props, windowBar: { onBack, macInset: true, drag: {} } }));
+    expect(html).toContain("pl-[84px]");
+    expect(html).toContain(">Scout&#x27;s browser<");
+    expect(html).toContain(">Back to chat<");
+    expect(html).not.toContain('aria-label="Maximize"');
+    expect(html).not.toContain('aria-label="Full screen"');
+  });
 });

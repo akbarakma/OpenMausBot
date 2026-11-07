@@ -1,20 +1,24 @@
-import { useEffect, useState } from "react";
-import { KeyRound, Monitor } from "lucide-react";
+import { useState } from "react";
+import { Globe, Monitor } from "lucide-react";
 
+import { cn } from "@/lib/cn";
 import { writeComputerPanelView, type ComputerPanelView } from "@/lib/computer-panel-view";
+import { browserAvailable, browserUnavailableReason, builtInBrowserEnabled } from "@/lib/feature-flags";
 import { t } from "@/lib/i18n";
-import type { Place } from "@/lib/place";
+import { pageOnRemoteServer } from "@/lib/local-computer";
+import { personPin, type Place } from "@/lib/place";
 import { placeHasIssue, worksOnSimpleLabel } from "@/lib/place-view";
-import { useOwnerOrAdmin } from "@/lib/use-owner-or-admin";
-import { api, useStore, type Bot } from "@/state/store";
-import { BotAvatar } from "../Avatar";
+import { api, currentTaskBot, useStore, type Bot, type ConfigStatus } from "@/state/store";
 import { useDesktopCapabilities } from "../DesktopCapabilities";
 import { LocalComputerAutoWarning } from "../LocalComputerAutoWarning";
 import { usePlaceViews } from "../PlaceChip";
 import { screenFramePreview } from "../ScreenFrame";
 import type { BotPatch, useBotSettingsDerived } from "../bot-settings/useBotSettingsDerived";
 import type { SimplePageId } from "./page-registry";
-import { Card, CardLabel, NavRow, RadioRow } from "./rows";
+import { openBrowserWindow, useBrowserWindow, useHoldGrace } from "./browser-window";
+import { browsingNow, useBrowsingHeld } from "./simple-side-panel";
+import { LiveBrowserCard } from "./LiveBrowserCard";
+import { BotSwitch, buttonCls, Card, CardLabel, CardSurface, NavRow, RadioRow, RowIcon, RowText, switchRowCls } from "./rows";
 
 type Derived = ReturnType<typeof useBotSettingsDerived>;
 type PlaceChoice = "auto" | Place | "off";
@@ -38,20 +42,6 @@ export function useOpenComputer(bot: Pick<Bot, "id">) {
     dispatch({ type: "toggleSettings", open: false });
     dispatch({ type: "toggleComputer", open: true });
   };
-}
-
-/** How many sites the bot's own browser is signed in to; null until read, and never asked for by a non-owner. */
-function useSignedInCount(bot: Pick<Bot, "id">, enabled: boolean): number | null {
-  const [count, setCount] = useState<{ botId: string; count: number } | null>(null);
-  useEffect(() => {
-    if (!enabled) return;
-    let cancelled = false;
-    void api(`/api/browser-sites?bot=${encodeURIComponent(bot.id)}`)
-      .then((answer: { sites?: unknown[] }) => { if (!cancelled) setCount({ botId: bot.id, count: answer.sites?.length ?? 0 }); })
-      .catch(() => {});
-    return () => { cancelled = true; };
-  }, [bot.id, enabled]);
-  return count?.botId === bot.id ? count.count : null;
 }
 
 function usePlaceChoices(bot: Bot) {
@@ -78,12 +68,19 @@ function usePlaceChoices(bot: Bot) {
   const usingNow = liveSurface && liveSurface !== current ? placeLabel(liveSurface) : null;
   const currentLabel = options.find((option) => option.value === current)?.label
     ?? (current === "auto" || current === "vm" || current === "off" ? undefined : placeLabel(current));
-  return { options, current, currentLabel, usingNow };
+  return { options, current, currentLabel, usingNow, placeLabel };
 }
 
 export function WherePage({ bot, derived }: { bot: Bot; derived: Derived }) {
   const { dispatch } = useStore();
-  const { options, current, usingNow } = usePlaceChoices(bot);
+  const { capabilities } = useDesktopCapabilities();
+  const { options, current, currentLabel, usingNow, placeLabel } = usePlaceChoices(bot);
+  const pin = personPin(bot.tasks?.find((task) => task.threadId === bot.threadId));
+  const heldPin = pin && bot.computer !== "off" && pin !== bot.computer ? pin : undefined;
+  const unpin = () => {
+    if (bot.computer === "local" && pageOnRemoteServer(capabilities)) dispatch({ type: "updateBot", botId: bot.id, patch: { computer: null } });
+    dispatch({ type: "updateTask", botId: bot.id, threadId: bot.threadId, patch: { surface: null } });
+  };
   const [localAutoWarning, setLocalAutoWarning] = useState<{ botId: string; patch: BotPatch } | null>(null);
   const { patch, approvalMode } = derived;
   const choosePlace = (value: PlaceChoice) => {
@@ -112,7 +109,14 @@ export function WherePage({ bot, derived }: { bot: Bot; derived: Derived }) {
           ))}
         </div>
       </Card>
-      {usingNow && <p data-panel-using-now className="mx-1 text-[13px] text-ink-secondary">{t("computer.simple.usingNow", { place: usingNow })}</p>}
+      {heldPin ? (
+        <div data-panel-pinned-place className="mx-1 flex items-center gap-2">
+          <p className="min-w-0 flex-1 text-[13px] text-ink-secondary">{t("place.pinnedNoteSimple", { place: placeLabel(heldPin) })}</p>
+          <button type="button" disabled={Boolean(bot.busy)} title={bot.busy ? t("place.busy") : undefined} onClick={unpin} className={buttonCls}>
+            {t("place.unpinSimple", { place: currentLabel ?? t("computer.simple.dest.letItChoose") })}
+          </button>
+        </div>
+      ) : usingNow && <p data-panel-using-now className="mx-1 text-[13px] text-ink-secondary">{t("computer.simple.usingNow", { place: usingNow })}</p>}
       <LocalComputerAutoWarning
         open={localAutoWarning !== null}
         onCancel={() => setLocalAutoWarning(null)}
@@ -127,65 +131,105 @@ export function WherePage({ bot, derived }: { bot: Bot; derived: Derived }) {
   );
 }
 
-export function ComputerTab({ bot, derived, onOpen }: { bot: Bot; derived: Derived; onOpen: (page: SimplePageId) => void }) {
+export function ComputerCard({ bot, onOpen }: { bot: Bot; onOpen: (page: SimplePageId) => void }) {
+  const { state, dispatch } = useStore();
   const openComputer = useOpenComputer(bot);
-  const ownerOrAdmin = useOwnerOrAdmin();
-  const { browserEnabled } = derived;
-  const signedIn = useSignedInCount(bot, browserEnabled && bot.computer !== "off" && ownerOrAdmin !== false);
-  const { currentLabel, usingNow } = usePlaceChoices(bot);
-  const screenOf = t("computer.screenOf", { name: bot.name });
+  const browserWindow = useBrowserWindow();
+  const { currentLabel } = usePlaceChoices(bot);
+  const [turningOn, setTurningOn] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const canTurnOn = browserAvailable(state.config) || state.config?.browserEngine?.installable === true;
+  const browserOn = builtInBrowserEnabled(state.config) && bot.browser !== false && canTurnOn;
+  const browserPlace = bot.computer === undefined || bot.computer === "browser";
+  const showsBrowser = browserOn && browserPlace;
+  // The card connects only while the turn uses the browser: opening a view starts the bot's browser when it is asleep.
+  const turnBrowses = browsingNow(currentTaskBot(bot));
+  const held = useBrowsingHeld(bot.id, turnBrowses);
+  const browsing = showsBrowser && turnBrowses;
+  const graceRunning = useHoldGrace(bot.id);
+  const streaming = showsBrowser && held && !browserWindow && !graceRunning;
+  const label = browserPlace ? t("browser.card.title") : t("chat.botScreen");
 
-  const screen = [...bot.messages].reverse().find((message) => message.kind === "screen" && (message.hasImage || message.png));
+  const screen = browserPlace ? undefined : [...bot.messages].reverse().find((message) => message.kind === "screen" && (message.hasImage || message.png));
   const screenSrc = screen ? screenFramePreview({ threadId: bot.threadId, messageId: screen.id }, screen.mime).src : null;
+  const open = () => (showsBrowser ? openBrowserWindow(bot.id) : openComputer());
+  const openLabel = `${t("computer.open")}: ${label}`;
+
+  const turnOnBrowser = async () => {
+    if (turningOn) return;
+    setTurningOn(true);
+    setError(null);
+    try {
+      if (!builtInBrowserEnabled(state.config)) {
+        const config: ConfigStatus = await api("/api/config", { method: "PATCH", body: JSON.stringify({ features: { browser: true } }) });
+        dispatch({ type: "configStatus", config });
+      }
+      if (bot.browser === false) dispatch({ type: "updateBot", botId: bot.id, patch: { browser: true } });
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : t("settings.experimental.error"));
+    } finally {
+      setTurningOn(false);
+    }
+  };
+  const turnOffBrowser = () => {
+    setError(null);
+    dispatch({ type: "updateBot", botId: bot.id, patch: { browser: false } });
+  };
 
   return (
-    <div data-panel-tabpanel="computer">
-      <CardLabel>{screenOf}</CardLabel>
-      <button
-        type="button"
-        data-panel-action="open-computer"
-        aria-label={`${t("place.action.watch")}: ${screenOf}`}
-        onClick={() => openComputer()}
-        className="group relative flex aspect-[16/10] w-full flex-col items-center justify-center gap-2 overflow-hidden rounded-xl bg-composer ring-1 ring-inset ring-ink/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-border"
-      >
-        {screenSrc ? (
-          <img src={screenSrc} alt="" className="absolute inset-0 size-full object-cover" />
-        ) : bot.busy ? (
-          <>
-            <span className="opacity-55"><BotAvatar bot={bot} size={52} animated={false} /></span>
-            <span className="max-w-[80%] text-center text-[13px] text-ink-secondary">{t("botPanel.screen.working")}</span>
-          </>
-        ) : (
-          <>
-            <span className="opacity-60"><BotAvatar bot={bot} size={44} state="sleeping" animated={false} /></span>
-            <span className="max-w-[80%] text-center text-[13px] font-medium text-ink">{t("botPanel.screen.resting")}</span>
-          </>
+    <section data-panel-card="computer">
+      <CardLabel>{t(browserPlace ? "computer.tab.browser" : "computer.tab.computer")}</CardLabel>
+      <CardSurface>
+        {(showsBrowser || !browserPlace) && (
+          <button
+            type="button"
+            data-panel-action="open-computer"
+            aria-label={openLabel}
+            onClick={open}
+            className="flex w-full cursor-pointer items-center gap-3 py-[9px] pr-[18px] pl-3.5 text-left hover:bg-ink/[0.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent-border"
+          >
+            <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+              <span className="truncate text-[14px] font-medium text-ink">{label}</span>
+              <span className="flex items-center gap-1.5 text-[13px] text-ink-secondary">
+                {streaming && <span aria-hidden="true" className={cn("size-[7px] shrink-0 rounded-full", browsing ? "animate-pulse bg-success" : "bg-ink-tertiary")} />}
+                {streaming ? t(browsing ? "browser.card.browsing" : "browser.card.done") : t("botPanel.face.sleeping")}
+              </span>
+            </span>
+            <span className="relative flex h-[45px] w-[72px] shrink-0 items-center justify-center overflow-hidden rounded-[7px] bg-ink/[0.04]">
+              {streaming ? (
+                <span className="absolute inset-0"><LiveBrowserCard bot={bot} /></span>
+              ) : screenSrc ? (
+                <img src={screenSrc} alt="" className="absolute inset-0 size-full object-cover" />
+              ) : (
+                <span aria-hidden="true" className="panel-zzz text-[11px] font-semibold text-ink-secondary"><span>z</span><span>z</span><span>Z</span></span>
+              )}
+              <span aria-hidden="true" className="pointer-events-none absolute inset-0 rounded-[7px] ring-1 ring-inset ring-ink/[0.08]" />
+            </span>
+          </button>
         )}
-        <span
-          aria-hidden="true"
-          className="absolute bottom-2.5 right-2.5 flex h-7 items-center gap-1.5 rounded-full border border-ink/10 bg-panel/80 px-2.5 text-[12px] text-ink opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 touch:opacity-100"
-        >
-          <Monitor size={13} aria-hidden="true" />
-          {t("place.action.watch")}
-        </span>
-      </button>
-      <Card label={t("botPanel.computer.setup")} anchor="where">
         <NavRow
           data-panel-page="where"
           icon={Monitor}
           title={t("botPanel.worksIn")}
-          hint={usingNow ? t("computer.simple.usingNow", { place: usingNow }) : undefined}
           value={currentLabel}
           onClick={() => onOpen("where")}
         />
-        <NavRow
-          data-panel-page="browser"
-          icon={KeyRound}
-          title={t("settings.sites.title")}
-          value={signedIn ?? undefined}
-          onClick={() => onOpen("browser")}
-        />
-      </Card>
-    </div>
+        <label data-panel-row="browser-switch" className={switchRowCls}>
+          <RowIcon icon={Globe} />
+          <RowText
+            title={t("browser.card.switch")}
+            hint={!canTurnOn ? browserUnavailableReason(state.config) : undefined}
+          />
+          <BotSwitch
+            color={bot.color}
+            checked={browserOn}
+            disabled={turningOn || (!browserOn && !canTurnOn)}
+            aria-label={t("browser.card.switch")}
+            onClick={() => (browserOn ? turnOffBrowser() : void turnOnBrowser())}
+          />
+        </label>
+      </CardSurface>
+      {error && <p role="alert" className="mx-1 mt-2 text-[12px] text-danger">{error}</p>}
+    </section>
   );
 }

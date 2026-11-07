@@ -54,7 +54,9 @@ export const TOUR_STEPS: TourStep[] = [
 // pill opens. Those steps point at the pill there, and give up rather than wait if even that is missing (a group chat).
 const SIMPLE_STEPS: Partial<Record<TourStepId, Partial<TourStep>>> = {
   "tour.model": { anchor: "bot-pill", skipIfMissing: true, copy: "onboarding.tour.model-simple" },
-  "tour.computer": { anchor: "bot-pill", skipIfMissing: true, copy: "onboarding.tour.computer-simple" },
+  "tour.computer": { anchor: "bot-pill", skipIfMissing: true, copy: "onboarding.tour.computer-simple", onExit: undefined },
+  // The computer opens over the whole window in Simple mode, above the tour.
+  "tour.computer-browser": { onEnter: undefined, onExit: undefined },
 };
 
 const SIMPLE_TOUR_STEPS: TourStep[] = TOUR_STEPS.map((step) => ({ ...step, ...SIMPLE_STEPS[step.id] }));

@@ -1,17 +1,17 @@
 import { useSyncExternalStore } from "react";
 
 import type { Action, BotSettingsSection } from "@/state/store";
-import { isSimplePage, PAGES, sectionTarget, type PageId, type PanelTarget, type SimplePageId } from "./page-registry";
+import { isSimplePage, sectionTarget, type PageId, type PanelTarget, type SimplePageId } from "./page-registry";
 
 /**
- * A named open of a bot's settings. The store keeps only the section, which the Simple bot panel maps to one tab or
- * page; a link may name a closer page (Access spans the Computer tab and several pages), and every link is a new
+ * A named open of a bot's settings. The store keeps only the section, which the Simple bot panel maps to one card or
+ * page; a link may name a closer page (Access spans the Computer card and several pages), and every link is a new
  * object, so following the same one again lands there again after the panel has moved on.
  */
 export interface PanelLink {
   section: BotSettingsSection;
   page?: PageId;
-  /** A card on the section's tab to scroll to, such as "conversations". */
+  /** A card on the panel's first page to scroll to, such as "conversations". */
   anchor?: string;
   nonce: number;
 }
@@ -22,7 +22,7 @@ const watchers = new Set<() => void>();
 /**
  * Opens the bot's settings at a section, exactly as `toggleSettings` does, and tells the bot panel where to land:
  * `page`, when given, is the panel page that holds what the caller is about (it must belong to the section); `anchor`
- * is a card on the section's tab.
+ * is a card on the panel's first page.
  */
 export function openBotSettings(
   dispatch: (action: Action) => void,
@@ -56,6 +56,6 @@ const SIMPLE_ALIAS: Partial<Record<PageId, SimplePageId>> = { mcp: "apps" };
 export function linkTarget(section: BotSettingsSection, link: PanelLink | null): PanelTarget {
   const ours = link?.section === section ? link : null;
   const page = ours?.page && (SIMPLE_ALIAS[ours.page] ?? ours.page);
-  if (page && isSimplePage(page)) return { tab: PAGES[page].home, page };
+  if (page && isSimplePage(page)) return { page };
   return ours?.anchor ? { ...sectionTarget(section), anchor: ours.anchor } : sectionTarget(section);
 }

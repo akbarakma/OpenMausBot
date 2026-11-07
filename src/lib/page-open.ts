@@ -3,6 +3,7 @@ import { PAGE_ID } from "../../shared/published-page";
 import type { Bot } from "@/state/store";
 import { useOptionalStoreRef } from "@/state/store-ref";
 import { openExternalLink } from "./app-links";
+import { writeComputerPanelView } from "./computer-panel-view";
 import { browserAvailable, builtInBrowserEnabled, type FeatureFlagConfig } from "./feature-flags";
 
 export const PAGES_DOMAIN = "mausbot.page";
@@ -80,6 +81,7 @@ export function usePageOpener(): (url: string) => void {
     const botId = app && state ? pagePanelBot(url, { selectedId: state.selectedId, bots: state.bots ?? [], groups: state.groups ?? [], config: state.config, desktop: window.ogb }) : null;
     if (!app || !botId) { void openExternalLink(url).catch(() => {}); return; }
     requestPanelPage(botId, url);
+    writeComputerPanelView(botId, "browser");
     app.dispatch({ type: "toggleComputer", open: true });
   }, []);
 }

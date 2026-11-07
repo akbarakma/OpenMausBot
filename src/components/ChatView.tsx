@@ -135,6 +135,7 @@ import { pendingApprovals } from "./PendingApproval";
 import { TranscriptAnnouncer } from "./TranscriptAnnouncer";
 import { JumpToLatestButton } from "./JumpToLatestButton";
 import { isBotTextRow, joinedCorners, needsStamp, quietRow, simpleRowLayout, SIMPLE_BOT_BUBBLE, SIMPLE_BUBBLE_MAX, SIMPLE_BUBBLE_TEXT, SIMPLE_STACKED, SIMPLE_USER_BUBBLE, type BubbleJoin } from "./chat-bubble";
+import { setBotPanelWanted } from "./bot-panel/simple-side-panel";
 
 const USER_COLLAPSE_CHARS = 600;
 const USER_COLLAPSE_LINES = 8;
@@ -1025,7 +1026,10 @@ export function ChatView({ bot: profile }: { bot: Bot }) {
               bot={bot}
               avatar={face}
               privacy={privateChat ? { kind: "private" } : ownHelper ? { kind: "ownHelper" } : sharedChat && team ? { kind: "shared", team: team.name, onlyPeopleAdded: bot.onlyPeopleAdded } : null}
-              onToggle={() => dispatch({ type: "toggleSettings", open: !state.settingsOpen })}
+              onToggle={() => {
+                if (state.settingsOpen) setBotPanelWanted(false);
+                dispatch({ type: "toggleSettings", open: !state.settingsOpen });
+              }}
             />
           ) : advanced ? (
             <div data-chathead-pill className={cn(CHATHEAD_PILL, "pr-1")}>
@@ -1104,10 +1108,10 @@ export function ChatView({ bot: profile }: { bot: Bot }) {
           )}
           <ThreadContextWarning bot={bot} messages={messages} />
           {phone && <UsageAlert engine={bot.modelSelection?.instanceId} />}
-          {/* The model and the bot's computer stay in view in both modes; Simple mode moves only ⋯ into the bot panel. */}
+          {/* The model stays in view in both modes; Simple mode moves the computer and ⋯ into the bot panel. */}
           {!phone && <ModelPicker key={bot.threadId} bot={bot} threadId={bot.threadId} />}
           <LiveCallChip currentBotId={bot.id} onOpen={(botId, threadId) => openThread(dispatch, { botId, threadId }, state, showThreads)} />
-          {!phoneMenu && <button
+          {!phoneMenu && !simpleHead && <button
             data-tour="computer"
             onClick={(event) => { if (!state.computerOpen) rememberComputerPanelOpen({ botId: bot.id, opener: event.currentTarget, tabs: event.detail === 0 }); dispatch({ type: "toggleComputer" }); }}
             className={cn(

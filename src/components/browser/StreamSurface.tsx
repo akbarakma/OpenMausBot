@@ -187,6 +187,8 @@ export function StreamSurface(props: {
   /** Shift+Escape: the person leaves the page for the app's own controls. */
   readonly onLeave?: () => void;
   readonly className?: string;
+  /** Watch only: the view never sends its size, because the newest viewer's size resizes the bot's real page. It fills its box from the top, cropping the rest. */
+  readonly passive?: boolean;
   readonly ref?: Ref<StreamSurfaceHandle>;
 }) {
   const { connect, ref } = props;
@@ -318,7 +320,7 @@ export function StreamSurface(props: {
       const previous = sizeRef.current;
       if (previous?.width === size.width && previous.height === size.height) return;
       sizeRef.current = size;
-      clientRef.current?.send({ type: "resize", ...size });
+      if (!propsRef.current.passive) clientRef.current?.send({ type: "resize", ...size });
       // Outgrowing the cap restarts the screencast, so grow it once the size settles rather than on every throttled
       // resize of a drag.
       if (capTimer !== null) clearTimeout(capTimer);
@@ -359,7 +361,7 @@ export function StreamSurface(props: {
       if (next?.dialog?.message !== previous?.dialog?.message || next?.dialog?.defaultValue !== previous?.dialog?.defaultValue) setPromptText(next?.dialog?.defaultValue ?? "");
       if (next?.controller !== "you") {
         setSelect(null);
-      } else if (previous?.controller !== "you" && sizeRef.current) {
+      } else if (previous?.controller !== "you" && sizeRef.current && !propsRef.current.passive) {
         clientRef.current?.send({ type: "resize", ...sizeRef.current });
       }
       if (!operable(next)) {
@@ -630,7 +632,7 @@ export function StreamSurface(props: {
         <canvas
           ref={canvasRef}
           aria-hidden="true"
-          className="block size-full touch-none object-contain"
+          className={`block size-full touch-none ${props.passive ? "object-cover object-top" : "object-contain"}`}
           style={{ cursor: operable(control) ? (you ? cursor : "default") : "not-allowed" }}
           onPointerDown={handlePointer}
           onPointerMove={handlePointer}
@@ -640,7 +642,7 @@ export function StreamSurface(props: {
           onMouseDown={(event) => event.preventDefault()}
           onContextMenu={(event) => event.preventDefault()}
         />
-        {agentCursor && !you ? <AgentCursor {...agentCursor} controller={control?.controller === "agent" ? "agent" : "none"} /> : null}
+        {agentCursor && !you && !props.passive ? <AgentCursor {...agentCursor} controller={control?.controller === "agent" ? "agent" : "none"} /> : null}
         {/* Focus target for page keyboard input. Pinned top-left so focusing it never scrolls the surface; 16px keeps
           iOS from zooming the app on focus. */}
         <textarea

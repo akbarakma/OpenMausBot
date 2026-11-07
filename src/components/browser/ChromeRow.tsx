@@ -2,7 +2,7 @@
 // apps/web/src/components/preview/PreviewChromeRow.tsx, MIT License, Copyright (c) 2026 T3 Tools Inc. (full text in
 // third_party/t3-code/LICENSE); modified: OpenMausBot's tabs, control pill and profile button.
 import { AppWindow, ArrowLeft, ArrowRight, Globe, Hand, Loader2, Maximize, Minimize, Plus, RotateCw, Shrink, UserRound, X } from "lucide-react";
-import { forwardRef, useState, type ReactNode } from "react";
+import { forwardRef, useState, type CSSProperties, type ReactNode } from "react";
 
 import type { PreviewStreamControl } from "@/lib/browser-stream-client";
 import type { BrowserTakeStatus } from "@/lib/browser-control";
@@ -72,6 +72,9 @@ export const ChromeRow = forwardRef<HTMLInputElement, {
   onFullscreen: () => void;
   onMaximize: () => void;
   onProfiles: () => void;
+  /** The browser fills the app window: a taller first row that drags the window and clears the macOS traffic lights,
+   * with a way back to the chat instead of the maximize and full-screen buttons. */
+  windowBar?: { onBack: () => void; macInset: boolean; drag: { "data-window-drag"?: ""; style?: CSSProperties } };
 }>(function ChromeRow(props, addressRef) {
   const { botName, tabs, nav, connected, control, takeStatus, commandsReady } = props;
   const [draft, setDraft] = useState("");
@@ -81,9 +84,16 @@ export const ChromeRow = forwardRef<HTMLInputElement, {
   // Whenever the person holds the browser, from this view or another, the pill hands it back.
   const handsBack = yours || pill === "held";
   const shown = nav.url === "about:blank" ? "" : nav.url;
+  const bar = props.windowBar;
   return (
     <div className="shrink-0 border-b border-hairline/40">
-      <div className="flex min-h-10 items-center gap-1 px-2 pt-1">
+      <div {...bar?.drag} className={bar ? `flex h-[60px] items-center gap-2 border-b border-hairline/30 bg-panel pr-3 ${bar.macInset ? "pl-[84px]" : "pl-3"}` : "flex min-h-10 items-center gap-1 px-2 pt-1"}>
+        {bar && (
+          <div className="flex shrink-0 items-center gap-2 rounded-full border border-hairline/50 px-3 py-1.5 text-[12px] font-medium text-ink">
+            <span className={`size-2 rounded-full ${pill === "bot" ? "animate-pulse bg-success" : "bg-ink-tertiary/50"}`} aria-hidden="true" />
+            {t("browser.window.title", { name: botName })}
+          </div>
+        )}
         <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto" role="tablist" aria-label={t("browser.panel.tabs")}>
           {tabs.length ? tabs.map((tab) => (
             <div key={tab.tabId} className={`flex max-w-52 shrink-0 items-center gap-1 rounded-xl px-1 text-[12px] ${tab.active ? "bg-inset text-ink" : "text-ink-secondary"}`}>
@@ -109,9 +119,15 @@ export const ChromeRow = forwardRef<HTMLInputElement, {
           <span className="truncate">{PILL_TEXT[pill](botName)}</span>
           {pill === "bot" || pill === "watching" ? <span className="shrink-0 text-ink">· {t("browser.control.take")}</span> : handsBack ? <span className="shrink-0">· {t("browser.control.handBack")}</span> : null}
         </button>
-        <button className={button} title={t(props.maximized ? "browser.panel.restore" : "browser.panel.maximizeHint")} aria-label={t(props.maximized ? "browser.panel.restore" : "browser.panel.maximize")} onClick={props.onMaximize}>{props.maximized ? <Shrink size={15} /> : <AppWindow size={15} />}</button>
-        <button className={button} title={t(props.fullscreen ? "browser.panel.exitFullscreen" : "browser.panel.fullscreenHint")} aria-label={t(props.fullscreen ? "browser.panel.exitFullscreen" : "browser.panel.fullscreen")} onClick={props.onFullscreen}>{props.fullscreen ? <Minimize size={15} /> : <Maximize size={15} />}</button>
+        {!bar && <button className={button} title={t(props.maximized ? "browser.panel.restore" : "browser.panel.maximizeHint")} aria-label={t(props.maximized ? "browser.panel.restore" : "browser.panel.maximize")} onClick={props.onMaximize}>{props.maximized ? <Shrink size={15} /> : <AppWindow size={15} />}</button>}
+        {!bar && <button className={button} title={t(props.fullscreen ? "browser.panel.exitFullscreen" : "browser.panel.fullscreenHint")} aria-label={t(props.fullscreen ? "browser.panel.exitFullscreen" : "browser.panel.fullscreen")} onClick={props.onFullscreen}>{props.fullscreen ? <Minimize size={15} /> : <Maximize size={15} />}</button>}
         <button className={`${button} rounded-xl bg-inset p-1.5`} title={t("browser.panel.profileTitle", { name: props.profileName })} aria-label={t("browser.panel.profiles")} onClick={props.onProfiles}><UserRound size={15} /></button>
+        {bar && (
+          <button type="button" data-browser-back className="flex h-9 shrink-0 cursor-pointer items-center gap-2 rounded-lg border border-hairline/60 px-3 text-[12px] font-medium text-ink hover:bg-inset" onClick={bar.onBack}>
+            <Shrink size={14} aria-hidden="true" />
+            {t("browser.window.back")}
+          </button>
+        )}
       </div>
       <form
         className="relative flex h-10 items-center gap-1 px-2"
