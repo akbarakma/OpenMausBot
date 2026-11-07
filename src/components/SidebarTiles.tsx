@@ -20,7 +20,7 @@ import { SIMPLE_ROW_FOCUS } from "./SidebarSimpleTop";
 import { useBotUnread } from "./unread-notice";
 import { useMotionBeat } from "./motion-beat";
 
-const RING = "ring-2 ring-[var(--tile)]";
+const RING = "ring-2 ring-panel";
 
 type TileProps = BotRowProps & PinnedCircleDragProps & { primary?: boolean };
 
@@ -77,8 +77,8 @@ export const SidebarBotTile = memo(function SidebarBotTile({ primary = false, dr
       onKeyDown={onKeyDown}
       onContextMenu={(event) => openBotContextMenu(onMenu, bot.id, event)}
       className={cn(
-        "flex h-[92px] w-[78px] shrink-0 cursor-pointer flex-col items-center rounded-[10px] bg-[var(--tile)] px-1 pt-2 transition-colors duration-150", SIMPLE_ROW_FOCUS,
-        selected ? "[--tile:var(--color-raised)]" : "[--tile:var(--color-panel)] hover:[--tile:color-mix(in_srgb,var(--color-raised)_50%,var(--color-panel))]",
+        "flex h-[92px] w-[78px] shrink-0 cursor-pointer flex-col items-center rounded-[10px] px-1 pt-2 transition-colors duration-150", SIMPLE_ROW_FOCUS,
+        selected ? "bg-ink/[0.10]" : "hover:bg-ink/[0.06]",
         pinnedCircleDragClass({ drag, dragging, drop }),
       )}
     >
