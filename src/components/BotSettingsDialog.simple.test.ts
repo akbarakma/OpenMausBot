@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Routine } from "@/lib/routines";
+import type { WebhookTrigger } from "../../shared/webhooks";
 import type { MemoryDoc } from "@/lib/memory";
 import type { Bot, BotSettingsSection, InstanceInfo } from "@/state/store";
 import { AVATAR_FOCUS_CENTER, AVATAR_ZOOM_MIN } from "../../shared/bot-avatar";
@@ -44,6 +45,7 @@ const fixture = vi.hoisted(() => {
     apps: { phase: "ready", apps: [], connectedSlugs: [] } as BotApps,
     places: {} as Record<string, [boolean, boolean, string]>,
     mcp: { servers: null as McpServerSummary[] | null, error: false },
+    appTriggersLoaded: true,
   };
 });
 vi.mock("react", async (original) => ({
@@ -64,6 +66,10 @@ vi.mock("@/lib/interface-mode", () => ({
 vi.mock("@/lib/mcp-servers", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/mcp-servers")>()),
   useMcpServers: () => ({ ...fixture.mcp, refresh: () => Promise.resolve(fixture.mcp.servers ?? []) }),
+}));
+vi.mock("@/lib/app-triggers", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@/lib/app-triggers")>(),
+  useAppTriggers: () => ({ loaded: fixture.appTriggersLoaded, triggers: [], attempts: [], service: null }),
 }));
 vi.mock("@/lib/use-owner-or-admin", () => ({ useOwnerOrAdmin: () => fixture.ownerOrAdmin }));
 vi.mock("@/lib/app-links", async (importOriginal) => ({
@@ -129,7 +135,8 @@ const { LibraryTab } = await import("./bot-panel/LibraryTab");
 const { ApprovalChip } = await import("./ComposerPlusMenu");
 const { callMode, setCallMode } = await import("@/lib/call-mode");
 const { ComputerTab, WherePage } = await import("./bot-panel/ComputerTab");
-const { PageBody, AppsPage, RoutinesPage, MemoryPage, SkillsPage, FolderPage, BrowserPage } = await import("./bot-panel/pages");
+const { PageBody, AppsPage, MemoryPage, SkillsPage, FolderPage, BrowserPage } = await import("./bot-panel/pages");
+const { AutomationsPage } = await import("./bot-panel/AutomationsPage");
 const { BrowserLogins } = await import("./bot-panel/browser-logins");
 const { memoryNoteKey, panelMemoryNotes } = await import("./bot-panel/memory-notes");
 const { PAGES, sectionTarget } = await import("./bot-panel/page-registry");
@@ -141,8 +148,6 @@ const { LocalComputerAutoWarning } = await import("./LocalComputerAutoWarning");
 const { ModelPicker } = await import("./ModelPicker");
 const { ThreadModelsLine } = await import("./ThreadModelsLine");
 const { ModelSection } = await import("./bot-settings/ModelSection");
-const { RoutineList } = await import("./routines/RoutineList");
-const { RoutineEditor } = await import("./RoutinesPage");
 const { SignedInSites } = await import("./SignedInSites");
 const { AvatarImageGenerator } = await import("./AvatarImageGenerator");
 const { AvatarFraming } = await import("./avatar-editing");
@@ -196,7 +201,7 @@ const derived = () => fixture.derived as never;
 const panel = (bot: Bot, linkedSection: BotSettingsSection | null = null) =>
   capture(() => BotPanel({ bot, derived: derived(), linkedSection, onClose }));
 const dialog = (bot: Bot) => capture(() => BotSettingsDialog({ bot }));
-const botTab = (bot: Bot) => capture(() => DetailsTab({ bot, derived: derived(), onOpen }));
+const botTab = (bot: Bot) => capture(() => DetailsTab({ bot, onOpen }));
 const settingsPage = (bot: Bot, editingInstructions = false) =>
   capture(() => SettingsPage({ bot, derived: derived(), onOpen, editingInstructions, onEditInstructions }));
 const library = (bot: Bot) => capture(() => LibraryTab({ bot, onOpen }));
@@ -233,6 +238,10 @@ const routine = (extra: Partial<Routine> = {}): Routine => ({
   schedule: { type: "daily", time: "09:00", weekdays: [1, 2, 3, 4, 5] }, durationMinutes: 15,
   nextRunAt: Date.UTC(2099, 0, 5, 9), createdAt: 1, updatedAt: 1, ...extra,
 });
+const webhook = (extra: Partial<WebhookTrigger> = {}): WebhookTrigger => ({
+  id: "w1", endpointId: "e1", name: "Release alert", prompt: "Post the release notes", botId: "scout", runOn: "maus", enabled: true,
+  createdAt: 1, updatedAt: 1, deliveryCount: 0, ...extra,
+});
 const app = (slug: string, scope: "read" | "write" | null) => ({
   slug, label: slug[0]!.toUpperCase() + slug.slice(1), blurb: `${slug} things`, card: { logo: null, domain: null, label: slug }, scope,
 });
@@ -254,7 +263,8 @@ beforeEach(() => {
   fixture.api = vi.fn(() => Promise.resolve({}));
   fixture.saveMemory = vi.fn((_bot: unknown, path: unknown, text: unknown) => Promise.resolve({ ok: true, doc: { path, text, hash: "h2", exists: true } }));
   fixture.openExternal = vi.fn(() => Promise.resolve());
-  fixture.storeState = { settingsOpen: true, botSettingsSection: "overview", botSettingsExpandAccordion: false };
+  fixture.storeState = { settingsOpen: true, botSettingsSection: "overview", botSettingsExpandAccordion: false, routinesLoadState: "ready" };
+  fixture.appTriggersLoaded = true;
   fixture.skills = {
     skills: [], loading: false, working: "", error: "", reviewing: null, toggle: vi.fn(() => Promise.resolve()),
     setWorking: vi.fn(), setError: vi.fn(), refresh: vi.fn(() => Promise.resolve()), putAssignments: vi.fn(() => Promise.resolve()),
@@ -328,7 +338,7 @@ describe("the bot panel in Simple mode", () => {
     const page = panel(bot);
     expect(shown(page)).toEqual({ tab: undefined, page: "routines" });
     expect(has(page, "role", "tablist")).toBe(false);
-    expect(ofType(page, PageHeader)!.props).toMatchObject({ back: "Details", title: "Routines" });
+    expect(ofType(page, PageHeader)!.props).toMatchObject({ back: "Details", title: "Automations" });
     expect(page.html).toContain('id="bot-settings-title"');
     (ofType(page, PageHeader)!.props.onBack as () => void)();
     expect(shown(panel(bot))).toEqual({ tab: "details", page: undefined });
@@ -625,7 +635,7 @@ describe("the avatar editor", () => {
 
 
 describe("the Details tab", () => {
-  it("holds the model and routines in one card, then the conversations and this conversation's rows, with no switch or Thinking row", () => {
+  it("holds the model and automations in one card, then the conversations and this conversation's rows, with no switch or Thinking row", () => {
     const rendered = botTab(makeBot());
     expect(ofType(rendered, ModelPicker)!.props).toMatchObject({ bot: expect.objectContaining({ id: "scout" }), threadId: "thread-scout", contained: true });
     expect(ofType(rendered, BotConversations)!.props.bot).toMatchObject({ id: "scout" });
@@ -642,7 +652,7 @@ describe("the Details tab", () => {
     expect(switches(rendered.html)).toBe(0);
   });
 
-  it("shows Routines as one row before the conversations, with or without routines, and no example asks", () => {
+  it("shows Automations as one row before the conversations, with or without automations, and no example asks", () => {
     const empty = botTab(makeBot({ defaultBot: {} }));
     expect(empty.html).not.toContain("data-panel-empty");
     expect(empty.html).not.toContain("data-panel-ask");
@@ -651,21 +661,26 @@ describe("the Details tab", () => {
     expect(rowValue(empty, "routines")).toBe("None");
     click(find(empty, "data-panel-page", "routines"));
     expect(onOpen).toHaveBeenLastCalledWith("routines");
-    fixture.derived.botRoutines = [routine()];
+    fixture.storeState.routines = [routine()];
     const two = [{ threadId: "thread-scout", title: "Plan", createdAt: 2 }, { threadId: "thread-older", title: "Older", createdAt: 1 }];
     const some = botTab(makeBot({ tasks: two }));
     expect(some.html.indexOf('data-panel-card="conversations"')).toBeGreaterThan(-1);
     expect(some.html.indexOf('data-panel-page="routines"')).toBeLessThan(some.html.indexOf('data-panel-card="conversations"'));
   });
 
-  it("values Routines by how many are on, and opens the routines page", () => {
-    fixture.derived.botRoutines = [routine(), routine({ id: "r2", enabled: false }), routine({ id: "r3" })];
+  it("values Automations by how many of this bot's routines and webhooks are on, and opens the automations page", () => {
+    fixture.storeState.routines = [routine(), routine({ id: "r2", enabled: false }), routine({ id: "r3", botId: "other" })];
+    fixture.storeState.webhooks = [webhook(), webhook({ id: "w2", botId: "other" })];
     const rendered = botTab(makeBot());
+    expect(rendered.html).toContain(">Automations<");
     expect(rowValue(rendered, "routines")).toBe("2 on");
     click(find(rendered, "data-panel-page", "routines"));
     expect(onOpen).toHaveBeenLastCalledWith("routines");
-    fixture.derived.botRoutines = [routine({ enabled: false })];
+    fixture.storeState.routines = [routine({ enabled: false })];
+    fixture.storeState.webhooks = [webhook({ enabled: false })];
     expect(rowValue(botTab(makeBot()), "routines")).toBe("None");
+    fixture.appTriggersLoaded = false;
+    expect(rowValue(botTab(makeBot()), "routines"), "app events still loading: no None yet").toBeUndefined();
   });
 
   it("lists Find and Activity for this conversation as rows that run them, leaving Copy and Download to Share", () => {
@@ -1009,7 +1024,7 @@ describe("the Where it works page", () => {
 
 describe("the drill-in pages", () => {
   const PAGE = {
-    settings: SettingsPage, apps: AppsPage, routines: RoutinesPage, memory: MemoryPage, skills: SkillsPage, folder: FolderPage, browser: BrowserPage, where: WherePage,
+    settings: SettingsPage, apps: AppsPage, routines: AutomationsPage, memory: MemoryPage, skills: SkillsPage, folder: FolderPage, browser: BrowserPage, where: WherePage,
   } as const;
   // The walker reads only what a component returns, so each page is called as the function PageBody picks.
   const onDetail = vi.fn();
@@ -1109,20 +1124,58 @@ describe("the drill-in pages", () => {
     expect(switches(failed.html)).toBe(0);
   });
 
-  it("lists routines with switches, adds one locked to this bot, and says to ask in chat; no logs page, no schedules link", () => {
-    const morning = routine();
-    fixture.derived.botRoutines = [morning];
+  it("groups this bot's routines and webhooks under their own headings, each with a switch, and opens the Automations page", async () => {
+    fixture.storeState.routines = [routine(), routine({ id: "r2", name: "Other bot's brief", botId: "other" })];
+    fixture.storeState.webhooks = [webhook()];
     const rendered = body("routines");
-    const list = ofType(rendered, RoutineList)!;
-    expect(list.props.routines).toBe(fixture.derived.botRoutines);
-    (list.props.onToggle as (routine: Routine) => void)(morning);
-    expect(fixture.dispatch).toHaveBeenLastCalledWith({ type: "updateRoutine", routineId: "r1", patch: { enabled: false } });
-    expect(rendered.html).toContain('aria-label="Run Morning brief on its schedule" type="button" role="switch" aria-checked="true"');
+    expect(rendered.html).toContain("Routines</span> · On a schedule");
+    expect(rendered.html).toContain("Webhooks</span> · When another app sends something");
+    expect(rendered.html.indexOf("Morning brief")).toBeLessThan(rendered.html.indexOf("Release alert"));
+    expect(rendered.html).not.toContain("Other bot&#x27;s brief");
+    expect(rendered.html).not.toContain("App events");
+    expect(switches(rendered.html)).toBe(2);
     expect(rendered.html).toContain("Or just ask Scout in chat: “every weekday at 8, send me a summary”.");
-    expect(rendered.html).not.toContain("Open schedules");
-    expect(has(rendered, "data-panel-action", "routine-logs")).toBe(false);
-    click(find(rendered, "data-panel-action", "new-routine"));
-    expect(ofType(body("routines"), RoutineEditor)!.props).toMatchObject({ lockedBotId: "scout", routine: undefined });
+
+    click(find(rendered, "data-panel-open", "w1"));
+    expect(fixture.dispatch).toHaveBeenLastCalledWith({ type: "showRoutines", view: "list", routineId: "w1" });
+    click(find(rendered, "data-panel-link", "new-automation"));
+    expect(fixture.dispatch).toHaveBeenLastCalledWith({ type: "showRoutines", view: "list", compose: true });
+    click(find(rendered, "data-panel-link", "all-automations"));
+    expect(fixture.dispatch).toHaveBeenLastCalledWith({ type: "showRoutines", view: "list" });
+
+    (find(rendered, "aria-label", "Turn “Morning brief” on or off").props.onClick as () => void)();
+    await vi.waitFor(() => expect(fixture.api).toHaveBeenCalledWith("/api/routines/r1", { method: "PATCH", body: JSON.stringify({ enabled: false }) }));
+  });
+
+  it("says nothing runs on its own yet when the bot has no automations, and offers only New automation", () => {
+    const rendered = body("routines");
+    expect(rendered.html).toContain("Nothing runs on its own yet.");
+    expect(switches(rendered.html)).toBe(0);
+    expect(has(rendered, "data-panel-link", "new-automation")).toBe(true);
+    expect(has(rendered, "data-panel-link", "all-automations")).toBe(false);
+  });
+
+  it("says Checking while routines or app events load, and shows the load error instead of an empty list", () => {
+    fixture.appTriggersLoaded = false;
+    expect(body("routines").html).toContain("Checking…");
+    fixture.appTriggersLoaded = true;
+    fixture.storeState.routinesLoadState = "loading";
+    expect(body("routines").html).toContain("Checking…");
+    fixture.storeState.routinesLoadState = "error";
+    const failed = body("routines");
+    expect(failed.html).toContain("Couldn&#x27;t refresh routines.");
+    expect(failed.html).not.toContain("Nothing runs on its own yet.");
+  });
+
+  it("holds every switch while one automation is being turned on or off", () => {
+    fixture.storeState.routines = [routine(), routine({ id: "r2", name: "Evening brief" })];
+    let release = () => {};
+    fixture.api = vi.fn(() => new Promise((resolve) => { release = () => resolve({ routine: routine({ enabled: false }) }); }));
+    (find(body("routines"), "aria-label", "Turn “Morning brief” on or off").props.onClick as () => void)();
+    const busy = body("routines");
+    expect(find(busy, "aria-label", "Turn “Morning brief” on or off").props.disabled).toBe(true);
+    expect(find(busy, "aria-label", "Turn “Evening brief” on or off").props.disabled).toBe(true);
+    release();
   });
 
   it("lists each note as one line without its date or source, opens one, deletes it after a confirm, and adds one", async () => {

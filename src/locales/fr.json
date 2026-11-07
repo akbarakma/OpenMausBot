@@ -3153,5 +3153,9 @@
   "rail.localRemoveAsk": "Retirer « {name} » ? Ses bots, discussions et fichiers sur cet ordinateur sont supprimés. Son dossier va d'abord à la Corbeille.",
   "rail.localRemoveAskWin": "Retirer « {name} » ? Ses bots, discussions et fichiers sur cet ordinateur sont supprimés. Son dossier va d'abord à la Corbeille.",
   "rail.localRemoveFailed": "Il n'a pas été retiré. Réessayez dans un instant.",
-  "native.menu.newLocal": "Nouvel espace de travail sur cet ordinateur…"
+  "native.menu.newLocal": "Nouvel espace de travail sur cet ordinateur…",
+  "botPanel.automations.appEvents": "Événements d'apps",
+  "botPanel.automations.empty": "Rien ne s'exécute encore tout seul.",
+  "botPanel.automations.new": "Nouvelle automatisation",
+  "botPanel.automations.openAll": "Ouvrir les automatisations"
 }

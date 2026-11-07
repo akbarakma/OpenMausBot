@@ -5937,5 +5937,9 @@
   "rail.localRemoveAsk": "¿Quitar “{name}”? Sus bots, chats y archivos en este equipo se borran. Antes, su carpeta va a la Papelera.",
   "rail.localRemoveAskWin": "¿Quitar “{name}”? Sus bots, chats y archivos en este equipo se borran. Antes, su carpeta va a la Papelera de reciclaje.",
   "rail.localRemoveFailed": "No se quitó. Inténtalo de nuevo en un momento.",
-  "native.menu.newLocal": "Nuevo espacio de trabajo en este equipo…"
+  "native.menu.newLocal": "Nuevo espacio de trabajo en este equipo…",
+  "botPanel.automations.appEvents": "Eventos de apps",
+  "botPanel.automations.empty": "Todavía nada se ejecuta solo.",
+  "botPanel.automations.new": "Nueva automatización",
+  "botPanel.automations.openAll": "Abrir Automatizaciones"
 }

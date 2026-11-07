@@ -5436,5 +5436,9 @@
   "rail.localRemoveAsk": "Xóa “{name}”? Bot, cuộc trò chuyện và tệp của nó trên máy tính này sẽ bị xóa. Thư mục của nó sẽ được chuyển vào Thùng rác trước.",
   "rail.localRemoveAskWin": "Xóa “{name}”? Bot, cuộc trò chuyện và tệp của nó trên máy tính này sẽ bị xóa. Thư mục của nó sẽ được chuyển vào Thùng rác trước.",
   "rail.localRemoveFailed": "Chưa xóa được. Hãy thử lại sau giây lát.",
-  "native.menu.newLocal": "Không gian làm việc mới trên máy tính này…"
+  "native.menu.newLocal": "Không gian làm việc mới trên máy tính này…",
+  "botPanel.automations.appEvents": "Sự kiện ứng dụng",
+  "botPanel.automations.empty": "Chưa có gì tự chạy.",
+  "botPanel.automations.new": "Tự động hóa mới",
+  "botPanel.automations.openAll": "Mở trang Tự động hóa"
 }

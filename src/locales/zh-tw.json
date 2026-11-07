@@ -4828,5 +4828,9 @@
   "rail.localRemoveAsk": "要移除「{name}」嗎？它在這台電腦上的機器人、對話和檔案都會被刪除。它的資料夾會先移到垃圾桶。",
   "rail.localRemoveAskWin": "要移除「{name}」嗎？它在這台電腦上的機器人、對話和檔案都會被刪除。它的資料夾會先移到資源回收筒。",
   "rail.localRemoveFailed": "沒有移除，請稍後再試。",
-  "native.menu.newLocal": "在這台電腦上新增工作區…"
+  "native.menu.newLocal": "在這台電腦上新增工作區…",
+  "botPanel.automations.appEvents": "應用程式事件",
+  "botPanel.automations.empty": "還沒有會自動執行的項目。",
+  "botPanel.automations.new": "新增自動化",
+  "botPanel.automations.openAll": "開啟自動化頁面"
 }

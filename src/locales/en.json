@@ -9682,5 +9682,9 @@
   "remote.e2e.anywhere": "Reachable from anywhere · end-to-end encrypted",
   "remote.e2e.connecting": "Connecting to MausBot Relay…",
   "remote.e2e.local": "On this Wi-Fi and Tailscale · end-to-end encrypted",
-  "serverError.mailbox.outgoingFields": "Check the outgoing server: a name like mail.example.com, a port from 1 to 65535, and SSL/TLS or STARTTLS."
+  "serverError.mailbox.outgoingFields": "Check the outgoing server: a name like mail.example.com, a port from 1 to 65535, and SSL/TLS or STARTTLS.",
+  "botPanel.automations.appEvents": "App events",
+  "botPanel.automations.empty": "Nothing runs on its own yet.",
+  "botPanel.automations.new": "New automation",
+  "botPanel.automations.openAll": "Open Automations page"
 }

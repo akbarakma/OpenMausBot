@@ -8,7 +8,6 @@ import { activeLocale, t } from "@/lib/i18n";
 import { mcpServersForBot, mcpServersOfBot, mcpSwitch, useMcpServers } from "@/lib/mcp-servers";
 import { deleteMemoryDoc, MEMORY_INDEX, saveMemoryDoc, type MemoryDoc } from "@/lib/memory";
 import { openExternalLink } from "@/lib/app-links";
-import type { Routine } from "@/lib/routines";
 import type { SkillImportSummary } from "../../../shared/skill-import";
 import { shortPath } from "@/lib/short-path";
 import { skillImportLines } from "@/lib/skill-import";
@@ -16,14 +15,13 @@ import { useStore, type Bot } from "@/state/store";
 import { ConfirmDialog } from "../ConfirmDialog";
 import { useDesktopCapabilities } from "../DesktopCapabilities";
 import { ServiceIcon } from "../ServiceIcon";
-import { RoutineEditor } from "../RoutinesPage";
 import { useWorkingFolder } from "../bot-settings/AccessSection";
 import { BotApiCard } from "../bot-settings/BotApiCard";
 import { useBotEditor } from "../bot-settings/BotEditorContext";
 import { SkillReviewDialog, useManagedSkills, type ManagedSkill } from "../bot-settings/SkillsSection";
 import { useBotApps, type BotApp } from "../bot-settings/useBotApps";
 import type { useBotSettingsDerived } from "../bot-settings/useBotSettingsDerived";
-import { RoutineList } from "../routines/RoutineList";
+import { AutomationsPage } from "./AutomationsPage";
 import { BackupAis } from "./BackupAis";
 import { BrowserLogins } from "./browser-logins";
 import { useOpenComputer, WherePage } from "./ComputerTab";
@@ -138,37 +136,6 @@ export function AppsPage({ bot, derived }: PageContext) {
           {t("botPanel.apps.connectAnother")}
         </LinkRow>
       </Card>
-    </>
-  );
-}
-
-export function RoutinesPage({ bot, derived }: PageContext) {
-  const { state, dispatch } = useStore();
-  const [editing, setEditing] = useState<Routine | "new" | null>(null);
-  return (
-    <>
-      <RoutineList
-        routines={derived.botRoutines}
-        runs={state.routineRuns}
-        loading={state.routinesLoadState === "loading" && derived.botRoutines.length === 0}
-        error={state.routinesLoadState === "error"}
-        onOpen={setEditing}
-        onLogs={(routine) => dispatch({ type: "showRoutines", section: "logs", botId: bot.id, routineId: routine.id })}
-        onToggle={(routine) => dispatch({ type: "updateRoutine", routineId: routine.id, patch: { enabled: !routine.enabled } })}
-      />
-      <Card>
-        <LinkRow data-panel-action="new-routine" icon={Plus} onClick={() => setEditing("new")}>{t("botPanel.routines.add")}</LinkRow>
-      </Card>
-      <p className="mx-1 text-[13px] leading-normal text-ink-secondary">{t("botPanel.routines.ask", { name: bot.name })}</p>
-      {editing && (
-        <RoutineEditor
-          key={bot.id}
-          routine={editing === "new" ? undefined : editing}
-          bots={[bot]}
-          lockedBotId={bot.id}
-          onClose={() => setEditing(null)}
-        />
-      )}
     </>
   );
 }
@@ -584,7 +551,7 @@ export function PageBody({ page, onOpen, detail = null, onDetail = () => {}, edi
     case "botapi":
       return <BotApiPage {...context} />;
     case "routines":
-      return <RoutinesPage {...context} />;
+      return <AutomationsPage {...context} />;
     case "memory":
       return <MemoryPage {...context} detail={detail} onDetail={onDetail} />;
     case "skills":

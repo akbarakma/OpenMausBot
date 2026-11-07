@@ -6560,5 +6560,9 @@
   "rail.localRemoveAsk": "Rimuovere “{name}”? I suoi bot, chat e file su questo computer vengono eliminati. Prima la sua cartella va nel Cestino.",
   "rail.localRemoveAskWin": "Rimuovere “{name}”? I suoi bot, chat e file su questo computer vengono eliminati. Prima la sua cartella va nel Cestino.",
   "rail.localRemoveFailed": "Non è stato rimosso. Riprova tra un momento.",
-  "native.menu.newLocal": "Nuovo spazio di lavoro su questo computer…"
+  "native.menu.newLocal": "Nuovo spazio di lavoro su questo computer…",
+  "botPanel.automations.appEvents": "Eventi delle app",
+  "botPanel.automations.empty": "Ancora niente parte da solo.",
+  "botPanel.automations.new": "Nuova automazione",
+  "botPanel.automations.openAll": "Apri Automazioni"
 }

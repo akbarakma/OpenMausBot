@@ -10,6 +10,7 @@ import { saveWebhookCredential, webhookCredentialStore } from "@/lib/webhook-cre
 import { useStore } from "@/state/store";
 import { useAppTriggers } from "@/lib/app-triggers";
 import { AppEventEditor } from "./automations/AppEventEditor";
+import { BotAvatar } from "./Avatar";
 import { useAllAutomationActions } from "./automations/app-actions";
 import { AutomationPanel } from "./automations/AutomationPanel";
 import { AutomationsCalendar } from "./automations/AutomationsCalendar";
@@ -45,6 +46,7 @@ export function TriggersPage({ onBack, onOpenRoom }: { onBack: () => void; onOpe
     setBotFilter(focus?.botId ?? "all");
     // "Open" from a chat card or a notice names the automation: open its panel.
     if (focus?.routineId && focus.section !== "logs") setOpenId(focus.routineId);
+    if (focus?.compose) setNewText("");
   }, [focus]);
   useEffect(() => { backButtonRef.current?.focus({ preventScroll: true }); }, []);
 
@@ -110,15 +112,23 @@ export function TriggersPage({ onBack, onOpenRoom }: { onBack: () => void; onOpe
                   {listed.map((automation) => {
                     const status = automationStatus(automation);
                     const name = automation.name.trim();
+                    const owner = state.bots.find((bot) => bot.id === automation.botId);
                     return (
                       <li key={automation.id} data-automation={automation.id} data-automation-status={status.state} className={cn("flex items-start gap-3 px-4 py-3.5", openId === automation.id && "bg-raised/60")}>
-                        <StatusMark status={status} className="mt-[5px]" />
+                        {owner ? (
+                          <span className="relative mt-0.5 flex shrink-0">
+                            <BotAvatar bot={owner} size={32} motion="none" motionKey={0} animated={false} />
+                            <span className="absolute -bottom-0.5 -right-0.5 flex size-3.5 items-center justify-center rounded-full bg-card">
+                              <StatusMark status={status} className="size-2.5" />
+                            </span>
+                          </span>
+                        ) : <StatusMark status={status} className="mt-[5px]" />}
                         <div className="min-w-0 flex-1">
                           <button type="button" onClick={() => setOpenId(automation.id)} className="block text-left text-[15px] font-medium leading-snug text-ink hover:text-accent-text">{name || sentenceOf(automation)}</button>
                           {name && <div className="mt-0.5 text-[13px] text-ink">{sentenceOf(automation)}</div>}
                           {status.state === "needs-you"
                             ? <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[13px] text-warning">{t("automations.needsYou", { reason: status.reason ?? "" })}<FixButton automation={automation} status={status} actions={actions} onEdit={() => setEditing({ kind: automation.kind, id: automation.id })} /></div>
-                            : <div className="mt-0.5 text-[13px] text-ink-secondary">{statusLine(automation)}</div>}
+                            : <div className="mt-0.5 text-[13px] text-ink-secondary">{owner && <><span className="font-medium text-ink">{owner.name}</span> · </>}{statusLine(automation)}</div>}
                           {actions.error && actions.errorFor?.endsWith(`:${automation.id}`) && <p role="alert" className="mt-1 text-[12px] text-danger">{actions.error}</p>}
                         </div>
                         {status.state !== "done" && <Switch checked={automation.enabled} disabled={actions.busy === `toggle:${automation.id}`} aria-label={t("automations.toggle", { name: automation.name })} onClick={() => void actions.toggle(automation)} className="mt-0.5 shrink-0" />}

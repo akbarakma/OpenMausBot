@@ -39,7 +39,7 @@ export const PAGES: Record<PageId, PageMeta> = {
   model: { title: "model.simple.model", home: "details" },
   instructions: { title: "botSettings.simple.instructions", home: "details" },
   approvals: { title: "botPanel.page.approvals", home: "details" },
-  routines: { title: "botSettings.simple.routines", home: "details" },
+  routines: { title: "automations.title", home: "details" },
   apps: { title: "botPanel.appsRow", home: "details", intro: "botPanel.apps.intro" },
   backups: { title: "botPanel.backups.title", home: "details", intro: "botPanel.backups.hint" },
   botapi: { title: "botApi.title", home: "details" },

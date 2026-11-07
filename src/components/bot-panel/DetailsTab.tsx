@@ -1,4 +1,4 @@
-import { Calendar, Sparkles } from "lucide-react";
+import { Sparkles, Zap } from "lucide-react";
 
 import { cn } from "@/lib/cn";
 import { t } from "@/lib/i18n";
@@ -6,12 +6,10 @@ import type { Bot } from "@/state/store";
 import { useChatMoreItems } from "../ChatMoreMenu";
 import { ModelPicker } from "../ModelPicker";
 import type { SidebarMenuItem } from "../SidebarPopoverMenu";
-import type { useBotSettingsDerived } from "../bot-settings/useBotSettingsDerived";
+import { useBotAutomations } from "./AutomationsPage";
 import { BotConversations } from "./Conversations";
 import type { SimplePageId } from "./page-registry";
 import { Card, NavRow, RowIcon, rowCls } from "./rows";
-
-type Derived = ReturnType<typeof useBotSettingsDerived>;
 
 export const CONVERSATION_ITEMS = ["find", "activity"];
 
@@ -35,13 +33,13 @@ function ItemRow({ item }: { item: SidebarMenuItem }) {
   );
 }
 
-export function DetailsTab({ bot, derived, onOpen }: {
+export function DetailsTab({ bot, onOpen }: {
   bot: Bot;
-  derived: Derived;
   onOpen: (page: SimplePageId) => void;
 }) {
   const { items } = useChatMoreItems(bot);
-  const routinesOn = derived.botRoutines.filter((routine) => routine.enabled).length;
+  const automationState = useBotAutomations(bot.id);
+  const automationsOn = automationState.automations.filter((automation) => automation.enabled).length;
   const conversationItems = CONVERSATION_ITEMS.flatMap((key) => items.filter((item) => item.key === key));
 
   return (
@@ -58,9 +56,9 @@ export function DetailsTab({ bot, derived, onOpen }: {
         </div>
         <NavRow
           data-panel-page="routines"
-          icon={Calendar}
-          title={t("botSettings.simple.routines")}
-          value={routinesOn > 0 ? t("botPanel.routinesOn", { count: routinesOn }) : t("botPanel.none")}
+          icon={Zap}
+          title={t("automations.title")}
+          value={automationsOn > 0 ? t("botPanel.routinesOn", { count: automationsOn }) : automationState.loading ? undefined : t("botPanel.none")}
           onClick={() => onOpen("routines")}
         />
       </Card>

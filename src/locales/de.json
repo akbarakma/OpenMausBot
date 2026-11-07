@@ -3287,5 +3287,9 @@
   "rail.localRemoveAsk": "„{name}“ entfernen? Seine Bots, Chats und Dateien auf diesem Computer werden gelöscht. Sein Ordner kommt vorher in den Papierkorb.",
   "rail.localRemoveAskWin": "„{name}“ entfernen? Seine Bots, Chats und Dateien auf diesem Computer werden gelöscht. Sein Ordner kommt vorher in den Papierkorb.",
   "rail.localRemoveFailed": "Es wurde nicht entfernt. Versuch es gleich noch einmal.",
-  "native.menu.newLocal": "Neuer Arbeitsbereich auf diesem Computer…"
+  "native.menu.newLocal": "Neuer Arbeitsbereich auf diesem Computer…",
+  "botPanel.automations.appEvents": "App-Ereignisse",
+  "botPanel.automations.empty": "Noch läuft nichts von selbst.",
+  "botPanel.automations.new": "Neue Automatisierung",
+  "botPanel.automations.openAll": "Automatisierungen öffnen"
 }
