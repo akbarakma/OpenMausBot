@@ -793,9 +793,10 @@ export const BotListItem = memo(function BotListItem(props: BotRowProps) {
                 }
               }}
               onEditingChange={setRenaming}
-              className="truncate"
+              className={cn("truncate", simpleList && title && "max-w-full shrink-0")}
               inputClassName={cn("w-full rounded bg-inset px-1 py-0.5", simpleRow ? "text-[14px] font-medium" : "text-[15px] font-semibold")}
             />
+            {simpleList && title && !renaming && <span data-testid="bot-role" title={title} className="-ms-0.5 min-w-0 truncate">· {title}</span>}
             {!simpleList && bot.chiefOfStaff && !renaming && (
               <Crown size={13} strokeWidth={2.25} className="shrink-0 text-accent" role="img" aria-label={t("sidebar.bot.chiefOfStaff")} data-testid="chief-crown">
                 <title>{t("sidebar.bot.chiefOfStaff")}</title>

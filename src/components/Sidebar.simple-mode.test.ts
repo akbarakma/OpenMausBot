@@ -270,7 +270,7 @@ describe("bot-first sidebar", () => {
     expect(advanced).toMatch(/data-testid="model-badge"[^>]*><span data-provider-mark="brand" class="[^"]*\bopacity-60\b/);
   });
 
-  it("keeps a Simple row to its name, preview and one faded engine mark, naming role, Chief and engine in its tooltip", () => {
+  it("keeps a Simple row to its name and job title, preview and one faded engine mark, naming role, Chief and engine in its tooltip", () => {
     fixture.showThreads = false;
     const instances = [{ instanceId: "fake", driverKind: "claude", displayName: "Claude", models: { options: [{ id: "test", label: "Sonnet" }] } }] as unknown as AppState["instances"];
     fixture.state = { ...fixture.state, instances, selectedId: bot.id };
@@ -278,7 +278,7 @@ describe("bot-first sidebar", () => {
     let tree: ReactNode;
     function Capture() { tree = botRow(rowProps("comfortable", candidate)); return tree; }
     const markup = renderToStaticMarkup(createElement(Capture));
-    expect(markup).not.toContain('data-testid="bot-role"');
+    expect(markup).toMatch(/>Atlas<\/span><span data-testid="bot-role" title="Research" class="-ms-0.5 min-w-0 truncate">· Research<\/span>/);
     expect(markup.match(/data-testid="model-badge"/g)).toHaveLength(1);
     expect(markup.match(/data-provider-mark=/g)).toHaveLength(1);
     expect(markup).toMatch(/<span class="absolute -left-1 -top-1 flex rounded-full bg-raised p-\[3px\]"><svg[^>]*role="img"[^>]*aria-label="Chief of Staff"[^>]*data-testid="chief-crown"/);
