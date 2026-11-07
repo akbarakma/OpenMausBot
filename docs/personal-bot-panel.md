@@ -8,17 +8,60 @@ table below.
 
 ## Layout
 
-Each tab and page is a column of labelled cards. Rows put a plain 16px icon,
+The panel is one page with no tabs, plus drill-in pages. Each is a column of
+labelled cards. Rows put a plain 16px icon,
 the title, a value on the right and a chevron on one line. The title and value
 share one baseline, and a picker spans its card's full width.
 
-- **Details:** one card with Model and Automations, then the conversation list,
-  then This conversation (Find, Activity). Usage is not in the panel
-  or the chat's ⋯ menu; the composer's context ring shows it. The list has no New
-  conversation button and shows only once the bot has 2 or more conversations;
-  New thread stays in the chat header's ⋯ menu. Upstream's "Try asking" card is
-  removed. The hero avatar shows the same face as the sidebar and chat header
-  (see "One face per bot" below).
+The whole row is the click target. A row with only a switch is a `<label>`
+(`switchRowCls`), so a click anywhere on it flips the switch. A row that opens
+a page and also has a switch (Skills, Automations) stretches its open button
+over the row (`openRowCls`), with the switch on top. Both kinds highlight the
+full row on hover. Switches and the browser tile end 18px from the card edge,
+where a chevron's drawn stroke ends, so their right edges line up.
+
+- **First page**, top to bottom:
+  - **Browser:** a card with a "Bot's browser" row (a screen place: "Bot's
+    screen", never the bot's name), a status line and a 72×45 tile. The whole
+    row opens the full-window browser. Below it: Works in and "Let Bot use a
+    browser"; with the browser off, the top row hides.
+    - Not browsing: "Sleeping" and rising Zs (`panel-zzz`).
+    - Browsing: a green dot, "Browsing" and the live page, once the turn calls
+      a browser tool (`browsingNow`; a code-mode `execute` counts once its
+      output lists a `browser.` tool). Only then does the card connect: a
+      viewer wakes an asleep Chrome.
+    - After the turn: a grey dot, "Done" and the live page for 5 minutes
+      (`useBrowsingHeld`), then Sleeping. bb-1 closes an idle browser after 10.
+      The hold is set during render, not in an effect, so the live view never
+      drops for a render and flashes black. No picture is stored.
+    - The tile is a passive `StreamSurface`, filled from the top; its outline
+      sits above the content.
+    - A screen place shows the chat's last screen picture, or the Zs, and
+      opens upstream's popup on Screen. That picture can be an old browser
+      page: screen pictures don't record their source.
+    - bb-1's live stream runs one command per bot at a time, so a view opened
+      during a bot's browser command shows "{name} is using this browser".
+  - **Setup:** Model and Automations.
+  - **What {name} knows:** Memories, Skills, Folder and Data. Folder shows the
+    open chat's own folder when it keeps one, else the bot's. Data opens the
+    Data page.
+  - **This conversation:** Files (with a count), Find, and Activity.
+  - **Conversations:** the list, shown once the bot has 2 or more.
+  Usage is not in the panel or the chat's ⋯ menu; the composer's context ring
+  shows it. The list has no New conversation button; New thread stays in the
+  chat header's ⋯ menu. Upstream's "Try asking" card is removed. The hero
+  avatar shows the same face as the sidebar and chat header (see "One face per
+  bot" below). The Signed-in sites row is hidden; its page stays for links, and
+  the list stays in the browser's Manage profiles.
+- **Data, Files, Activity pages:** Data embeds upstream's `DataPanel` with its
+  own Fullscreen. Files lists the chat's pages, apps and files, each file with
+  its folder. Activity is upstream's list (`ActivityList`); its Reload button
+  sits on the title line through `PageHeader`'s `action`. `dayBg="bg-app"`
+  matches the sticky day heading to the panel page.
+- **Folder page:** a chat that keeps its own folder shows it on top with
+  upstream's "This chat keeps its current folder" hint.
+- **Works in page:** a chat a person pinned to another place says so, with
+  upstream's "Use {place}" button.
 - **Automations:** the row counts the bot's switched-on routines, webhooks and
   app events, where upstream's Routines row counted routines only. Its page
   groups them under Routines, Webhooks and App events, each row with its
@@ -27,11 +70,6 @@ share one baseline, and a picker spans its card's full width.
   not used. Until routines and app events arrive, the row has no value and the
   page says Checking; a failed routine load shows its error, not an empty list.
   While one switch's request runs, every switch waits.
-- **Library:** "What {name} knows" (Memories, Skills, Folder, Tables), then
-  "From this conversation" (pages, apps, files). Tables opens the side panel's
-  Data tab.
-- **Computer:** a "{name}'s screen" label above the preview, then a Setup card
-  with "Works in" and "Signed-in sites".
 - **Bot settings (gear):** Profile (Job title, Instructions), Rules (Before it
   acts, Apps it can use), Models (Backup AIs), Calls (Call mode), Advanced
   (Bot API, Hide from sidebar). Backup AIs and Bot API are rows that open their
@@ -44,6 +82,72 @@ share one baseline, and a picker spans its card's full width.
   A tap opens the full description with the switch and Remove.
 
 Delete on a note and Remove on a skill confirm in `ConfirmDialog` first.
+
+## The panel stays open
+
+In Simple mode the panel stays open until its ✕ or the header pill closes it;
+Escape no longer closes it. `simple-side-panel.ts` stores that choice in
+`localStorage` (`omb-personal-bot-panel`). When whatever covered the panel
+goes (a full page, the Inbox, App settings, another side panel, the browser),
+the panel opens again without taking focus, on the page each bot last showed
+(`lastStack` in `PanelShell.tsx`). In a window narrower than 768 px, where the
+sidebar is not inline, it does not reopen by itself.
+
+Each page and gear page keeps its scroll position per bot (`lastScroll` in
+`PanelShell.tsx`). Back returns to where the list was; a newly opened page
+starts at the top.
+
+`useSimpleSidePanel` in App also redirects every request for the computer
+popup and the Activity panel, so upstream's callers need no change:
+
+- Data and Files requests open those panel pages.
+- A browser request, a browser sign-in and a published page open the
+  full-window browser.
+- A screen place, or a bot with its browser off, keeps upstream's popup.
+- Activity opens the Activity page.
+
+Advanced mode and the remote client keep upstream's popup, monitor button and
+Activity panel.
+
+## Full-window browser
+
+`SimpleBrowserWindow` draws `LiveBrowser` over the whole app window. Its first
+row is 60px tall and drags the window. With the macOS inset it starts 84px in,
+clear of the traffic lights. The row holds a "{name}'s browser" chip, the tabs,
+the control pill, the profile button and "Back to chat". It has no maximize or
+full-screen button. The address bar is the second row, and a browser sign-in
+banner sits under it. Escape goes back to the chat, except in a text field or an
+open dialog. The window closes when another bot is selected.
+
+The panel's card is `LiveBrowserCard`, a watch-only `StreamSurface` with
+`passive`. The newest viewer's size resizes the bot's real page
+(`server/browser/viewers/core.ts`), so a passive view connects without a size
+and never sends one. Opening a view starts an asleep browser, so the card
+connects only while the bot works. It disconnects while the full window is
+open or the app is hidden. The Simple guided tour no longer opens the computer.
+If the person still holds the browser when the full window closes, the card
+stays away for 2 minutes (`useHoldGrace`). The server hands a hold back 2
+minutes after the person's last view closes, and any view of theirs that opens
+stops that clock, the card's too, which would leave only the 5-minute idle
+limit.
+
+On the agent-browser stream bb-1 uses, the card acks frames at most every
+400 ms. The server sends two frames per ack, so the tile runs near 5 frames a
+second; the full window keeps the full rate.
+
+## Animations stop while the window is unfocused
+
+Any endless animation makes Chromium redraw the whole window every frame. The
+sleeping Zs alone cost about 20% of a core in the GPU process. While the window
+is not focused, `src/lib/window-focus.ts` marks each element with an endless
+CSS animation `data-unfocused-paused`, and `styles.css` pauses it. One-shot
+animations run on, so nothing stops halfway through a fade-in. The mascot clock
+stops too, but it still draws a new face's first frame, because the face is
+drawn by that frame. Paused Zs show their still frame. In the desktop app the
+focus comes from the window (`windowControls.onFocusChanged`), because Electron
+43 reports `document.hasFocus()` as true after a reload in an unfocused window.
+Measured in `dev:personal`: 26–29% GPU and 10–13% renderer focused with the Zs
+on screen, under 1.5% for both while unfocused.
 
 ## One face per bot
 
@@ -77,20 +181,32 @@ the same state, motion beat and working ring.
 | File | Change |
 |---|---|
 | `src/components/bot-panel/rows.tsx` | `RowIcon` is a plain 16px icon; `CardSurface`; `PageHeader` title is optional; a `NavRow` with a value keeps its title on one line, truncates the value and puts both on one baseline; on a row with a hint, the value centers on the row like the chevron |
-| `src/components/bot-panel/DetailsTab.tsx` | Model and Automations in one card, no Try asking, Model row passes `row`, no `derived` prop |
+| `src/components/bot-panel/PanelHome.tsx` | New, from upstream's `DetailsTab.tsx`: the one first page |
+| `src/components/bot-panel/simple-side-panel.ts` | New: the open state, the quiet reopen, and the popup and Activity redirects |
+| `src/components/bot-panel/browser-window.ts` | New: which bot's browser fills the window; `browserWindowClosed` and `useHoldGrace` |
+| `src/components/bot-panel/SimpleBrowserWindow.tsx` | New: the full-window browser |
+| `src/components/bot-panel/LiveBrowserCard.tsx` | New: the watch-only browser in the Computer card |
+| `src/components/BrowserPanel.tsx` | `LiveBrowser` takes `window` (`onBack`, `banner`); closing it reports whether the person still held the browser |
+| `src/components/browser/ChromeRow.tsx` | `windowBar`: the 60px first row |
+| `src/components/browser/StreamSurface.tsx` | `passive`: never sends a resize |
+| `src/components/ActivityPanel.tsx` | `ActivityList`, shared with the Activity page |
+| `src/App.tsx` | Calls `useSimpleSidePanel`; draws `SimpleBrowserWindow`; hides the popup and Activity panel it redirects |
+| `src/components/BotSettingsDialog.tsx` | Simple panel: Escape does not close it, ✕ records the close, a quiet reopen leaves focus alone |
+| `src/lib/guided-tour.ts` | Simple tour steps never open the computer |
 | `src/components/bot-panel/AutomationsPage.tsx` | New: `useBotAutomations` and the grouped Automations page |
 | `src/components/bot-panel/Conversations.tsx` | No New conversation button; a "Conversations" label with search; renders nothing with one conversation |
 | `src/components/bot-panel/PanelHero.tsx` | Avatar takes its props from `useBotFace`; no `activeState` prop |
-| `src/components/bot-panel/PanelShell.tsx` | No `activeState` passed to `PanelHero` |
+| `src/components/bot-panel/PanelShell.tsx` | No `activeState` passed to `PanelHero`; no tabs, `PanelHome` under the hero; `lastStack` per bot; Back at the root names the bot |
 | `src/components/bot-face.ts` | New: `useBotFace` (`hops` for sidebar copies), `botFaceState` and `restOrigin` |
 | `src/components/Avatar.tsx` | `BotAvatar` takes `restingSince` and wraps the face in the hop; `MausAvatar` passes `still` |
 | `src/components/ChatHeadPill.tsx` | `avatar` takes `restingSince` |
-| `src/styles.css` | `.bot-rest-hop` and its keyframes |
+| `src/styles.css` | `.bot-rest-hop` and its keyframes; `.panel-zzz`; `[data-unfocused-paused]` |
 | `src/components/mascot-motion.ts` | `startMotion`, `mixTransform`, `retargetBody`: blended body motion on the page clock, replacing `bodyTransform` |
 | `src/components/CursorAvatar.tsx` | Draws the body from the motion mix; a paused face eases to rest first; `still` holds the body and stops expression changes but keeps blinks; `blinkScale` moved to `mascot-motion.ts` and no `MOTION` re-export, to stay at its size limit |
-| `src/components/ChatView.tsx` | Header avatars take `useBotFace` with `sidebarBotStatus`'s `running` |
+| `src/components/ChatView.tsx` | Header avatars take `useBotFace` with `sidebarBotStatus`'s `running`; no monitor button in Simple; the pill's close records it |
 | `src/components/PinnedCircleThreads.tsx` | Avatar takes `useBotFace` |
-| `src/components/bot-panel/page-registry.ts` | `backups` and `botapi` Simple pages; the `routines` page is titled Automations |
+| `src/components/bot-panel/page-registry.ts` | `backups`, `botapi`, `data`, `files` and `activity` Simple pages; the `routines` page is titled Automations; no tabs, a section lands on a page or a first-page card |
+| `src/components/bot-panel/panel-link.ts` | `linkTarget` returns a page or a card, no tab |
 | `src/components/ModelPicker.tsx` | `row` prop: in Simple mode with `contained`, the whole row is the picker button, its label and model name share a baseline, and the list opens at the row's width |
 | `src/components/ModelTrigger.tsx` | New: the Simple-mode trigger's contents, moved out of `ModelPicker.tsx` to keep it under its size limit in `scripts/testing/file-size-ratchet.test.ts` |
 | `src/components/bot-settings/BotApiCard.tsx` | `titled` prop, false on the Bot API page |
@@ -99,12 +215,12 @@ the same state, motion beat and working ring.
 | `src/components/TriggersPage.tsx` | Each row shows its bot's avatar with the status mark on it and the bot's name first in the status line; `compose` focus opens the New box |
 | `src/components/SidebarTiles.tsx` | A tile has no fill at rest, `bg-ink/[0.06]` on hover and `bg-ink/[0.10]` when open; badges ring in `panel`; avatar takes `useBotFace` |
 | `src/components/ComputerPanel.tsx` | A data request without a card opens Data and focuses no card |
-| `src/components/bot-panel/LibraryTab.tsx` | "What {name} knows" first, Tables row sends `openDataResult` with no card |
-| `src/components/bot-panel/ComputerTab.tsx` | Screen label, Setup card |
+| `src/components/bot-panel/LibraryTab.tsx` | `KnowsCard`, `MadeHere` and `chatFolder`, shared with the first page; Advanced's library still sends `openDataResult` with no card |
+| `src/components/bot-panel/ComputerTab.tsx` | `ComputerCard` (live card, Works in, browser switch); `WherePage` pinned-place note |
 | `src/components/bot-panel/SettingsPage.tsx` | Grouped cards, full-width pickers |
 | `src/components/bot-panel/BackupAis.tsx` | Only the list and Add; the page intro holds the explanation |
 | `src/components/bot-panel/PanelShell.tsx` | `detail` state: the note or skill open in place of its list |
-| `src/components/bot-panel/pages.tsx` | Memory note and skill pages, confirm dialogs, Backup AIs and Bot API pages; `routines` renders `AutomationsPage` |
+| `src/components/bot-panel/pages.tsx` | Memory note and skill pages, confirm dialogs, Backup AIs and Bot API pages; `routines` renders `AutomationsPage`; Data, Files and Activity pages; the chat's folder on the Folder page |
 | `src/components/ComposerContextMeter.tsx` | New: the composer's context ring, left of the call and Send slot, with a card on hover or click; Compact now from 80%, as the header pill |
 | `src/lib/context-meter.ts` | New: the ring's reading (red above 90%) and the Advanced card's token rows |
 | `src/components/Composer.tsx` | Renders `ComposerContextMeter` in one-to-one chats, before Stop so Stop keeps the right-hand slot; stays at 1,000 lines for the size ratchet |
@@ -116,6 +232,11 @@ the same state, motion beat and working ring.
 | `src/components/SidebarInboxRow.tsx` | `circle` variant: a 36px round Inbox button with its count and running dot; "Inbox" is its tooltip and label |
 | `src/components/SidebarSimpleRail.tsx` | The rail's foot holds Apps, the round Inbox button and the account, in that order |
 | `src/components/ChatView.tsx` | In the top band, the header's glass layer carries `data-glass-band` |
+| `src/lib/window-focus.ts` | New: `windowFocused`, `onWindowFocusChange`, `pauseLoopsWhileUnfocused` (called in `src/main.tsx`) |
+| `src/components/mascot-clock.ts` | `asleep`/`onAsleepChange` replace `documentHidden`/`onDocumentVisibility` and include window focus; a face added while asleep gets one frame |
+| `src/lib/browser-stream-v1.ts` | `createLiveStreamClient` takes `ackEveryMs` |
+| `electron/preload.cjs`, `electron/personal-dev-preload.cjs` | `windowControls.onFocusChanged` |
+| `electron/main.mjs`, `electron/personal-dev.mjs`, `electron/window-state-file.mjs` | `window:state` returns `focused`; focus and blur send `window:focus-changed` |
 | `src/components/bot-panel/memory-notes.ts` | `memoryNoteParts` splits `YYYY-MM-DD · from <source> · text` and marks struck or expired notes inactive; `panelMemoryNotes` leaves inactive notes out; `memoryNoteKey` includes the text |
 
 `TryAsking.tsx` and its test are deleted, and so is `src/lib/chat-usage-summary.ts`. `SwitchRow` in `rows.tsx` is deleted too,
@@ -152,17 +273,22 @@ translated in every language pack. `botPanel.memoryRow` reads "Memories" and
 `botPanel.memory.intro` no longer says "Tap one to remove it".
 The ring's `composer.context.*` keys sit after `contextWarning.roomRequested`,
 also in every language pack. The `botPanel.automations.*` keys sit at the end
-of every pack.
+of every pack. `browser.window.title`, `browser.window.back` and the
+`browser.card.*` keys (title, browsing, done, switch) sit after
+`botPanel.knows` in every pack.
 
 ## Merging an upstream release
 
 1. List upstream's changes to the files above:
-   `git diff <old-tag> <new-tag> -- src/components/bot-panel/ src/components/Composer.tsx src/components/ChatMoreMenu.tsx src/components/ContextWarning.tsx src/lib/usage.ts src/components/ModelPicker.tsx src/components/ModelTrigger.tsx src/components/DefaultBotControls.tsx src/components/bot-settings/BotApiCard.tsx src/components/ComputerPanel.tsx src/state/store.tsx src/components/Sidebar.tsx src/components/SidebarSimpleTop.tsx src/components/SidebarInboxRow.tsx src/components/SidebarSimpleRail.tsx src/components/ChatView.tsx src/components/TriggersPage.tsx src/components/SidebarTiles.tsx src/styles.css electron/window-chrome.mjs`.
+   `git diff <old-tag> <new-tag> -- src/components/bot-panel/ src/components/Composer.tsx src/components/ChatMoreMenu.tsx src/components/ContextWarning.tsx src/lib/usage.ts src/components/ModelPicker.tsx src/components/ModelTrigger.tsx src/components/DefaultBotControls.tsx src/components/bot-settings/BotApiCard.tsx src/components/ComputerPanel.tsx src/state/store.tsx src/components/Sidebar.tsx src/components/SidebarSimpleTop.tsx src/components/SidebarInboxRow.tsx src/components/SidebarSimpleRail.tsx src/components/ChatView.tsx src/components/TriggersPage.tsx src/components/SidebarTiles.tsx src/styles.css electron/window-chrome.mjs src/App.tsx src/components/BotSettingsDialog.tsx src/components/BrowserPanel.tsx src/components/browser/ src/components/ActivityPanel.tsx src/lib/guided-tour.ts`.
 2. Keep upstream's new rows, settings and behaviour. Place each new row in the
    card it belongs to, with a `RowIcon` and no icon tile.
 3. If upstream changes the memory entry grammar in
    `server/memory-entries.ts`, update `memoryNoteParts` and its tests.
-4. If upstream brings back an example-asks card, leave it out of `DetailsTab`.
+4. If upstream brings back an example-asks card, leave it out of `PanelHome`.
+   If upstream adds a caller that opens the computer popup or Activity panel,
+   it goes through `toggleComputer` or `toggleActivity`, so the redirect in
+   `simple-side-panel.ts` covers it. Check that it does.
    If upstream brings back a Usage item in `useChatMoreItems`, leave it out.
-5. Run `corepack pnpm exec vitest run BotSettingsDialog.simple MemoryPage.team memory-notes PanelShell.dom page-registry Conversations.dom BackupAis.dom ModelPicker ComputerPanel.android ComposerContextMeter context-meter ChatMoreMenu Sidebar.header Sidebar.simple-layout SidebarTiles electron/window-chrome`,
+5. Run `corepack pnpm exec vitest run BotSettingsDialog.simple MemoryPage.team memory-notes PanelShell.dom page-registry panel-link simple-side-panel Conversations.dom BackupAis.dom ModelPicker ComputerPanel.android ComposerContextMeter context-meter ChatMoreMenu ChatView.controls Sidebar.header Sidebar.simple-layout SidebarTiles electron/window-chrome BrowserPanel ChromeRow StreamSurface guided-tour`,
    `corepack pnpm i18n:check`, `typecheck` and `lint`.
