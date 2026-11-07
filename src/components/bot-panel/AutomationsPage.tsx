@@ -43,16 +43,22 @@ export function AutomationsPage({ bot }: PageContext) {
           <Card key={kind} anchor={`automations-${kind}`} label={<><span className="font-medium text-ink">{t(title)}</span> · {t(hint)}</>}>
             {items.map((automation) => {
               const status = automationStatus(automation);
+              const name = automation.name.trim() || t("automations.title");
+              const hint = status.state === "needs-you" ? t("automations.needsYou", { reason: status.reason ?? "" }) : statusLine(automation);
               return (
                 <div key={automation.id} className={rowCls}>
                   <button
                     type="button"
                     data-panel-open={automation.id}
+                    title={`${name}\n${hint}`}
                     onClick={() => dispatch({ type: "showRoutines", view: "list", routineId: automation.id })}
                     className="-my-[11px] -ml-3.5 flex min-w-0 flex-1 cursor-pointer items-center gap-2.5 py-[11px] pl-3.5 text-left hover:opacity-80"
                   >
                     <StatusMark status={status} />
-                    <RowText title={automation.name.trim() || t("automations.title")} hint={status.state === "needs-you" ? t("automations.needsYou", { reason: status.reason ?? "" }) : statusLine(automation)} />
+                    <RowText
+                      title={<span className="block truncate">{name}</span>}
+                      hint={<span className="block truncate">{hint}</span>}
+                    />
                   </button>
                   {status.state !== "done" && (
                     <BotSwitch

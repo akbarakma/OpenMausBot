@@ -1136,6 +1136,8 @@ describe("the drill-in pages", () => {
     expect(switches(rendered.html)).toBe(2);
     expect(rendered.html).toContain("Or just ask Scout in chat: “every weekday at 8, send me a summary”.");
 
+    expect(rendered.html).toContain('<span class="block truncate">Release alert</span>');
+    expect(find(rendered, "data-panel-open", "w1").props.title).toMatch(/^Release alert\n\S/);
     click(find(rendered, "data-panel-open", "w1"));
     expect(fixture.dispatch).toHaveBeenLastCalledWith({ type: "showRoutines", view: "list", routineId: "w1" });
     click(find(rendered, "data-panel-link", "new-automation"));
