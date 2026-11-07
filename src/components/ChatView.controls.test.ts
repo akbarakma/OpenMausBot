@@ -266,7 +266,7 @@ describe("header name", () => {
       };
       const withoutRing = (pill: string) => pill.replace(/<span[^>]*data-testid="working-ring"[\s\S]*?<\/svg><\/span><\/span>/, "");
       expect(pillOf(busyMarkup)).not.toContain("animate-status-pulse");
-      expect(pillOf(busyMarkup)).toContain('data-testid="working-ring"');
+      expect(pillOf(busyMarkup).includes('data-testid="working-ring"'), "Simple's header face stays still").toBe(advanced);
       expect(pillOf(idleMarkup)).not.toContain('data-testid="working-ring"');
       expect(withoutRing(pillOf(busyMarkup))).toBe(pillOf(idleMarkup));
       expect(busyMarkup).toMatch(/<span role="status" class="sr-only" data-chathead-status="true">Working…<\/span>/);

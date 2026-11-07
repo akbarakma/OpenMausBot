@@ -11,7 +11,8 @@ vi.mock("./CursorAvatar", async (importOriginal) => ({
     createElement("svg", { "data-state": state, "data-effects": String(effects) })),
 }));
 
-const { BotAvatar, REST_CYCLE_MS, REST_HOP_MS } = await import("./Avatar");
+const { BotAvatar } = await import("./Avatar");
+const { REST_CYCLE_MS, REST_HOP_MS } = await import("./mascot-motion");
 const { sidebarBotStatus } = await import("./SidebarBotActivity");
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -62,11 +63,14 @@ describe("the resting hop", () => {
     }
   };
 
-  it("joins the hop in phase from the shared start time, and lands a hop in the air before it stops", () => withClock(() => {
+  it("starts the hop at the shared rest moment, and lands a hop in the air before it stops", () => withClock(() => {
+    const animation = { startTime: null as number | null };
+    const getAnimations = vi.spyOn(HTMLElement.prototype, "getAnimations").mockReturnValue([animation] as unknown as Animation[]);
     const since = performance.now() - 400;
     rest(since);
     expect(hop()!.style.animationDuration).toBe(`${REST_CYCLE_MS}ms`);
-    expect(hop()!.style.animationDelay).toBe("-400ms");
+    expect(animation.startTime).toBe(since);
+    getAnimations.mockRestore();
     act(() => { vi.advanceTimersByTime(300); });
     rest(null);
     act(() => { vi.advanceTimersByTime(REST_HOP_MS - 700 - 20); });

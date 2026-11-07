@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react"
 import { Crown, Pencil } from "lucide-react";
 
 import { cn } from "@/lib/cn";
+import { useOnScreen } from "@/lib/on-screen";
 import { t } from "@/lib/i18n";
 import { useStore, visibleMessages, type Bot } from "@/state/store";
 import { BOT_PROFILE_LIMITS } from "../../../shared/bot-profile";
@@ -72,17 +73,21 @@ export function PanelHero({ bot, patch, editorOpen, onToggleEditor }: {
   const { state } = useStore();
   const { messages, activeLeafId } = bot;
   const visible = useMemo(() => visibleMessages({ messages, activeLeafId }), [messages, activeLeafId]);
+  const avatarRef = useRef<HTMLButtonElement>(null);
+  const onScreen = useOnScreen(avatarRef);
   const face = useBotFace({
     bot,
     messages: visible,
     running: sidebarBotStatus(bot, state.pendingQueued).running,
     selected: true,
     motion: state.mascotMotion?.botId === bot.id ? state.mascotMotion : null,
+    hops: onScreen,
   });
 
   return (
     <div className="group/hero flex flex-col items-center text-center">
       <button
+        ref={avatarRef}
         type="button"
         data-panel-avatar
         aria-label={t("botPanel.avatar.edit")}

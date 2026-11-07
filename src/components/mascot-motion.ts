@@ -307,9 +307,29 @@ function smoothFrameAt(now: number, input: CadenceInput): number {
   return Math.min(due, now + fadingOut - position);
 }
 
+export const BLINK_MS = 320;
+export const REST_HOP_MS = 1300;
+export const REST_CYCLE_MS = 4000;
+const REST_BLINK_FROM_MS = 1600;
+const REST_BLINK_SPAN_MS = 2000;
+
+function restBlinkOffset(cycle: number): number {
+  const x = Math.sin(cycle * 12.9898) * 43758.5453;
+  return REST_BLINK_FROM_MS + (x - Math.floor(x)) * REST_BLINK_SPAN_MS;
+}
+
+/** One blink per rest cycle, after the hop lands, at an offset that varies by cycle but not by copy: every face
+ * resting since the same moment blinks on the same frame. */
+export function nextRestBlink(since: number, now: number): number {
+  for (let cycle = Math.max(0, Math.floor((now - since) / REST_CYCLE_MS)); ; cycle++) {
+    const at = since + cycle * REST_CYCLE_MS + restBlinkOffset(cycle);
+    if (at > now) return at;
+  }
+}
+
 export function blinkScale(e: { blinkStart: number | null }, now: number): number {
   if (e.blinkStart === null) return 1;
-  const t = (now - e.blinkStart) / 320;
+  const t = Math.max(0, (now - e.blinkStart) / BLINK_MS);
   if (t >= 1) {
     e.blinkStart = null;
     return 1;

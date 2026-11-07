@@ -1,11 +1,11 @@
 import { localizedTaskTitle } from "@/lib/task-title";
 import { ChevronRight, Lock, UserRound, Users } from "lucide-react";
-import type { ComponentProps } from "react";
 
 import { cn } from "@/lib/cn";
 import { t } from "@/lib/i18n";
 import { useStore, type Bot } from "@/state/store";
 import { awayFromMainThread } from "@/state/thread-navigation";
+import type { MausState } from "@/lib/mascot";
 import { BotAvatar } from "./Avatar";
 import { ELEVATED_FLOAT, ELEVATED_HOVER } from "./elevated";
 import { sidebarBotActivityTasks } from "./SidebarBotActivity";
@@ -34,7 +34,7 @@ function privacyLabelOf(privacy: ChatHeadPrivacy): string | null {
  * look; a team chat says who can read it with one quiet glyph. */
 export function ChatHeadPill({ bot, avatar, privacy, onToggle }: {
   bot: Bot;
-  avatar: Pick<ComponentProps<typeof BotAvatar>, "state" | "motion" | "motionKey" | "animated" | "working" | "greet" | "restingSince">;
+  avatar: { state: MausState };
   privacy: ChatHeadPrivacy;
   onToggle: () => void;
 }) {
@@ -60,7 +60,7 @@ export function ChatHeadPill({ bot, avatar, privacy, onToggle }: {
       aria-controls={open ? BOT_PANEL_ID : undefined}
       className={cn("group flex min-w-0 max-w-full items-center gap-2 rounded-full py-[7.5px] pl-[7.5px] pr-[13.5px] text-ink", ELEVATED_FLOAT, ELEVATED_HOVER)}
     >
-      <BotAvatar bot={bot} size={24} {...avatar} />
+      <BotAvatar bot={bot} size={24} state={avatar.state} motion="none" motionKey={0} animated={false} />
       <span dir="auto" className="min-w-0 truncate text-[14px] font-medium leading-5">{bot.name}</span>
       {conversation && (
         <>

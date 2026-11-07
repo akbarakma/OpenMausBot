@@ -3,6 +3,7 @@ import {
   memo,
   useEffect,
   useImperativeHandle,
+  useLayoutEffect,
   useRef,
   useState,
   type CSSProperties,
@@ -10,8 +11,10 @@ import {
   type ReactNode,
 } from "react";
 import { cn } from "@/lib/cn";
+import { onWindowFocusChange, windowFocused } from "@/lib/window-focus";
 import { CHROME_EYES, CHROME_GRADIENT, MAUS_COLORS, type MausColor, type MausMotion, type MausState } from "@/lib/mascot";
 import { CursorAvatar, EFFECTS, type CursorAvatarHandle } from "./CursorAvatar";
+import { REST_CYCLE_MS, REST_HOP_MS } from "./mascot-motion";
 import { avatarCropRadius, botAvatarProfile, clampAvatarFocus, clampAvatarZoom, mascotFaceInk, type BotAvatarCrop, type MascotFaceColor } from "../../shared/bot-avatar";
 import { MASCOT_BODIES, botMascotBody } from "../../shared/mascot-bodies";
 import { isHalloweenBody, type BotBodyId } from "../../shared/bot-body";
@@ -100,6 +103,8 @@ export type MausAvatarProps = {
   /** false turns off the face's own orbit trails, judged on the face it actually shows, motion beats included. */
   trails?: boolean;
   still?: boolean;
+  /** When the face came to rest: copies given the same moment blink together. */
+  restClock?: number;
   bodyId?: BotBodyId;
   gradient?: [string, string, string];
   faceColor?: MascotFaceColor | null;
@@ -150,6 +155,7 @@ function GradientAvatarComponent(
     effects,
     trails,
     still,
+    restClock,
     bodyId,
     gradient,
     faceColor,
@@ -219,6 +225,7 @@ function GradientAvatarComponent(
         mouthStroke={mouthStroke}
         paused={!animated}
         still={still}
+        restClock={restClock}
         effects={trails === false && EFFECTS[motionState ?? state]?.trails ? false : effects}
       />
     </span>
@@ -263,20 +270,35 @@ export function resolveBotAvatarOutcome(params: {
   return "flatImage";
 }
 
-export const REST_HOP_MS = 1300;
-export const REST_CYCLE_MS = 4000;
+const HOP_STYLE: CSSProperties = { animationDuration: `${REST_CYCLE_MS}ms` };
 
-function useRestHop(since: number | null): CSSProperties | null {
-  const start = (at: number) => ({ since: at, delay: at - performance.now() });
-  const [hop, setHop] = useState(() => (since === null ? null : start(since)));
-  if (since !== null && hop?.since !== since) setHop(start(since));
+// Every copy starts the hop at the shared rest moment; refocus re-anchors it because an unfocused pause resumes mid-loop.
+function useRestHop(since: number | null) {
+  const [hop, setHop] = useState(since);
+  if (since !== null && hop !== since) setHop(since);
   useEffect(() => {
     if (since !== null || hop === null) return;
-    const into = (performance.now() - hop.since) % REST_CYCLE_MS;
+    const into = (performance.now() - hop) % REST_CYCLE_MS;
     const timer = setTimeout(() => setHop(null), Math.max(REST_HOP_MS - into, 0));
     return () => clearTimeout(timer);
   }, [since, hop]);
-  return hop && { animationDuration: `${REST_CYCLE_MS}ms`, animationDelay: `${hop.delay}ms` };
+  const ref = useRef<HTMLSpanElement>(null);
+  useLayoutEffect(() => {
+    const element = ref.current;
+    if (hop === null || !element?.getAnimations) return;
+    const anchor = () => { for (const animation of element.getAnimations()) animation.startTime = hop; };
+    anchor();
+    let frame = 0;
+    const stop = onWindowFocusChange(() => {
+      cancelAnimationFrame(frame);
+      if (windowFocused()) frame = requestAnimationFrame(anchor);
+    });
+    return () => {
+      stop();
+      cancelAnimationFrame(frame);
+    };
+  }, [hop]);
+  return { ref, hopping: hop !== null };
 }
 
 export function BotAvatar({ working, greet = false, restingSince = null, ...props }: BotAvatarProps) {
@@ -288,8 +310,8 @@ export function BotAvatar({ working, greet = false, restingSince = null, ...prop
   return (
     <span className="relative inline-flex shrink-0">
       {!overImage && ring}
-      <span className={cn("relative inline-flex", hop && !overImage && "bot-rest-hop")} style={overImage ? undefined : hop ?? undefined}>
-        <BotAvatarFace {...props} still={restingSince !== null} trails={false} />
+      <span ref={hop.ref} className={cn("relative inline-flex", hop.hopping && !overImage && "bot-rest-hop")} style={hop.hopping && !overImage ? HOP_STYLE : undefined}>
+        <BotAvatarFace {...props} still={restingSince !== null} restClock={restingSince ?? undefined} trails={false} />
       </span>
       {overImage && ring}
     </span>

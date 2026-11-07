@@ -1024,7 +1024,7 @@ export function ChatView({ bot: profile }: { bot: Bot }) {
           {simpleHead ? (
             <ChatHeadPill
               bot={bot}
-              avatar={face}
+              avatar={{ state: face.state }}
               privacy={privateChat ? { kind: "private" } : ownHelper ? { kind: "ownHelper" } : sharedChat && team ? { kind: "shared", team: team.name, onlyPeopleAdded: bot.onlyPeopleAdded } : null}
               onToggle={() => {
                 if (state.settingsOpen) setBotPanelWanted(false);

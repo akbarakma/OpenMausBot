@@ -15,7 +15,7 @@ import {
   mouthFrame,
   type Ring,
 } from "./cursor-face-data"
-import { FULL_FRAME_MS, GLYPH_EASE_MS, MOTION, VIEW_SPAN, faceTravelUnits, frameFloorMs, mixTransform, morphUnitsPerMs, motionBlending, nextFrameAt, nextMascotFrame, retargetBody, bodyStillResting, blinkScale, spinEase, type BodyMotionState } from "./mascot-motion"
+import { FULL_FRAME_MS, GLYPH_EASE_MS, MOTION, VIEW_SPAN, faceTravelUnits, frameFloorMs, mixTransform, morphUnitsPerMs, motionBlending, nextFrameAt, nextMascotFrame, retargetBody, bodyStillResting, BLINK_MS, blinkScale, nextRestBlink, spinEase, type BodyMotionState } from "./mascot-motion"
 import { mascotClock, usePrefersReducedMotion, type MascotTicket } from "./mascot-clock"
 
 export {
@@ -900,6 +900,7 @@ export interface CursorAvatarProps {
   autoBlink?: boolean
   autoExpression?: boolean
   still?: boolean
+  restClock?: number
   paused?: boolean
   silhouette?: CursorSilhouette
   gradient?: [string, string, string]
@@ -936,6 +937,7 @@ export const CursorAvatar = React.forwardRef<CursorAvatarHandle, CursorAvatarPro
       autoBlink = true,
       autoExpression = true,
       still = false,
+      restClock,
       paused = false,
       silhouette = DEFAULT_SILHOUETTE,
       gradient = DEFAULT_GRADIENT, picture,
@@ -1071,17 +1073,19 @@ export const CursorAvatar = React.forwardRef<CursorAvatarHandle, CursorAvatarPro
     useEffect(() => {
       const cadence = BLINK[state]
       if (!autoBlink || !cadence || paused || reduced) return
-      let timer: ReturnType<typeof setTimeout>
+      let timer: ReturnType<typeof setTimeout>, after = -Infinity
       const tick = () => {
+        const now = performance.now()
+        const at = restClock === undefined ? now + cadence[0] + Math.random() * (cadence[1] - cadence[0]) : (after = nextRestBlink(restClock, Math.max(after, now - BLINK_MS)))
         timer = setTimeout(() => {
-          engine.current.blinkStart = performance.now()
+          engine.current.blinkStart = at
           wake()
           tick()
-        }, cadence[0] + Math.random() * (cadence[1] - cadence[0]))
+        }, at - now)
       }
       tick()
       return () => clearTimeout(timer)
-    }, [state, autoBlink, paused, reduced])
+    }, [state, autoBlink, paused, reduced, restClock])
 
     useEffect(() => {
       engine.current.faceStale = true

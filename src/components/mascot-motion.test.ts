@@ -14,6 +14,10 @@ import {
   motionBlending,
   nextFrameAt,
   nextMascotFrame,
+  BLINK_MS,
+  nextRestBlink,
+  REST_CYCLE_MS,
+  REST_HOP_MS,
   spinEase,
   startMotion,
   type CadenceInput,
@@ -171,5 +175,26 @@ describe("body motion mix", () => {
 
   it("holds still with no motion strength", () => {
     expect(mixTransform(startMotion(null, MOTION.celebrate, 0), 400, 0)).toBe("");
+  });
+});
+
+describe("nextRestBlink", () => {
+  it("gives copies that start looking at different moments the same blinks, one per cycle after the hop lands", () => {
+    const since = 5_000;
+    const early = [nextRestBlink(since, since)];
+    while (early.length < 6) early.push(nextRestBlink(since, early.at(-1)!));
+    const late = nextRestBlink(since, since + 9_000);
+    expect(early).toContain(late);
+    early.forEach((at, cycle) => {
+      const into = at - since - cycle * REST_CYCLE_MS;
+      expect(into).toBeGreaterThan(REST_HOP_MS);
+      expect(into).toBeLessThan(REST_CYCLE_MS);
+    });
+  });
+
+  it("lets a copy that starts looking mid-blink find the blink already in progress", () => {
+    const since = 5_000;
+    const blink = nextRestBlink(since, since);
+    expect(nextRestBlink(since, blink + 100 - BLINK_MS)).toBe(blink);
   });
 });
