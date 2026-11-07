@@ -28,17 +28,19 @@ export function withMemoryNote(text: string, note: string): string {
   return body ? `${body}\n${bullet}\n` : `${bullet}\n`;
 }
 
-/** A note of one file: a bullet of it, or, for a topic file without bullets, the whole file (`line` null). */
+/** A note of one file: a bullet of it still in force, or, for a topic file without bullets, the whole file (`line` null). */
 export interface PanelMemoryNote {
   path: string;
   line: number | null;
   text: string;
 }
 
-export function panelMemoryNotes(docs: readonly MemoryDoc[]): PanelMemoryNote[] {
+export function panelMemoryNotes(docs: readonly MemoryDoc[], today?: string): PanelMemoryNote[] {
   return docs.flatMap((doc): PanelMemoryNote[] => {
-    const bullets = memoryNotes(doc.text).map((note) => ({ path: doc.path, ...note }));
-    if (bullets.length || doc.path === MEMORY_INDEX) return bullets;
+    const bullets = memoryNotes(doc.text);
+    if (bullets.length || doc.path === MEMORY_INDEX) {
+      return bullets.filter((note) => !memoryNoteParts(note.text, today).inactive).map((note) => ({ path: doc.path, ...note }));
+    }
     const text = doc.text.split("\n").map((line) => line.replace(/^#+\s*/, "").trim()).filter(Boolean).join(" ");
     return text ? [{ path: doc.path, line: null, text }] : [];
   });

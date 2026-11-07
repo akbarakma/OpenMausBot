@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { memoryNoteKey, memoryNoteParts, memoryNotes, withMemoryNote, withoutMemoryNote } from "./memory-notes";
+import { memoryNoteKey, memoryNoteParts, memoryNotes, panelMemoryNotes, withMemoryNote, withoutMemoryNote } from "./memory-notes";
 
 const doc = "# Notes\n- Omkar uses Resolve Studio\n* Likes short replies\nplain line\n  - nested one\n";
 
@@ -22,6 +22,28 @@ describe("the notes in MEMORY.md", () => {
     expect(withMemoryNote(doc, "  Prefers the free version ")).toBe(`${doc}- Prefers the free version\n`);
     expect(withMemoryNote("", "First")).toBe("- First\n");
     expect(withMemoryNote("# Notes", "Two\nlines")).toBe("# Notes\n- Two lines\n");
+  });
+});
+
+describe("the notes the panel lists", () => {
+  it("leave out struck and expired notes, keeping the line each live note sits on", () => {
+    const text = [
+      "# Notes",
+      "- 2026-11-04 · ~~1Password reaches Keys & Secrets~~ · superseded 2026-11-04",
+      "- 2026-11-04 · 1Password reaches only Bot Agent",
+      "- 2026-10-01 · from chat · In Bali this week · until 2026-10-08",
+      "- Likes short replies",
+    ].join("\n");
+    expect(panelMemoryNotes([{ path: "MEMORY.md", text, hash: "h", exists: true }], "2026-11-05")).toEqual([
+      { path: "MEMORY.md", line: 2, text: "2026-11-04 · 1Password reaches only Bot Agent" },
+      { path: "MEMORY.md", line: 4, text: "Likes short replies" },
+    ]);
+  });
+
+  it("show nothing for a topic file whose only bullets are expired, never the whole file in their place", () => {
+    const travel = { path: "memory/travel.md", text: "# Travel\n- 2026-10-01 · from chat · In Bali this week · until 2026-10-08\n", hash: "h", exists: true };
+    expect(panelMemoryNotes([travel], "2026-11-05")).toEqual([]);
+    expect(panelMemoryNotes([{ ...travel, text: "# Travel\nPrefers window seats.\n" }], "2026-11-05")).toEqual([{ path: "memory/travel.md", line: null, text: "Travel Prefers window seats." }]);
   });
 });
 

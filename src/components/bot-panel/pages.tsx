@@ -2,7 +2,6 @@ import { useEffect, useState, type ReactNode } from "react";
 import { FolderOpen, Plus, Server } from "lucide-react";
 
 import { appSwitchPatch } from "@/lib/bot-app-access";
-import { cn } from "@/lib/cn";
 import { skillsLibraryEnabled } from "@/lib/feature-flags";
 import { activeLocale, t } from "@/lib/i18n";
 import { mcpServersForBot, mcpServersOfBot, mcpSwitch, useMcpServers } from "@/lib/mcp-servers";
@@ -219,7 +218,7 @@ export function MemoryPage({ bot, detail, onDetail }: PageContext & DetailContex
     const meta = [parts.source && t("botPanel.memory.from", { source: parts.source }), parts.date && dateFormat(parts.date)].filter(Boolean).join(" · ");
     return (
       <>
-        <p data-memory-text className={cn("mx-1 whitespace-pre-wrap break-words text-[14px] leading-[1.5]", parts.inactive ? "text-ink-tertiary line-through" : "text-ink")}>{parts.body}</p>
+        <p data-memory-text className="mx-1 whitespace-pre-wrap break-words text-[14px] leading-[1.5] text-ink">{parts.body}</p>
         {meta && <p data-memory-meta className="mx-1 -mt-1 text-[12px] leading-[1.4] text-ink-tertiary">{meta}</p>}
         {error && <p className="mx-1 text-[13px] text-warning">{error}</p>}
         <div className="mx-1 mt-1">
@@ -244,12 +243,11 @@ export function MemoryPage({ bot, detail, onDetail }: PageContext & DetailContex
         ) : notes.length === 0 ? (
           <NoteRow>{t("botPanel.memory.empty")}</NoteRow>
         ) : notes.map((note) => {
-          const parts = memoryNoteParts(note.text);
           return (
             <NavRow
               key={memoryNoteKey(note)}
               data-memory-note={note.line ?? note.path}
-              title={<span className={cn("block truncate font-normal", parts.inactive && "text-ink-tertiary line-through")}>{parts.body}</span>}
+              title={<span className="block truncate font-normal">{memoryNoteParts(note.text).body}</span>}
               onClick={() => { setError(null); onDetail(memoryNoteKey(note)); }}
             />
           );

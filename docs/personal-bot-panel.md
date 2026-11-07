@@ -37,8 +37,8 @@ share one baseline, and a picker spans its card's full width.
   own pages. "In this conversation" shows only when the thread's approval
   differs from the bot's.
 - **Memories:** one row per note showing only its text; a struck or expired
-  note is crossed out. A tap opens the note with its source and date and a
-  Delete button.
+  note is left out, as the server no longer reads it. A tap opens the note
+  with its source and date and a Delete button.
 - **Skills:** one row per skill with a one-line description and its switch.
   A tap opens the full description with the switch and Remove.
 
@@ -79,7 +79,7 @@ Delete on a note and Remove on a skill confirm in `ConfirmDialog` first.
 | `src/components/SidebarInboxRow.tsx` | `circle` variant: a 36px round Inbox button with its count and running dot; "Inbox" is its tooltip and label |
 | `src/components/SidebarSimpleRail.tsx` | The rail's foot holds Apps, the round Inbox button and the account, in that order |
 | `src/components/ChatView.tsx` | In the top band, the header's glass layer carries `data-glass-band` |
-| `src/components/bot-panel/memory-notes.ts` | `memoryNoteParts` splits `YYYY-MM-DD · from <source> · text` and marks struck or expired notes inactive; `memoryNoteKey` includes the text |
+| `src/components/bot-panel/memory-notes.ts` | `memoryNoteParts` splits `YYYY-MM-DD · from <source> · text` and marks struck or expired notes inactive; `panelMemoryNotes` leaves inactive notes out; `memoryNoteKey` includes the text |
 
 `TryAsking.tsx` and its test are deleted, and so is `src/lib/chat-usage-summary.ts`. `SwitchRow` in `rows.tsx` is deleted too,
 because no page uses it.
