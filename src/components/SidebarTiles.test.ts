@@ -42,12 +42,18 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("the sidebar tiles", () => {
-  it.each([true, false])("draws the main tile and a pinned tile the same: 78 by 92, radius 10, a 56px avatar over a one-line 13px medium name (main %s)", (primary) => {
+  it.each([true, false])("draws the main tile and a pinned tile the same: 100 by 112, radius 10, a 56px avatar over a one-line 13px medium name (main %s)", (primary) => {
     const html = renderToStaticMarkup(createElement(SidebarBotTile, { ...props(bot({ chiefOfStaff: primary })), primary }));
-    expect(html).toMatch(new RegExp(`data-sidebar-tile="${primary ? "primary" : "pinned"}"[^>]*class="[^"]*\\bh-\\[92px\\] w-\\[78px\\][^"]*\\brounded-\\[10px\\]`));
+    expect(html).toMatch(new RegExp(`data-sidebar-tile="${primary ? "primary" : "pinned"}"[^>]*class="[^"]*\\bh-\\[112px\\] w-\\[100px\\][^"]*\\brounded-\\[10px\\]`));
     expect(html).toContain('width="56px" height="56px"');
     expect(html).toMatch(/truncate text-center text-\[13px\] font-medium leading-4 text-ink"[^>]*>MausBot</);
     expect(html).not.toContain("data-provider-mark");
+  });
+
+  it("puts the job title in a chip under the name, and no chip for a bot without one", () => {
+    const tileHtml = (title: string) => renderToStaticMarkup(createElement(SidebarBotTile, { ...props(bot({ title })), primary: false }));
+    expect(tileHtml("  Fleet Ops ")).toMatch(/data-testid="tile-role" class="[^"]*\btruncate\b[^"]*\bmax-w-full\b[^"]*">Fleet Ops<\/span>/);
+    expect(tileHtml("")).not.toContain('data-testid="tile-role"');
   });
 
   it("gives the crown to the main tile only, and only when it is the Chief", () => {
@@ -120,7 +126,7 @@ describe("the tile grid", () => {
     const drag = count > 1 ? ":drag" : "";
     expect(tiles(html)).toEqual(["primary:mausbot", ...pins(count).map((pin) => `pinned:${pin.id}${drag}`)]);
     expect(html).toMatch(/^<div data-sidebar-tiles="" class="flex max-h-\[40vh\] flex-wrap justify-center gap-1 overflow-y-auto /);
-    expect(html.match(/\bh-\[92px\] w-\[78px\]/g)).toHaveLength(count + 1);
+    expect(html.match(/\bh-\[112px\] w-\[100px\]/g)).toHaveLength(count + 1);
     expect(html.match(/width="56px" height="56px"/g)).toHaveLength(count + 1);
     expect(html.match(/data-testid="chief-badge"/g)).toHaveLength(1);
   });
@@ -136,7 +142,7 @@ describe("the tile grid", () => {
   });
 
   // A grid taller than its 40vh cap scrolls, and its 8px scrollbar takes from the room.
-  it.each([[280, 3], [360, 4]])("fits %ipx of sidebar to %i tiles across, with or without a scrollbar", (width, columns) => {
+  it.each([[240, 2], [280, 2], [360, 3]])("fits %ipx of sidebar to %i tiles across, with or without a scrollbar", (width, columns) => {
     const html = grid(main, pins(5));
     const tile = Number(/data-sidebar-tile="primary"[^>]*class="[^"]*\bw-\[(\d+)px\]/.exec(html)![1]);
     const gridClass = /data-sidebar-tiles="" class="([^"]*)"/.exec(html)![1]!;

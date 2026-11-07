@@ -15,6 +15,7 @@ import { pinnedCircleDragClass, pinnedCircleDragHandlers, usePinnedCircleDrag, t
 import { RenameTitle } from "./RenameTitle";
 import { openBotContextMenu, useVisibleMessages, type BotRowProps } from "./Sidebar";
 import { sidebarBotStatus } from "./SidebarBotActivity";
+import { TITLE_CHIP } from "./SidebarRowMarkers";
 import { SIMPLE_ROW_FOCUS } from "./SidebarSimpleTop";
 import { useBotUnread } from "./unread-notice";
 import { useBotFace } from "./bot-face";
@@ -35,6 +36,7 @@ export const SidebarBotTile = memo(function SidebarBotTile({ primary = false, dr
   const face = useBotFace({ bot, messages: visible, running, selected, motion: mascotMotion, noticing, hops: true });
   const onLiveCall = liveBadgeFor(bot.id, liveMedia, liveCall);
   const tooltip = botTooltip(bot, instances);
+  const title = bot.title.trim();
   const status = waiting ? t("sidebar.preview.waiting") : working ? t("chat.activity.working") : teammateWait ? t("sidebar.preview.waitingOnTeammate") : queued ? t("task.queued") : "";
   const label = [bot.name, bot.chiefOfStaff ? t("sidebar.bot.chiefOfStaff") : "", onLiveCall ? t("call.live.badge") : "", status, unread ? t("task.unread") : ""].filter(Boolean).join(" · ");
   const reorder = pinnedCircleDragHandlers(bot.id, { drag, dragging, prevId, nextId });
@@ -76,7 +78,7 @@ export const SidebarBotTile = memo(function SidebarBotTile({ primary = false, dr
       onKeyDown={onKeyDown}
       onContextMenu={(event) => openBotContextMenu(onMenu, bot.id, event)}
       className={cn(
-        "flex h-[92px] w-[78px] shrink-0 cursor-pointer flex-col items-center rounded-[10px] px-1 pt-2 transition-colors duration-150", SIMPLE_ROW_FOCUS,
+        "flex h-[112px] w-[100px] shrink-0 cursor-pointer flex-col items-center rounded-[10px] px-1 pt-1.5 transition-colors duration-150", SIMPLE_ROW_FOCUS,
         selected ? "bg-ink/[0.10]" : "hover:bg-ink/[0.06]",
         pinnedCircleDragClass({ drag, dragging, drop }),
       )}
@@ -116,6 +118,7 @@ export const SidebarBotTile = memo(function SidebarBotTile({ primary = false, dr
           inputClassName="w-full rounded bg-inset px-1 text-center text-[13px] font-medium leading-4"
         />
       </span>
+      {title && !renaming && <span data-testid="tile-role" className={cn(TITLE_CHIP, "mt-1 max-w-full")}>{title}</span>}
     </div>
   );
 });

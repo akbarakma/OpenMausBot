@@ -278,7 +278,7 @@ describe("bot-first sidebar", () => {
     let tree: ReactNode;
     function Capture() { tree = botRow(rowProps("comfortable", candidate)); return tree; }
     const markup = renderToStaticMarkup(createElement(Capture));
-    expect(markup).toMatch(/>Atlas<\/span><span data-testid="bot-role" title="Research" class="-ms-0.5 min-w-0 truncate">· Research<\/span>/);
+    expect(markup).toMatch(/>Atlas<\/span><span data-testid="bot-role" title="Research" class="min-w-0 truncate rounded-\[5px\] bg-ink\/\[0.07\] px-1.5 py-px text-\[11px\] font-medium leading-4 text-ink-secondary">Research<\/span>/);
     expect(markup.match(/data-testid="model-badge"/g)).toHaveLength(1);
     expect(markup.match(/data-provider-mark=/g)).toHaveLength(1);
     expect(markup).toMatch(/<span class="absolute -left-1 -top-1 flex rounded-full bg-raised p-\[3px\]"><svg[^>]*role="img"[^>]*aria-label="Chief of Staff"[^>]*data-testid="chief-crown"/);

@@ -8,6 +8,8 @@ export function rowSurface(selected: boolean): string {
     : "[--row:var(--color-panel)] max-md:[--row:var(--color-app)] hover:[--row:color-mix(in_srgb,var(--color-raised)_50%,var(--color-panel))]";
 }
 
+export const TITLE_CHIP = "min-w-0 truncate rounded-[5px] bg-ink/[0.07] px-1.5 py-px text-[11px] font-medium leading-4 text-ink-secondary";
+
 export type RowActivity = "working" | "teammate" | "queued";
 
 const ACTIVITY = {
