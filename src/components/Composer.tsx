@@ -921,23 +921,6 @@ export function Composer({
             )}
           />
           <div data-composer-actions className={cn("flex items-center", simpleDock ? "gap-2" : "gap-1", !singleRow && !simpleDock && "@max-[30rem]/composer:ml-auto", stacked && "ml-auto")}>
-          {(simpleDock ? stoppable : busy) && !locked && (
-          <button
-            onClick={interruptTurn}
-            aria-label={t("chat.stopTurn")}
-            data-composer-stop={simpleDock ? (stopInSlot ? "slot" : "beside") : undefined}
-            className={cn(
-              "flex shrink-0 items-center justify-center rounded-full",
-              !simpleDock ? "size-8 text-ink-secondary hover:bg-raised hover:text-ink"
-                : stopInSlot ? cn("size-7", slot.button.className)
-                : SIMPLE_CONTROL,
-            )}
-            style={stopInSlot ? slot.button.style : undefined}
-            title={t("chat.stop")}
-          >
-            <Square size={simpleDock ? 10 : 14} className="fill-current" />
-          </button>
-        )}
         {!locked && !busy && micReady && (
           <button
             onClick={toggleMic}
@@ -955,6 +938,23 @@ export function Composer({
           </button>
         )}
         {bot && !group && !locked && <ComposerContextMeter bot={bot} compact={simpleDock} />}
+          {(simpleDock ? stoppable : busy) && !locked && (
+          <button
+            onClick={interruptTurn}
+            aria-label={t("chat.stopTurn")}
+            data-composer-stop={simpleDock ? (stopInSlot ? "slot" : "beside") : undefined}
+            className={cn(
+              "flex shrink-0 items-center justify-center rounded-full",
+              !simpleDock ? "size-8 text-ink-secondary hover:bg-raised hover:text-ink"
+                : stopInSlot ? cn("size-7", slot.button.className)
+                : SIMPLE_CONTROL,
+            )}
+            style={stopInSlot ? slot.button.style : undefined}
+            title={t("chat.stop")}
+          >
+            <Square size={simpleDock ? 10 : 14} className="fill-current" />
+          </button>
+        )}
         {callShown && bot && !group && <CallButton bot={bot} placement="composer" fill={advanced || singleRow ? undefined : slot.fill} ink={slot.ink} inverse={singleRow} />}
         {callShown && group && !advanced && <GroupCallButton group={group} members={members ?? []} placement="composer" fill={slot.fill} ink={slot.ink} />}
         {hasContent && !locked && (
