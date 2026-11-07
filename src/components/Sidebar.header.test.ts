@@ -187,7 +187,7 @@ describe("sidebar top row", () => {
     const simple = topRow(render());
     expect(simple, "Simple keeps its own top row, not the frame's corner").toMatch(/^data-sidebar-top-row="true"/);
     fixture.density = "icons";
-    expect(classesOf(render(), "data-traffic-light-space"), "the column of avatars keeps a strip above for them").toEqual(["h-5", "w-full"]);
+    expect(classesOf(render(), "data-traffic-light-space"), "Simple's rail keeps a strip above them, with 20px of air under the lights").toEqual(["h-8", "w-full"]);
   });
 
   it("in Simple mode with the frame off on macOS, puts round Inbox, Search and New beside the traffic lights, on their line", () => {

@@ -90,6 +90,7 @@ import { SidebarNoBots, SidebarTileGrid } from "./SidebarTiles";
 import { BotContextMenu } from "./SidebarBotMenu";
 export { BotContextMenu };
 import { AvatarActivityDot, RowDot, RowStatusText, rowSurface, TITLE_CHIP } from "./SidebarRowMarkers";
+import { SidebarRailCard } from "./SidebarRailCard";
 
 
 import { SidebarAttentionPanel } from "./SidebarAttentionPanel";
@@ -189,7 +190,7 @@ export function GroupListItem({
           ? cn("gap-2 rounded-[10px] py-2 pr-2 group-hover:pr-9 group-focus-within:pr-9 max-md:pr-9 touch:pr-9 md:h-[54px] md:py-0", !group.dm && hasThreadList ? "pl-6" : "pl-2") : "gap-2 py-1.5 pl-6 pr-9",
         selected && !expanded ? "bg-raised" : "hover:bg-raised/50",
       )}
-      title={density === "icons" ? group.name : undefined}
+      title={density === "icons" && !railTile ? group.name : undefined}
       aria-label={density === "icons" ? group.name : undefined}
     >
       <StackedMauses members={members} density={railTile ? "comfortable" : density} large={simpleRow || railTile} />
@@ -850,7 +851,7 @@ export const BotListItem = memo(function BotListItem(props: BotRowProps) {
   return (
     <>
     <div className={cn("group relative", railTile && "mx-auto w-[54px]", botRowDropClass(drop, dragging))} data-bot-drop={drop ?? undefined} {...(drag && !renaming ? drag.row(bot.id) : {})}
-      title={railTile ? botTooltip(bot, instances) : iconOnly ? [bot.name, bot.title?.trim()].filter(Boolean).join(" · ") : undefined}><BotDropLine place={drop} />
+      title={railTile ? undefined : iconOnly ? [bot.name, bot.title?.trim()].filter(Boolean).join(" · ") : undefined}><BotDropLine place={drop} />
       {/* Keep this wrapper mounted: replacing it remounts RenameTitle and leaves the row stuck in rename mode. */}
       <div
         role={renaming ? undefined : "button"}
@@ -1264,7 +1265,7 @@ export function Sidebar({ open, onClose, collapseToIcons = false }: {
         ) : lights ? (
           // The traffic lights span 16-76px of the window; nothing clickable starts before 88px, with the window's rail
           // beside the page or not.
-          <div aria-hidden="true" data-traffic-light-space className={density === "icons" ? "h-5 w-full" : "w-[72px] shrink-0 md:w-[calc(72px_-_var(--rail-beside,0px))]"} />
+          <div aria-hidden="true" data-traffic-light-space className={rail ? "h-8 w-full" : density === "icons" ? "h-5 w-full" : "w-[72px] shrink-0 md:w-[calc(72px_-_var(--rail-beside,0px))]"} />
         ) : null}
         {density !== "icons" && (simpleDesk ? <div data-sidebar-top-slot className="min-w-0 flex-1" /> : (
           <div data-sidebar-top-slot className={cn("@container/sidebar-top flex min-w-0 flex-1 items-center", simple && "justify-end")}>
@@ -1368,8 +1369,9 @@ export function Sidebar({ open, onClose, collapseToIcons = false }: {
           {unsectionedChief && (phone ? (
             <PhoneHero bot={unsectionedChief} selected={botRow(unsectionedChief).selected} onOpen={() => openBotRow(dispatch, unsectionedChief, showThreads, botRow(unsectionedChief).selected)} onMenu={setMenu} />
           ) : (
-            <div className="mb-1.5">
+            <div className={rail ? "flex flex-col gap-1" : "mb-1.5"}>
               <BotListItem {...botRow(unsectionedChief)} />
+              {rail && <SidebarRailSeparator />}
             </div>
           ))}
           {sectionIds.map((id, index) => {
@@ -1504,6 +1506,7 @@ export function Sidebar({ open, onClose, collapseToIcons = false }: {
       </GlassBar>
       </GlassScrollFrame>
 
+      {rail && <SidebarRailCard railRef={sidebarRef} />}
       <BotContextMenu
           menu={menu}
           onClose={() => setMenu(null)}
