@@ -15,10 +15,9 @@ import {
   mouthFrame,
   type Ring,
 } from "./cursor-face-data"
-import { FULL_FRAME_MS, GLYPH_EASE_MS, MOTION, VIEW_SPAN, bodyTransform, faceTravelUnits, frameFloorMs, morphUnitsPerMs, nextFrameAt, nextMascotFrame, spinEase, type BodyMotion } from "./mascot-motion"
+import { FULL_FRAME_MS, GLYPH_EASE_MS, MOTION, VIEW_SPAN, faceTravelUnits, frameFloorMs, mixTransform, morphUnitsPerMs, motionBlending, nextFrameAt, nextMascotFrame, retargetBody, bodyStillResting, blinkScale, spinEase, type BodyMotionState } from "./mascot-motion"
 import { mascotClock, usePrefersReducedMotion, type MascotTicket } from "./mascot-clock"
 
-export { MOTION, bodyTransform, type BodyMotion }
 export {
   EXPRESSIONS,
   EXPRESSION_COUNT,
@@ -900,6 +899,7 @@ export interface CursorAvatarProps {
   glyphs?: boolean
   autoBlink?: boolean
   autoExpression?: boolean
+  still?: boolean
   paused?: boolean
   silhouette?: CursorSilhouette
   gradient?: [string, string, string]
@@ -935,6 +935,7 @@ export const CursorAvatar = React.forwardRef<CursorAvatarHandle, CursorAvatarPro
       glyphs = true,
       autoBlink = true,
       autoExpression = true,
+      still = false,
       paused = false,
       silhouette = DEFAULT_SILHOUETTE,
       gradient = DEFAULT_GRADIENT, picture,
@@ -970,6 +971,7 @@ export const CursorAvatar = React.forwardRef<CursorAvatarHandle, CursorAvatarPro
       spring,
       eyeScale,
       paused,
+      still,
       reduced,
       lookAround,
       motionStrength,
@@ -996,7 +998,7 @@ export const CursorAvatar = React.forwardRef<CursorAvatarHandle, CursorAvatarPro
       last: 0,
       stateStart: 0,
       lastState: state,
-      lastBodyTransform: '',
+      lastBodyTransform: '', body: { key: '', mix: null, resting: false } as BodyMotionState,
       faceStale: true,
       faceMoving: false,
       effectsStill: '',
@@ -1047,7 +1049,7 @@ export const CursorAvatar = React.forwardRef<CursorAvatarHandle, CursorAvatarPro
     }, [state, expression])
 
     useEffect(() => {
-      if (!autoExpression || expression !== undefined || paused || reduced) return
+      if (!autoExpression || still || expression !== undefined || paused || reduced) return
       let timer: ReturnType<typeof setTimeout>
       const tick = () => {
         const [lo, hi] = EXPR_CADENCE[state]
@@ -1064,7 +1066,7 @@ export const CursorAvatar = React.forwardRef<CursorAvatarHandle, CursorAvatarPro
       }
       tick()
       return () => clearTimeout(timer)
-    }, [state, autoExpression, expression, paused, reduced])
+    }, [state, autoExpression, still, expression, paused, reduced])
 
     useEffect(() => {
       const cadence = BLINK[state]
@@ -1084,7 +1086,7 @@ export const CursorAvatar = React.forwardRef<CursorAvatarHandle, CursorAvatarPro
     useEffect(() => {
       engine.current.faceStale = true
       wake()
-    }, [state, expression, gaze?.x, gaze?.y, turn, eyeScale, lookAround, paused, reduced, motionStrength, effects, glyphs, paint, showMouth, size])
+    }, [state, expression, gaze?.x, gaze?.y, turn, eyeScale, lookAround, paused, still, reduced, motionStrength, effects, glyphs, paint, showMouth, size])
 
     useEffect(() => {
       const drawFace = (e: typeof engine.current, now: number, spinTurn: number) => {
@@ -1153,7 +1155,7 @@ export const CursorAvatar = React.forwardRef<CursorAvatarHandle, CursorAvatarPro
         }
         const bodyEl = bodyGroup.current
         if (bodyEl) {
-          const transform = bodyTransform(MOTION[p.state] ?? {}, now - e.stateStart, p.motionStrength ?? 1)
+          const transform = mixTransform(e.body.mix, now, p.motionStrength ?? 1)
           if (transform !== e.lastBodyTransform) {
             e.lastBodyTransform = transform
             if (transform) bodyEl.setAttribute('transform', transform)
@@ -1185,7 +1187,8 @@ export const CursorAvatar = React.forwardRef<CursorAvatarHandle, CursorAvatarPro
         const dt = Math.min(Math.max(now - e.last, 0) / 1000, 0.05)
         const f = p.spring ?? 7
         e.last = now
-        if (p.paused || p.reduced) {
+        retargetBody(e.body, p.paused || p.still ? null : p.state, now, !p.reduced && (p.motionStrength ?? 1) > 0)
+        if ((p.paused && !e.body.resting) || p.reduced) {
           e.morph = 1
           e.velocity = 0
           e.blinkStart = null
@@ -1214,9 +1217,9 @@ export const CursorAvatar = React.forwardRef<CursorAvatarHandle, CursorAvatarPro
         const showEffects = p.effects !== false && !p.paused
         const showGlyphs = p.glyphs !== false && !p.paused && !p.reduced
         drawBody(e, now, showEffects, showGlyphs)
-        if (p.paused) return Infinity
+        if (p.paused && !bodyStillResting(e.body, now, faceMoving())) return Infinity
         return nextMascotFrame(now, {
-          motion: MOTION[p.state] ?? {},
+          motion: p.still ? {} : MOTION[p.state] ?? {},
           effects: EFFECTS[p.state],
           stateElapsedMs: now - e.stateStart,
           strength: p.motionStrength ?? 1,
@@ -1224,7 +1227,7 @@ export const CursorAvatar = React.forwardRef<CursorAvatarHandle, CursorAvatarPro
           showGlyphs,
           sizePx: p.sizePx,
           faceUnitsPerMs: morphUnitsPerMs(e.velocity, e.morph, f, e.travel),
-          blinkingOrSpinning: e.blinkStart !== null || e.spinStart !== null, spinning: e.spinStart !== null,
+          blinkingOrSpinning: e.blinkStart !== null || e.spinStart !== null, spinning: e.spinStart !== null, blending: motionBlending(e.body.mix, now),
         })
       }
 
@@ -1310,15 +1313,5 @@ function displayed(e: { current: Ring[]; target: Ring[]; morph: number }): Ring[
 const towards = (from: number[], to: number[], morph: number) => from.map((v, i) => v + (to[i] - v) * clamp(morph, 0, 1))
 const displayedMouth = (e: { currentMouth: number[]; targetMouth: number[]; morph: number }) => towards(e.currentMouth, e.targetMouth, e.morph)
 const displayedGaze = (e: { currentGaze: number[]; targetGaze: number[]; morph: number }) => towards(e.currentGaze, e.targetGaze, e.morph)
-
-function blinkScale(e: { blinkStart: number | null }, now: number) {
-  if (e.blinkStart === null) return 1
-  const t = (now - e.blinkStart) / 320
-  if (t >= 1) {
-    e.blinkStart = null
-    return 1
-  }
-  return Math.max(t < 0.42 ? 1 - t / 0.42 : (t - 0.42) / 0.58, 0.04)
-}
 
 export default CursorAvatar

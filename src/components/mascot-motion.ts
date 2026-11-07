@@ -82,64 +82,144 @@ const easeOutBack = (t: number) => {
 
 const easeInOut = (t: number) => (t < 0.5 ? 2 * t * t : 1 - 2 * (1 - t) * (1 - t));
 
-export function bodyTransform(motion: BodyMotion, elapsed: number, strength: number): string {
-  if (strength <= 0) return "";
-  const centre = FACE_BOX / 2;
-  const ground = FACE_BOX;
-  const wave = (period: number, phase = 0) => Math.sin((elapsed / period) * Math.PI * 2 + phase);
+interface BodyPose {
+  dx: number;
+  dy: number;
+  rotation: number;
+  scale: number;
+  sx: number;
+  sy: number;
+}
 
-  let dx = 0;
-  let dy = 0;
-  let rotation = motion.tilt ? motion.tilt * strength : 0;
-  let scale = 1;
-  let sx = 1;
-  let sy = 1;
+function bodyPose(motion: BodyMotion, clock: number, elapsed: number, strength: number): BodyPose {
+  const wave = (period: number, phase = 0) => Math.sin((clock / period) * TAU + phase);
+  const pose = { dx: 0, dy: 0, rotation: motion.tilt ? motion.tilt * strength : 0, scale: 1, sx: 1, sy: 1 };
 
   if (motion.bob) {
     const [amplitude, period] = motion.bob;
     const p = wave(period);
-    dy -= amplitude * strength * p;
+    pose.dy -= amplitude * strength * p;
     if (motion.squash) {
       const amount = motion.squash * strength * Math.max(0, -p);
-      sy = 1 - amount * 0.5;
-      sx = 1 + amount * 0.5;
+      pose.sy = 1 - amount * 0.5;
+      pose.sx = 1 + amount * 0.5;
     }
   }
   if (motion.circle) {
     const [radius, period] = motion.circle;
-    dx += radius * strength * wave(period);
-    dy += radius * strength * wave(period, Math.PI / 2);
+    pose.dx += radius * strength * wave(period);
+    pose.dy += radius * strength * wave(period, Math.PI / 2);
   }
   if (motion.sway) {
     const [degrees, period] = motion.sway;
-    rotation += degrees * strength * wave(period);
+    pose.rotation += degrees * strength * wave(period);
   }
   if (motion.pulse) {
     const [fraction, period] = motion.pulse;
-    scale *= 1 + fraction * strength * wave(period);
+    pose.scale *= 1 + fraction * strength * wave(period);
   }
   if (motion.jitter) {
     const [amplitude, period] = motion.jitter;
-    dx += amplitude * strength * wave(period);
-    dy += amplitude * strength * wave(period * 0.63, 1.1);
-  }
-  if (motion.enter) {
-    const [from, duration] = motion.enter;
-    const t = elapsed / duration;
-    scale *= t >= 1 ? 1 : from + (1 - from) * easeOutBack(Math.max(t, 0));
+    pose.dx += amplitude * strength * wave(period);
+    pose.dy += amplitude * strength * wave(period * 0.63, 1.1);
   }
   if (motion.settle !== undefined) {
     const t = Math.min(Math.max(elapsed / SETTLE_MS, 0), 1);
-    scale *= 1 + (motion.settle - 1) * easeInOut(t) * strength;
+    pose.scale *= 1 + (motion.settle - 1) * easeInOut(t) * strength;
   }
+  return pose;
+}
 
+function enterScale(motion: BodyMotion, elapsed: number, strength: number): number {
+  if (!motion.enter || strength <= 0) return 1;
+  const [from, duration] = motion.enter;
+  const t = elapsed / duration;
+  return t >= 1 ? 1 : from + (1 - from) * easeOutBack(Math.max(t, 0));
+}
+
+export const BLEND_MS = 500;
+
+interface MotionLayer {
+  motion: BodyMotion;
+  start: number;
+  weight: number;
+}
+
+export interface MotionMix {
+  layers: MotionLayer[];
+  blendStart: number;
+}
+
+const blendProgress = (mix: MotionMix, now: number) => easeInOut(Math.min(Math.max((now - mix.blendStart) / BLEND_MS, 0), 1));
+
+function layerWeights(mix: MotionMix, now: number): number[] {
+  const k = blendProgress(mix, now);
+  const newest = mix.layers.length - 1;
+  return mix.layers.map((layer, i) => (i === newest ? layer.weight + (1 - layer.weight) * k : layer.weight * (1 - k)));
+}
+
+export function startMotion(mix: MotionMix | null, motion: BodyMotion, now: number): MotionMix {
+  if (!mix) return { layers: [{ motion, start: now, weight: 1 }], blendStart: -Infinity };
+  const weights = layerWeights(mix, now);
+  const kept = mix.layers.map((layer, i) => ({ ...layer, weight: weights[i]! })).filter((layer) => layer.weight > 0);
+  return { layers: [...kept, { motion, start: now, weight: 0 }], blendStart: now };
+}
+
+export interface BodyMotionState {
+  key: string;
+  mix: MotionMix | null;
+  resting: boolean;
+}
+
+export function retargetBody(body: BodyMotionState, state: CursorState | null, now: number, moving: boolean): void {
+  const key = state ?? "";
+  if (key !== body.key || !body.mix) {
+    body.resting = state === null && body.mix !== null;
+    body.key = key;
+    body.mix = startMotion(body.mix, state ? MOTION[state] ?? {} : {}, now);
+  }
+  if (!moving) body.resting = false;
+}
+
+export function bodyStillResting(body: BodyMotionState, now: number, faceMoving: boolean): boolean {
+  if (body.resting && !faceMoving && !motionBlending(body.mix, now)) body.resting = false;
+  return body.resting;
+}
+
+export function motionBlending(mix: MotionMix | null, now: number): boolean {
+  return mix !== null && now - mix.blendStart < BLEND_MS;
+}
+
+export function mixTransform(mix: MotionMix | null, now: number, strength: number): string {
+  if (!mix || strength <= 0) return "";
+  const weights = layerWeights(mix, now);
+  const pose = { dx: 0, dy: 0, rotation: 0, scale: 1, sx: 1, sy: 1 };
+  mix.layers.forEach((layer, i) => {
+    const w = weights[i]!;
+    if (w <= 0) return;
+    const elapsed = now - layer.start;
+    const part = bodyPose(layer.motion, now, elapsed, strength);
+    part.scale *= enterScale(layer.motion, elapsed, strength);
+    pose.dx += part.dx * w;
+    pose.dy += part.dy * w;
+    pose.rotation += part.rotation * w;
+    pose.scale += (part.scale - 1) * w;
+    pose.sx += (part.sx - 1) * w;
+    pose.sy += (part.sy - 1) * w;
+  });
+  return poseTransform(pose);
+}
+
+function poseTransform({ dx, dy, rotation, scale, sx, sy }: BodyPose): string {
+  const centre = FACE_BOX / 2;
+  const ground = FACE_BOX;
   const parts: string[] = [];
-  if (dx || dy) parts.push(`translate(${dx.toFixed(2)} ${dy.toFixed(2)})`);
-  if (rotation) parts.push(`rotate(${rotation.toFixed(2)} ${centre} ${centre})`);
-  if (scale !== 1) {
+  if (Math.abs(dx) >= 0.005 || Math.abs(dy) >= 0.005) parts.push(`translate(${dx.toFixed(2)} ${dy.toFixed(2)})`);
+  if (Math.abs(rotation) >= 0.005) parts.push(`rotate(${rotation.toFixed(2)} ${centre} ${centre})`);
+  if (Math.abs(scale - 1) >= 0.00005) {
     parts.push(`translate(${centre} ${centre}) scale(${scale.toFixed(4)}) translate(${-centre} ${-centre})`);
   }
-  if (sx !== 1 || sy !== 1) {
+  if (Math.abs(sx - 1) >= 0.00005 || Math.abs(sy - 1) >= 0.00005) {
     parts.push(`translate(${centre} ${ground}) scale(${sx.toFixed(4)} ${sy.toFixed(4)}) translate(${-centre} ${-ground})`);
   }
   return parts.join(" ");
@@ -156,6 +236,7 @@ export interface CadenceInput {
   faceUnitsPerMs: number;
   blinkingOrSpinning: boolean;
   spinning?: boolean;
+  blending?: boolean;
 }
 
 export function frameIntervalFor(pxPerMs: number): number {
@@ -195,9 +276,9 @@ export function frameFloorMs(sizePx: number): number {
   return sizePx <= SMALL_MASCOT_PX ? SMALL_MASCOT_FRAME_MS : FULL_FRAME_MS;
 }
 
-/** A spin or an entrance plays once, for under a second, so it runs at full rate at any size. */
+/** A spin, an entrance or a blend plays once, for under a second, so it runs at full rate at any size. */
 export function nextMascotFrame(now: number, input: CadenceInput): number {
-  const oneShot = input.spinning || (input.strength > 0 && bodyTransient(input.motion, input.stateElapsedMs));
+  const oneShot = input.spinning || (input.strength > 0 && (input.blending || bodyTransient(input.motion, input.stateElapsedMs)));
   if (oneShot) return nextFrameAt(now, FULL_FRAME_MS);
   return Math.max(smoothFrameAt(now, input), nextFrameAt(now, frameFloorMs(input.sizePx)));
 }
@@ -224,6 +305,16 @@ function smoothFrameAt(now: number, input: CadenceInput): number {
   const fadingOut = glyph.period - GLYPH_EASE_MS;
   if (position < shown + GLYPH_EASE_MS || position >= fadingOut) return full;
   return Math.min(due, now + fadingOut - position);
+}
+
+export function blinkScale(e: { blinkStart: number | null }, now: number): number {
+  if (e.blinkStart === null) return 1;
+  const t = (now - e.blinkStart) / 320;
+  if (t >= 1) {
+    e.blinkStart = null;
+    return 1;
+  }
+  return Math.max(t < 0.42 ? 1 - t / 0.42 : (t - 0.42) / 0.58, 0.04);
 }
 
 export function morphUnitsPerMs(velocity: number, morph: number, stiffness: number, travel: number): number {

@@ -6,6 +6,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import { MausAvatar, type MausAvatarHandle, type MausAvatarProps } from "./Avatar";
 import { EFFECTS, EXPRESSIONS, POOLS } from "./CursorAvatar";
 import { mascotClock } from "./mascot-clock";
+import { BLEND_MS } from "./mascot-motion";
 import { UNREAD_NOTICE_MS, useUnreadNotice } from "./unread-notice";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -133,7 +134,7 @@ describe("CursorAvatar on the shared clock", () => {
     expect(writes).toHaveBeenCalled();
   });
 
-  it("lets an unread mascot play its notice, then draws nothing while the news waits", () => {
+  it("lets an unread mascot play its notice, eases it to rest, then draws nothing while the news waits", () => {
     function Row({ unread }: { unread: boolean }) {
       return createElement(MausAvatar, { color: "green", state: unread ? "notifying" : "idle", size: 42, animated: useUnreadNotice(unread) });
     }
@@ -144,11 +145,59 @@ describe("CursorAvatar on the shared clock", () => {
     run(2000);
     expect(frameRequests).toBeGreaterThan(20);
     run(UNREAD_NOTICE_MS);
-    run(100);
+    run(BLEND_MS * 3);
     frameRequests = 0;
     run(30_000);
     expect(frameRequests).toBe(0);
     expect(mascotClock().pending()).toBe(0);
+  });
+
+  it("eases a mascot that stops animating back to its rest pose instead of freezing mid-bounce", () => {
+    const body = () => host.querySelector("svg")!.querySelector("g > g:nth-child(2)")!.getAttribute("transform");
+    render([{ state: "working", size: 96 }]);
+    run(500);
+    render([{ state: "idle", size: 96, animated: false }]);
+    frameRequests = 0;
+    run(BLEND_MS / 2);
+    expect(frameRequests).toBeGreaterThan(5);
+    run(BLEND_MS * 3);
+    expect(body()).toBeNull();
+    frameRequests = 0;
+    run(5_000);
+    expect(frameRequests).toBe(0);
+  });
+
+  it("eases a still mascot's body to rest and then draws only its blinks", () => {
+    const body = () => host.querySelector("svg")!.querySelector("g > g:nth-child(2)")!.getAttribute("transform");
+    render([{ state: "happy", size: 96 }]);
+    run(500);
+    render([{ state: "happy", size: 96, still: true }]);
+    run(BLEND_MS * 3);
+    expect(body()).toBeNull();
+    frameRequests = 0;
+    run(10_000);
+    expect(frameRequests).toBeGreaterThan(0);
+    expect(frameRequests).toBeLessThan(150);
+  });
+
+  it("settles an entrance cut short by a pause at the still pose", () => {
+    const body = () => host.querySelector("svg")!.querySelector("g > g:nth-child(2)")!.getAttribute("transform");
+    render([{ state: "spawning", size: 96, expression: 0 }]);
+    run(100);
+    render([{ state: "spawning", size: 96, expression: 0, animated: false }]);
+    run(BLEND_MS * 3);
+    expect(body()).toBeNull();
+    frameRequests = 0;
+    run(5_000);
+    expect(frameRequests).toBe(0);
+  });
+
+  it("holds a still carved body without drawing, so only the CSS hop moves it", () => {
+    render([{ state: "happy", size: 96, bodyId: "pumpkin", still: true }]);
+    run(500);
+    frameRequests = 0;
+    run(6_000);
+    expect(frameRequests).toBe(0);
   });
 
   it("stops drawing a mascot that leaves the screen", () => {

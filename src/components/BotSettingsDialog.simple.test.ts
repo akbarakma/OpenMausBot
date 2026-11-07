@@ -451,7 +451,7 @@ describe("the bot panel in Simple mode", () => {
 
 describe("the hero", () => {
   const hero = (bot: Bot, editorOpen = false) =>
-    capture(() => PanelHero({ bot, activeState: "idle", patch, editorOpen, onToggleEditor: vi.fn() }));
+    capture(() => PanelHero({ bot, patch, editorOpen, onToggleEditor: vi.fn() }));
 
   it("labels the avatar Edit avatar and shows whether the editor is open", () => {
     const rendered = hero(makeBot(), true);

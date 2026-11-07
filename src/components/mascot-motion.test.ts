@@ -4,14 +4,18 @@ import { EFFECTS, type CursorState } from "./CursorAvatar";
 import {
   FULL_FRAME_MS,
   GLYPH_EASE_MS,
+  BLEND_MS,
   MOTION,
   SMALL_MASCOT_PX,
   SMOOTH_STEP_PX,
   frameIntervalFor,
+  mixTransform,
   morphUnitsPerMs,
+  motionBlending,
   nextFrameAt,
   nextMascotFrame,
   spinEase,
+  startMotion,
   type CadenceInput,
 } from "./mascot-motion";
 
@@ -114,5 +118,58 @@ describe("mascot cadence", () => {
     const peak = Math.max(...Array.from({ length: 101 }, (_, i) => spinEase(i / 100)));
     expect(peak * 360 - 360).toBeGreaterThan(8);
     expect(peak * 360 - 360).toBeLessThan(18);
+  });
+});
+
+describe("body motion mix", () => {
+  const numbers = (transform: string) => (transform.match(/-?\d+(\.\d+)?/g) ?? []).map(Number);
+  const close = (a: string, b: string, tolerance: number) => {
+    const [x, y] = [numbers(a), numbers(b)];
+    expect(x.length).toBe(y.length);
+    x.forEach((value, i) => expect(Math.abs(value - y[i]!)).toBeLessThanOrEqual(tolerance));
+  };
+
+  it("moves two copies of one state in step, whenever each one started", () => {
+    const early = startMotion(null, MOTION.happy, 1_000);
+    const late = startMotion(null, MOTION.happy, 7_345);
+    for (const now of [8_000, 8_210, 9_999]) expect(mixTransform(late, now, 1)).toBe(mixTransform(early, now, 1));
+  });
+
+  it("starts a new motion from the pose on screen and reaches it after BLEND_MS", () => {
+    const working = startMotion(null, MOTION.working, 0);
+    const happy = startMotion(working, MOTION.happy, 5_000);
+    close(mixTransform(happy, 5_000, 1), mixTransform(working, 5_000, 1), 0.01);
+    close(mixTransform(happy, 5_016, 1), mixTransform(working, 5_016, 1), 0.2);
+    expect(motionBlending(happy, 5_000 + BLEND_MS - 1)).toBe(true);
+    expect(motionBlending(happy, 5_000 + BLEND_MS)).toBe(false);
+    expect(mixTransform(happy, 5_000 + BLEND_MS + 300, 1)).toBe(mixTransform(startMotion(null, MOTION.happy, 0), 5_000 + BLEND_MS + 300, 1));
+  });
+
+  it("changes course mid-blend without a jump", () => {
+    const working = startMotion(null, MOTION.working, 0);
+    const happy = startMotion(working, MOTION.happy, 5_000);
+    const rest = startMotion(happy, {}, 5_200);
+    close(mixTransform(rest, 5_200, 1), mixTransform(happy, 5_200, 1), 0.01);
+    expect(mixTransform(rest, 5_200 + BLEND_MS, 1)).toBe("");
+  });
+
+  it("fades an entrance in from the pose on screen instead of popping its scale", () => {
+    const working = startMotion(null, MOTION.working, 0);
+    for (const state of ["waking", "surprised", "spawning"] as const) {
+      const entering = startMotion(working, MOTION[state], 5_000);
+      close(mixTransform(entering, 5_000, 1), mixTransform(working, 5_000, 1), 0.01);
+    }
+  });
+
+  it("settles an entrance cut short at the still pose", () => {
+    const spawning = startMotion(null, MOTION.spawning, 0);
+    const rest = startMotion(spawning, {}, 100);
+    expect(mixTransform(rest, 100 + BLEND_MS, 1)).toBe("");
+    expect(rest.layers).toHaveLength(2);
+    expect(startMotion(rest, MOTION.idle, 100 + BLEND_MS).layers).toHaveLength(2);
+  });
+
+  it("holds still with no motion strength", () => {
+    expect(mixTransform(startMotion(null, MOTION.celebrate, 0), 400, 0)).toBe("");
   });
 });

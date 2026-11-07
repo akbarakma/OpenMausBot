@@ -2062,6 +2062,21 @@ html[data-cloud-intent-morph] [data-tour="composer"] { view-transition-name: clo
   .working-ring svg { animation: none; }
   .working-ring[data-greet] { display: none; }
 }
+.bot-rest-hop {
+  transform-origin: 50% 100%;
+  will-change: transform;
+  animation-name: bot-rest-hop;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+@keyframes bot-rest-hop {
+  0%, 29.9%, 100% { transform: none; }
+  2.6%, 26% { transform: scale(1.03, 0.97); }
+  14.6% { transform: translateY(-7%) scale(0.99, 1.01); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bot-rest-hop { animation: none; }
+}
 /* Simple mode's typing row is quieter: the sheen runs from tertiary ink up to secondary. */
 .turn-phrase-quiet .thinking-shimmer { color: var(--color-ink-tertiary); }
 .turn-phrase-quiet .thinking-sheen > span::before { color: var(--color-ink-secondary); }

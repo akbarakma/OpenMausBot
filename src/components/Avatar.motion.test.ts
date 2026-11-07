@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { act, createElement, forwardRef } from "react";
+import { readFileSync } from "node:fs";
 import { createRoot, type Root } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -10,7 +11,7 @@ vi.mock("./CursorAvatar", async (importOriginal) => ({
     createElement("svg", { "data-state": state, "data-effects": String(effects) })),
 }));
 
-const { BotAvatar } = await import("./Avatar");
+const { BotAvatar, REST_CYCLE_MS, REST_HOP_MS } = await import("./Avatar");
 const { sidebarBotStatus } = await import("./SidebarBotActivity");
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -44,6 +45,49 @@ describe("BotAvatar motion beats", () => {
     expect(face().getAttribute("data-state")).toBe("loading");
     expect(face().getAttribute("data-effects")).toBe("false");
   });
+});
+
+describe("the resting hop", () => {
+  const hop = () => host.querySelector(".bot-rest-hop") as HTMLElement | null;
+  const rest = (restingSince: number | null) =>
+    act(() => root.render(createElement(BotAvatar, { bot: { color: "green" }, state: "happy", animated: true, working: false, restingSince })));
+
+  const withClock = (body: () => void) => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "performance"] });
+    try {
+      vi.advanceTimersByTime(10_000);
+      body();
+    } finally {
+      vi.useRealTimers();
+    }
+  };
+
+  it("joins the hop in phase from the shared start time, and lands a hop in the air before it stops", () => withClock(() => {
+    const since = performance.now() - 400;
+    rest(since);
+    expect(hop()!.style.animationDuration).toBe(`${REST_CYCLE_MS}ms`);
+    expect(hop()!.style.animationDelay).toBe("-400ms");
+    act(() => { vi.advanceTimersByTime(300); });
+    rest(null);
+    act(() => { vi.advanceTimersByTime(REST_HOP_MS - 700 - 20); });
+    expect(hop()).not.toBeNull();
+    act(() => { vi.advanceTimersByTime(40); });
+    expect(hop()).toBeNull();
+  }));
+
+  it("lands every keyframe of the CSS hop within REST_HOP_MS of the cycle", () => {
+    const block = readFileSync("src/styles.css", "utf8").match(/@keyframes bot-rest-hop \{([\s\S]*?)\n\}/)![1]!;
+    const moving = [...block.matchAll(/^\s*([\d.%, ]+)\{\s*transform: (?!none)/gm)].flatMap((m) => m[1]!.split(",").map((p) => Number.parseFloat(p)));
+    expect(moving.length).toBeGreaterThan(0);
+    expect(Math.max(...moving)).toBeLessThan((REST_HOP_MS / REST_CYCLE_MS) * 100);
+  });
+
+  it("stops at once when rest ends during the still part of the cycle", () => withClock(() => {
+    rest(performance.now() - REST_HOP_MS - 500);
+    rest(null);
+    act(() => { vi.advanceTimersByTime(0); });
+    expect(hop()).toBeNull();
+  }));
 });
 
 describe("the working ring's place", () => {

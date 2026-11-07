@@ -17,7 +17,8 @@ share one baseline, and a picker spans its card's full width.
   or the chat's ⋯ menu; the composer's context ring shows it. The list has no New
   conversation button and shows only once the bot has 2 or more conversations;
   New thread stays in the chat header's ⋯ menu. Upstream's "Try asking" card is
-  removed. The hero avatar shows the working ring, like the sidebar.
+  removed. The hero avatar shows the same face as the sidebar and chat header
+  (see "One face per bot" below).
 - **Automations:** the row counts the bot's switched-on routines, webhooks and
   app events, where upstream's Routines row counted routines only. Its page
   groups them under Routines, Webhooks and App events, each row with its
@@ -44,6 +45,33 @@ share one baseline, and a picker spans its card's full width.
 
 Delete on a note and Remove on a skill confirm in `ConfirmDialog` first.
 
+## One face per bot
+
+The selected bot shows one face in the sidebar row or tile, the chat header and
+the panel hero. `useBotFace` in `src/components/bot-face.ts` gives all of them
+the same state, motion beat and working ring.
+
+- In Simple mode a selected bot at rest shows `happy`, over its role face and a
+  pinned face. A failed tool (`alerting`) and a waiting question (`curious`)
+  keep their own animated face. Advanced mode keeps the bot's own face and has
+  no hop.
+- At rest only the sidebar copy moves: it blinks and does one soft hop every
+  4 s with the `bot-rest-hop` CSS animation in `src/styles.css`. The chat header
+  and panel hero hold the face still. The compositor runs the hop without
+  redrawing the face, and the still part of the cycle draws no frames. A
+  JavaScript loop on three faces cost 13 to 23% of a CPU core, and a
+  continuous CSS hop on two faces about 21%. A hop in the air lands before it
+  stops. A Halloween body holds its carved face still under the hop.
+- Picking a bot plays the `switch` beat (spin and ring sweep) everywhere, then
+  the sidebar hop.
+- Other bots animate only while they work or play an unread notice.
+- Body motion cross-fades over `BLEND_MS` (500 ms) on every state change,
+  entrances included, and a face that stops animating eases to its still pose
+  before it pauses. A beat that has run passes no motion, so a remounted face
+  does not replay it.
+- Repeating bob, sway and pulse waves read the page clock, so every copy of a
+  face in one state moves in step.
+
 ## Files this fork owns
 
 | File | Change |
@@ -52,7 +80,16 @@ Delete on a note and Remove on a skill confirm in `ConfirmDialog` first.
 | `src/components/bot-panel/DetailsTab.tsx` | Model and Automations in one card, no Try asking, Model row passes `row`, no `derived` prop |
 | `src/components/bot-panel/AutomationsPage.tsx` | New: `useBotAutomations` and the grouped Automations page |
 | `src/components/bot-panel/Conversations.tsx` | No New conversation button; a "Conversations" label with search; renders nothing with one conversation |
-| `src/components/bot-panel/PanelHero.tsx` | Avatar gets `working` from `sidebarBotStatus` |
+| `src/components/bot-panel/PanelHero.tsx` | Avatar takes its props from `useBotFace`; no `activeState` prop |
+| `src/components/bot-panel/PanelShell.tsx` | No `activeState` passed to `PanelHero` |
+| `src/components/bot-face.ts` | New: `useBotFace` (`hops` for sidebar copies), `botFaceState` and `restOrigin` |
+| `src/components/Avatar.tsx` | `BotAvatar` takes `restingSince` and wraps the face in the hop; `MausAvatar` passes `still` |
+| `src/components/ChatHeadPill.tsx` | `avatar` takes `restingSince` |
+| `src/styles.css` | `.bot-rest-hop` and its keyframes |
+| `src/components/mascot-motion.ts` | `startMotion`, `mixTransform`, `retargetBody`: blended body motion on the page clock, replacing `bodyTransform` |
+| `src/components/CursorAvatar.tsx` | Draws the body from the motion mix; a paused face eases to rest first; `still` holds the body and stops expression changes but keeps blinks; `blinkScale` moved to `mascot-motion.ts` and no `MOTION` re-export, to stay at its size limit |
+| `src/components/ChatView.tsx` | Header avatars take `useBotFace` with `sidebarBotStatus`'s `running` |
+| `src/components/PinnedCircleThreads.tsx` | Avatar takes `useBotFace` |
 | `src/components/bot-panel/page-registry.ts` | `backups` and `botapi` Simple pages; the `routines` page is titled Automations |
 | `src/components/ModelPicker.tsx` | `row` prop: in Simple mode with `contained`, the whole row is the picker button, its label and model name share a baseline, and the list opens at the row's width |
 | `src/components/ModelTrigger.tsx` | New: the Simple-mode trigger's contents, moved out of `ModelPicker.tsx` to keep it under its size limit in `scripts/testing/file-size-ratchet.test.ts` |
@@ -60,7 +97,7 @@ Delete on a note and Remove on a skill confirm in `ConfirmDialog` first.
 | `src/components/DefaultBotControls.tsx` | `HideFromSidebarRow`, the row without its card |
 | `src/state/store.tsx` | `openDataResult` takes an optional `cardId`; without one it opens the Data tab; `showRoutines` takes `compose` |
 | `src/components/TriggersPage.tsx` | Each row shows its bot's avatar with the status mark on it and the bot's name first in the status line; `compose` focus opens the New box |
-| `src/components/SidebarTiles.tsx` | A tile has no fill at rest, `bg-ink/[0.06]` on hover and `bg-ink/[0.10]` when open; badges ring in `panel` |
+| `src/components/SidebarTiles.tsx` | A tile has no fill at rest, `bg-ink/[0.06]` on hover and `bg-ink/[0.10]` when open; badges ring in `panel`; avatar takes `useBotFace` |
 | `src/components/ComputerPanel.tsx` | A data request without a card opens Data and focuses no card |
 | `src/components/bot-panel/LibraryTab.tsx` | "What {name} knows" first, Tables row sends `openDataResult` with no card |
 | `src/components/bot-panel/ComputerTab.tsx` | Screen label, Setup card |
@@ -75,7 +112,7 @@ Delete on a note and Remove on a skill confirm in `ConfirmDialog` first.
 | `src/components/ContextWarning.tsx` | `useCompact` is exported for the ring's card |
 | `electron/window-chrome.mjs` | `TRAFFIC_LIGHTS.unframed` is `{ x: 16, y: 23 }`, so the lights' center is y=30 (upstream: y=16, center y=23) |
 | `src/components/SidebarSimpleTop.tsx` | `useTopBandLayout`, `TOP_BAND_HIT`, `TOP_BAND_BUTTON`; `SidebarSearchToggle` takes `band` |
-| `src/components/Sidebar.tsx` | `MAC_TRAFFIC_LIGHT_CENTER_Y` is 30. In the top band, the top row holds round Inbox, Search and New, and the Inbox row below is gone. In Simple's icon rail, Search, New and the Inbox square are gone from the top, and the first bot starts 7px under the traffic lights |
+| `src/components/Sidebar.tsx` | A Simple row reads "Name · Job title", the title truncating first; its avatar takes `useBotFace`. `MAC_TRAFFIC_LIGHT_CENTER_Y` is 30. In the top band, the top row holds round Inbox, Search and New, and the Inbox row below is gone. In Simple's icon rail, Search, New and the Inbox square are gone from the top, and the first bot starts 7px under the traffic lights |
 | `src/components/SidebarInboxRow.tsx` | `circle` variant: a 36px round Inbox button with its count and running dot; "Inbox" is its tooltip and label |
 | `src/components/SidebarSimpleRail.tsx` | The rail's foot holds Apps, the round Inbox button and the account, in that order |
 | `src/components/ChatView.tsx` | In the top band, the header's glass layer carries `data-glass-band` |

@@ -4,7 +4,6 @@ import { memo, useLayoutEffect, useRef, useState, type KeyboardEvent, type Mouse
 import { cn } from "@/lib/cn";
 import { t } from "@/lib/i18n";
 import { useLiveMedia } from "@/lib/live-call-media";
-import { stateForBot } from "@/lib/mascot";
 import { useShowThreads } from "@/lib/thread-preferences";
 import { api, openBotRow, useStore, type Bot } from "@/state/store";
 import { useChiefStepOpen } from "@/lib/default-bot";
@@ -18,7 +17,7 @@ import { openBotContextMenu, useVisibleMessages, type BotRowProps } from "./Side
 import { sidebarBotStatus } from "./SidebarBotActivity";
 import { SIMPLE_ROW_FOCUS } from "./SidebarSimpleTop";
 import { useBotUnread } from "./unread-notice";
-import { useMotionBeat } from "./motion-beat";
+import { useBotFace } from "./bot-face";
 
 const RING = "ring-2 ring-panel";
 
@@ -33,7 +32,7 @@ export const SidebarBotTile = memo(function SidebarBotTile({ primary = false, dr
   const visible = useVisibleMessages(bot);
   const { waiting, working, running, teammateWait, queued } = sidebarBotStatus(bot, pendingQueued);
   const { unread, noticing } = useBotUnread(bot);
-  const beat = useMotionBeat(mascotMotion);
+  const face = useBotFace({ bot, messages: visible, running, selected, motion: mascotMotion, noticing, hops: true });
   const onLiveCall = liveBadgeFor(bot.id, liveMedia, liveCall);
   const tooltip = botTooltip(bot, instances);
   const status = waiting ? t("sidebar.preview.waiting") : working ? t("chat.activity.working") : teammateWait ? t("sidebar.preview.waitingOnTeammate") : queued ? t("task.queued") : "";
@@ -83,14 +82,7 @@ export const SidebarBotTile = memo(function SidebarBotTile({ primary = false, dr
       )}
     >
       <span className="relative flex">
-        <BotAvatar
-          bot={bot}
-          state={stateForBot({ ...bot, busy: bot.busy || running, messages: visible })}
-          size={56}
-          motion={mascotMotion?.kind ?? "none"}
-          motionKey={mascotMotion?.nonce ?? 0}
-          animated={running || noticing || beat !== null} working={running} greet={beat === "switch"}
-        />
+        <BotAvatar bot={bot} size={56} {...face} />
         {primary && bot.chiefOfStaff && (
           <span data-testid="chief-badge" className={cn("absolute -bottom-px -right-px flex size-4 items-center justify-center rounded-full bg-[#E8993A] text-white", RING)}>
             <Crown size={10} strokeWidth={1.5} fill="currentColor" aria-hidden="true" />

@@ -129,7 +129,6 @@ export function BotPanel({ bot, derived, linkedSection, onClose }: {
             <div className="relative mt-3.5" ref={editorRef}>
               <PanelHero
                 bot={bot}
-                activeState={derived.activeState}
                 patch={derived.patch}
                 editorOpen={editorOpen}
                 onToggleEditor={() => setEditorOpen((open) => !open)}

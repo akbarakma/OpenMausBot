@@ -5,6 +5,7 @@ import {
   useImperativeHandle,
   useRef,
   useState,
+  type CSSProperties,
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from "react";
@@ -98,6 +99,7 @@ export type MausAvatarProps = {
   effects?: boolean;
   /** false turns off the face's own orbit trails, judged on the face it actually shows, motion beats included. */
   trails?: boolean;
+  still?: boolean;
   bodyId?: BotBodyId;
   gradient?: [string, string, string];
   faceColor?: MascotFaceColor | null;
@@ -118,7 +120,7 @@ function MausAvatarComponent(props: MausAvatarProps, ref: React.Ref<MausAvatarHa
         motionKey={motionKey}
         gaze={gaze}
         trackPointer={trackPointer}
-        animated={animated}
+        animated={props.still ? false : animated}
         label={label}
       />
     );
@@ -147,6 +149,7 @@ function GradientAvatarComponent(
     animated = true,
     effects,
     trails,
+    still,
     bodyId,
     gradient,
     faceColor,
@@ -215,6 +218,7 @@ function GradientAvatarComponent(
         showMouth={showMouth}
         mouthStroke={mouthStroke}
         paused={!animated}
+        still={still}
         effects={trails === false && EFFECTS[motionState ?? state]?.trails ? false : effects}
       />
     </span>
@@ -230,6 +234,7 @@ export type BotAvatarProps = Omit<MausAvatarProps, "color" | "gradient"> & {
   /** Keep it a boolean at a call site that shows work: switching to or from undefined remounts the face. */
   working?: boolean;
   greet?: boolean;
+  restingSince?: number | null;
   bot: {
     name?: string;
     color: MausColor;
@@ -258,7 +263,24 @@ export function resolveBotAvatarOutcome(params: {
   return "flatImage";
 }
 
-export function BotAvatar({ working, greet = false, ...props }: BotAvatarProps) {
+export const REST_HOP_MS = 1300;
+export const REST_CYCLE_MS = 4000;
+
+function useRestHop(since: number | null): CSSProperties | null {
+  const start = (at: number) => ({ since: at, delay: at - performance.now() });
+  const [hop, setHop] = useState(() => (since === null ? null : start(since)));
+  if (since !== null && hop?.since !== since) setHop(start(since));
+  useEffect(() => {
+    if (since !== null || hop === null) return;
+    const into = (performance.now() - hop.since) % REST_CYCLE_MS;
+    const timer = setTimeout(() => setHop(null), Math.max(REST_HOP_MS - into, 0));
+    return () => clearTimeout(timer);
+  }, [since, hop]);
+  return hop && { animationDuration: `${REST_CYCLE_MS}ms`, animationDelay: `${hop.delay}ms` };
+}
+
+export function BotAvatar({ working, greet = false, restingSince = null, ...props }: BotAvatarProps) {
+  const hop = useRestHop(restingSince);
   if (working === undefined) return <BotAvatarFace {...props} />;
   const profile = botAvatarProfile(props.bot);
   const ring = <WorkingRing active={working} greet={greet} state={props.state ?? "idle"} />;
@@ -266,8 +288,8 @@ export function BotAvatar({ working, greet = false, ...props }: BotAvatarProps) 
   return (
     <span className="relative inline-flex shrink-0">
       {!overImage && ring}
-      <span className="relative inline-flex">
-        <BotAvatarFace {...props} trails={false} />
+      <span className={cn("relative inline-flex", hop && !overImage && "bot-rest-hop")} style={overImage ? undefined : hop ?? undefined}>
+        <BotAvatarFace {...props} still={restingSince !== null} trails={false} />
       </span>
       {overImage && ring}
     </span>

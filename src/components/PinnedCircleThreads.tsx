@@ -5,7 +5,6 @@ import { openBotRow, visibleMessages, type Bot, type Message } from "@/state/sto
 import { avatarCropRadius, botAvatarProfile } from "../../shared/bot-avatar";
 import { liveActivityLabel } from "@/lib/live-activity";
 import { BotAvatar } from "./Avatar";
-import { stateForBot } from "@/lib/mascot";
 import { cn } from "@/lib/cn";
 import { searchMatchesThreads, useSearchDisclosure } from "@/lib/search-disclosure";
 import { lastNonReceipt } from "@/lib/receipts";
@@ -19,7 +18,7 @@ import { sidebarSectionAttention } from "@/lib/sidebar-attention";
 import { SidebarSectionHeader } from "./SidebarSectionHeader";
 import { BotListItem, BotThreadList, type BotRowProps } from "./Sidebar";
 import { useUnreadNotice } from "./unread-notice";
-import { useMotionBeat } from "./motion-beat";
+import { useBotFace } from "./bot-face";
 
 function useVisibleMessages(bot: Bot): Message[] {
   const { messages, activeLeafId } = bot;
@@ -192,7 +191,7 @@ export const PinnedBotCircle = memo(function PinnedBotCircle({
   const running = Boolean(bot.busy) || activityTasks.some((task) => task.busy || task.activity === "working"), working = !waiting && running;
   const unread = bot.unread || activityTasks.some((task) => task.unread);
   const noticing = useUnreadNotice(Boolean(bot.unread));
-  const beat = useMotionBeat(mascotMotion);
+  const face = useBotFace({ bot, messages: visible, running, selected, motion: mascotMotion, noticing, hops: true });
   const radius = avatarCropRadius(botAvatarProfile(bot).avatarCrop);
   return (
     <div className="flex w-full min-w-0 flex-col items-center">
@@ -224,14 +223,7 @@ export const PinnedBotCircle = memo(function PinnedBotCircle({
             )}
             style={{ borderRadius: radius }}
           >
-            <BotAvatar
-              bot={bot}
-              state={stateForBot({ ...bot, busy: bot.busy || running, messages: visible })}
-              size={64}
-              motion={mascotMotion?.kind ?? "none"}
-              motionKey={mascotMotion?.nonce ?? 0}
-              animated={running || noticing || beat !== null} working={running} greet={beat === "switch"}
-            />
+            <BotAvatar bot={bot} size={64} {...face} />
           </span>
           {unread && (
             <span className="absolute top-0.5 right-0.5 size-2.5 rounded-full border-2 border-panel bg-accent" aria-label={t("task.unreadMany")} />
