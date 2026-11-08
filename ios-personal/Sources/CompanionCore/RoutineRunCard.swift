@@ -134,7 +134,7 @@ public struct RoutineRunCard: Codable, Hashable, Sendable {
         return state.isEmpty ? name : "\(name) \(state)"
     }
 
-    /// One line for a roster row, Updates, or Walkie: the headline, then the
+    /// One line for a roster row or Updates: the headline, then the
     /// first thing the run actually said — which is why anyone set it up.
     public var previewLine: String {
         guard let first = summary?

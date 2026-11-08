@@ -174,8 +174,8 @@ public enum ImageDownsampler {
 }
 
 /// Decoded images shared by every view that draws the same input at the same
-/// size: a bot's face appears in its Home row, the chat header, a room and
-/// the Walkie sheet at once, and each used to decode its own copy.
+/// size: a bot's face appears in its Home row, the chat header, and a room
+/// at once, and each used to decode its own copy.
 ///
 /// Bounded by count and by decoded bytes (an `NSCache`, so it also empties
 /// under memory pressure). Callers asking for the same key at the same time

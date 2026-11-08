@@ -656,18 +656,18 @@ struct AgentProfileView: View {
             return
         }
         // The preview reconfigures and later deactivates the shared audio
-        // session, which would cut a Live call's audio. Same arbiter as
-        // voice notes: refused while an input owner holds the session.
+        // session, which would cut dictation. Same arbiter as voice notes:
+        // refused while an input owner holds the session.
         guard VoiceNoteCenter.shared.playbackAllowed else {
-            session.actionError = String(localized: "Voice previews are paused during a Live call.")
+            session.actionError = String(localized: "Voice previews are paused during dictation.")
             return
         }
         busy = true
         defer { busy = false }
         guard let data = await session.previewVoice(voice, for: current), !Task.isCancelled else { return }
-        // A call may have taken ownership while the generated clip loaded.
+        // Dictation may have taken ownership while the generated clip loaded.
         guard VoiceNoteCenter.shared.playbackAllowed else {
-            session.actionError = String(localized: "Voice previews are paused during a Live call.")
+            session.actionError = String(localized: "Voice previews are paused during dictation.")
             return
         }
         do {

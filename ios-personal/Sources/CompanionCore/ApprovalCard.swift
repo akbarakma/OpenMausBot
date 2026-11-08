@@ -156,7 +156,7 @@ extension OptionCard {
     }
 
     /// The bold first line, in English. The app draws the localized form of
-    /// the same rule; Walkie and other plain-text surfaces read this one.
+    /// the same rule; plain-text surfaces read this one.
     public var headline: String {
         guard presentation == .outbound else { return title }
         if let app = outboundApp { return "Send to \(app)?" }
@@ -201,12 +201,6 @@ extension OptionCard {
             let line = Self.firstLine(of: subtitle)
             return line.isEmpty ? title : line
         }
-    }
-
-    /// The card as one spoken sentence.
-    public var spokenLine: String {
-        let rest = presentation == .standard ? subtitle : summaryLine
-        return [headline, rest].filter { !$0.isEmpty }.joined(separator: " ")
     }
 
     /// An answered permission or outbound card has done its job: the bot's

@@ -11,7 +11,6 @@ import CompanionCore
 
 struct ChatListView: View {
     @EnvironmentObject private var session: Session
-    @EnvironmentObject private var liveCall: LiveCallController
     @State private var query = ""
     @AppStorage(PrefKey.activityDetail) private var activityDetail = ActivityDetail.phoneDefault.rawValue
     @AppStorage(PrefKey.rosterDensity) private var rosterDensity = RosterDensity.default.rawValue
@@ -24,7 +23,6 @@ struct ChatListView: View {
     @State private var searchOpen = false
     @State private var showingUpdates = false
     @State private var showingCalendar = false
-    @State private var showingWalkie = false
     @State private var showingNewGroup = false
     @State private var showingNewSection = false
     @State private var expandedBots = Set<String>()
@@ -61,11 +59,6 @@ struct ChatListView: View {
             VStack(spacing: 0) {
                 header
                 StatusBanner()
-                LiveCallBanner { target in
-                    if let bot = session.state.bot(target.botId)?.projected(forThread: target.threadId) {
-                        path.append(Chat.bot(bot))
-                    }
-                }
 
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 0) {
@@ -170,9 +163,6 @@ struct ChatListView: View {
                 if ProcessInfo.processInfo.arguments.contains("-open-new-section") {
                     showingNewSection = true
                 }
-                if ProcessInfo.processInfo.arguments.contains("-open-walkie") {
-                    showingWalkie = true
-                }
                 if ProcessInfo.processInfo.arguments.contains("-open-first"),
                    path.isEmpty, let first = chats.first {
                     path.append(first.chat)
@@ -188,13 +178,6 @@ struct ChatListView: View {
                     showingUpdates = false
                     path.append(chat)
                 }
-            }
-            .fullScreenCover(isPresented: $showingWalkie) {
-                WalkieView { chat in
-                    showingWalkie = false
-                    path.append(chat)
-                }
-                .environmentObject(session)
             }
             .sheet(isPresented: $showingNewGroup) {
                 NewGroupSheet { room in
@@ -681,7 +664,6 @@ struct ChatListView: View {
             updatesButton(updates: updates)
                 .frame(width: 180)
             searchButton
-            walkieButton
             if session.canAdminister {
                 sectionButton
                 newBotButton
@@ -694,7 +676,6 @@ struct ChatListView: View {
             updatesButton(updates: updates)
                 .frame(minWidth: 148)
             searchButton
-            walkieButton
             // Creating bots and sections needs the admin scope on a server;
             // a chat-only phone is not shown buttons the server would refuse.
             if session.canAdminister {
@@ -731,16 +712,6 @@ struct ChatListView: View {
             searchFocused = true
         }
         .accessibilityLabel("Search")
-    }
-
-    /// Walkie: hold-to-talk with every agent's state at a glance.
-    private var walkieButton: some View {
-        GlassButton(systemImage: "waveform", size: 48, weight: .semibold) {
-            Haptics.selection()
-            showingWalkie = true
-        }
-        .accessibilityLabel("Walkie")
-        .disabled(liveCall.machine.isActive)
     }
 
     private var sectionButton: some View {

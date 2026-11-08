@@ -45,7 +45,7 @@ public struct ChatUpdate: Identifiable, Hashable, Codable {
 
 extension CompanionState {
     /// Every chat worth a line on the pill, the sheet, the island, Live
-    /// Activities, the widget and Walkie. `detail` is the reader's Activity
+    /// Activities and the widget. `detail` is the reader's Activity
     /// setting: these lines fold tool calls and webhooks by the same rule as
     /// the roster, so Hidden means hidden on every surface (MOCA-204).
     public func updates(detail: ActivityDetail) -> [ChatUpdate] {

@@ -3,11 +3,10 @@
 #
 #   brew install xcodegen && cd ios && xcodegen generate && open OpenMausCompanion.xcodeproj
 #
-# XcodeGen is a development tool, not a dependency of the app: the app's one
-# dependency is the WebRTC package below, for Live calls. If you'd rather not
-# install XcodeGen, make an iOS App target in Xcode by hand, add the App/
-# folder, the local CompanionCore package and the WebRTC package — the
-# Info.plist keys below are the part that is easy to miss.
+# XcodeGen is a development tool, not a dependency of the app. If you'd
+# rather not install XcodeGen, make an iOS App target in Xcode by hand, add
+# the App/ folder and the local CompanionCore package — the Info.plist keys
+# below are the part that is easy to miss.
 name: OpenMausCompanion
 options:
   bundleIdPrefix: com.openmausbot
@@ -37,14 +36,6 @@ settings:
 packages:
   CompanionCore:
     path: .
-  # Live calls: the phone's WebRTC audio goes straight to OpenAI. A prebuilt
-  # XCFramework of Google's WebRTC (BSD), pinned exactly because the generated
-  # project's Package.resolved is never committed. App target only: the
-  # extensions never call anyone, and CompanionCore stays Foundation-only so
-  # `swift test` runs on a Mac. Adds ~12 MB to the app on a phone.
-  WebRTC:
-    url: https://github.com/stasel/WebRTC
-    exactVersion: 153.0.0
 
 schemes:
   OpenMausCompanion:
@@ -68,7 +59,6 @@ targets:
     dependencies:
       - package: CompanionCore
         product: CompanionCore
-      - package: WebRTC
       - target: OpenMausCompanionWidgets
       - target: OpenMausShareExtension
     settings:
@@ -137,8 +127,7 @@ targets:
           OpenMausBot uses the camera only to scan a pairing QR code shown on
           your computer.
         NSMicrophoneUsageDescription: >-
-          OpenMausMobile listens while you dictate a message to a bot or talk
-          to it on a Live call.
+          OpenMausMobile listens while you dictate a message to a bot.
         NSSpeechRecognitionUsageDescription: >-
           OpenMausMobile converts your speech into text so you can send it
           to a bot. Recognition runs on this phone when it can.

@@ -1230,9 +1230,6 @@ public struct ConfigStatus: Codable, Sendable {
     public var tts: ConfigFlag?
     public var imageGen: ConfigFlag?
     public var profile: Profile?
-    /// Live-call settings on the paired computer. Absent on a computer older
-    /// than Live calls; never carries the key.
-    public var live: LiveSettings?
 
     /// Whether synthesis is available on the paired computer. Deliberately
     /// provider-neutral: under ElevenLabs this is a key on file, while under
@@ -1269,12 +1266,6 @@ public struct ConfigStatus: Codable, Sendable {
         case "chatterbox": .chatterbox
         default: .elevenlabs
         }
-    }
-
-    /// Walkie synthesizes directly on the phone through its own ElevenLabs
-    /// key. A voice chosen from another provider's catalog is not compatible.
-    public func walkieAgentVoice(_ voice: String?) -> String? {
-        voiceProvider == .elevenlabs ? voice : nil
     }
 }
 

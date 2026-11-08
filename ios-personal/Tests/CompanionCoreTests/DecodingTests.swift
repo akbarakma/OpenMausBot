@@ -955,62 +955,6 @@ final class DecodingTests: XCTestCase {
         XCTAssertTrue(odd.isRunning)
     }
 
-    func testConfigCarriesLiveSettingsAndTolerateAnOlderComputer() throws {
-        let full = try JSONDecoder().decode(ConfigStatus.self, from: Data(#"{"live":{"configured":false,"voice":"cedar","readTypedReplies":false,"idleMinutes":9}}"#.utf8))
-        XCTAssertEqual(full.live, LiveSettings(configured: false, voice: "cedar", readTypedReplies: false, idleMinutes: 9))
-
-        // today's harness sends only { configured, voice }: the rest default
-        let older = try JSONDecoder().decode(ConfigStatus.self, from: Data(#"{"live":{"configured":true,"voice":"marin"}}"#.utf8))
-        XCTAssertEqual(older.live, LiveSettings(configured: true, voice: "marin", readTypedReplies: true, idleMinutes: 5))
-
-        // no voice chosen on the Mac arrives as "" — the desktop reads that
-        // as marin, and so must the phone, or the picker grows an empty row
-        let unset = try JSONDecoder().decode(ConfigStatus.self, from: Data(#"{"live":{"configured":true,"voice":""}}"#.utf8))
-        XCTAssertEqual(unset.live?.voice, "marin")
-        let blank = try JSONDecoder().decode(ConfigStatus.self, from: Data(#"{"live":{"configured":true,"voice":"  "}}"#.utf8))
-        XCTAssertEqual(blank.live?.voice, "marin")
-
-        // the captured fixture predates Live calls altogether
-        XCTAssertNil(try decode(ConfigStatus.self, "config").live)
-    }
-
-    func testASettingsPatchOmitsWhatItDoesNotChange() throws {
-        let data = try JSONEncoder().encode(LiveSettingsPatch(idleMinutes: 10))
-        let object = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
-        XCTAssertEqual(object.keys.sorted(), ["idleMinutes"])
-        XCTAssertEqual(object["idleMinutes"] as? Int, 10)
-
-        let both = try JSONEncoder().encode(LiveSettingsPatch(voice: "sage", readTypedReplies: false))
-        let bothObject = try XCTUnwrap(JSONSerialization.jsonObject(with: both) as? [String: Any])
-        XCTAssertEqual(bothObject.keys.sorted(), ["readTypedReplies", "voice"])
-        XCTAssertEqual(bothObject["readTypedReplies"] as? Bool, false)
-    }
-
-    func testTheVoiceListMatchesTheDesktop() {
-        XCTAssertEqual(LiveVoices.options.first?.id, "marin")
-        XCTAssertEqual(LiveVoices.options.map(\.id), [
-            "marin", "cedar", "alloy", "ash", "ballad", "coral", "echo", "sage", "shimmer", "verse",
-            "gleam", "meridian", "quartz", "ripple", "vesper", "willow", "stone", "delta", "cinder",
-            "beacon", "bossa", "tempo",
-        ])
-        XCTAssertEqual(LiveVoices.options.first?.label, "Marin (default)")
-        XCTAssertEqual(LiveVoices.options.last?.label, "Tempo — Brazilian Portuguese, masculine")
-        XCTAssertEqual(LiveVoices.defaultVoice, "marin")
-        XCTAssertEqual(LiveVoices.idleMinutesRange, 1...60)
-        XCTAssertEqual(LiveVoices.defaultIdleMinutes, 5)
-    }
-
-    func testTheIdleHangUpChoicesMatchEveryClient() {
-        // The desktop's IDLE_CHOICES (src/components/LiveCallSettings.tsx),
-        // a choice each rather than a stepper that sent one PATCH per step.
-        XCTAssertEqual(LiveVoices.idleMinuteChoices, [1, 2, 3, 5, 10, 15, 30, 60])
-        XCTAssertEqual(LiveVoices.idleChoices(current: 5), [1, 2, 3, 5, 10, 15, 30, 60])
-        // A value set before (the stepper allowed any minute) is shown in
-        // its place and stays selected, as on the desktop.
-        XCTAssertEqual(LiveVoices.idleChoices(current: 7), [1, 2, 3, 5, 7, 10, 15, 30, 60])
-        XCTAssertEqual(LiveVoices.idleChoices(current: 90), [1, 2, 3, 5, 10, 15, 30, 60, 90], "a newer computer's limit")
-    }
-
     func testDecodesALiveCallFrame() throws {
         let json = #"{"kind":"live.call","seq":30,"botId":"b1","threadId":"t1","call":{"callId":"c1","botId":"b1","threadId":"t1","client":"desktop","voice":"marin","startedAt":1700000000000,"status":"live"}}"#
         let frame = try JSONDecoder().decode(StreamFrame.self, from: Data(json.utf8))

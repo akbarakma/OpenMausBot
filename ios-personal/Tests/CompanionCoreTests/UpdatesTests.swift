@@ -175,7 +175,7 @@ final class UpdatesTests: XCTestCase {
     // MARK: - Activity and webhooks (MOCA-204)
 
     /// The line under a chat in Updates, the island, Live Activities, the
-    /// widget and Walkie reads like the roster: a webhook is its task, never
+    /// widget read like the roster: a webhook is its task, never
     /// its envelope of delivery ids and headers.
     func testToReviewLineShowsAWebhookAsItsTaskNotItsEnvelope() throws {
         var state = try hydrated

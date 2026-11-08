@@ -97,17 +97,6 @@ final class VoiceProviderClientTests: XCTestCase {
         XCTAssertEqual(tts["provider"] as? String, "fish")
     }
 
-    func testWalkieNeverSendsAnotherProvidersVoiceIdToElevenLabs() throws {
-        let fish = try JSONDecoder().decode(ConfigStatus.self, from: Self.fishStatus)
-        let eleven = try JSONDecoder().decode(
-            ConfigStatus.self,
-            from: Data(#"{"tts":{"configured":true,"provider":"elevenlabs"}}"#.utf8)
-        )
-
-        XCTAssertNil(fish.walkieAgentVoice("fish-voice"))
-        XCTAssertEqual(eleven.walkieAgentVoice("eleven-voice"), "eleven-voice")
-    }
-
     func testSaveChatterboxServerCommitsAddressAndModelTogether() async throws {
         VoiceProviderRequestStub.responseBody = Self.chatterboxStatus
 

@@ -4,18 +4,18 @@ import SwiftUI
 
 /// The one-voice rule for transcript audio and voice previews: playing one pauses any
 /// other, exactly as the web bubble's claimExternalVoice does. The audio
-/// session itself arbitrates against call mode — its reconfiguration
+/// session itself arbitrates against other audio — its reconfiguration
 /// arrives here as an interruption, which pauses the holder. The current
 /// holder is weak: a bubble scrolled out of the transcript releases itself.
 ///
 /// The session this coordinates is process-wide, so the arbiter is too:
-/// dictation, Walkie and Live calls file through the same instance before
-/// they reconfigure the shared session for recording.
+/// dictation files through the same instance before it reconfigures the
+/// shared session for recording.
 @MainActor
 final class VoiceNoteCenter {
     static let shared = VoiceNoteCenter()
 
-    enum InputOwner: String { case dictation, walkie, liveCall }
+    enum InputOwner: String { case dictation }
 
     private weak var current: VoiceNotePlayer?
     private var inputOwners: Set<InputOwner> = []
@@ -49,7 +49,7 @@ final class VoiceNoteCenter {
     }
 
     /// Claim the shared session for playback. Rejected while an input
-    /// owner holds it, so starting dictation or Walkie silences the
+    /// owner holds it, so starting dictation silences the
     /// transcript instead of the two fighting over the route.
     func beginPlaybackSession() -> Bool {
         guard playbackAllowed else { return false }
@@ -58,8 +58,8 @@ final class VoiceNoteCenter {
     }
 
     /// Give the session back — but only if a voice-note player still owns
-    /// it. Deactivating while dictation or Walkie holds the session would
-    /// end their capture.
+    /// it. Deactivating while dictation holds the session would
+    /// end its capture.
     func endPlaybackSession() {
         guard ownsPlaybackSession else { return }
         ownsPlaybackSession = false
@@ -201,17 +201,10 @@ struct VoiceNoteBubble: View {
     /// every voice note in the transcript whenever any bot streams.
     let actions: TranscriptActions
 
-    @EnvironmentObject private var liveCall: LiveCallController
     @StateObject private var player = VoiceNotePlayer()
     @State private var loading = true
     @State private var loadFailed = false
     @State private var attempt = 0
-
-    /// This phone is on a Live call, which holds the audio: a note cannot
-    /// play until it ends (VoiceNoteCenter refuses it), and the bubble says
-    /// so rather than ignore the tap. A note still playing as the call
-    /// starts can be paused; the call pauses it anyway once it has the mic.
-    private var heldByCall: Bool { liveCall.machine.isActive && !player.isPlaying }
 
     /// The server's estimate until the clip loads its own metadata.
     private var duration: Double? {
@@ -249,7 +242,7 @@ struct VoiceNoteBubble: View {
                     .background(Circle().fill(tint))
             }
             .buttonStyle(.plain)
-            .disabled(loading || loadFailed || duration == nil || heldByCall)
+            .disabled(loading || loadFailed || duration == nil)
             .accessibilityIdentifier("voice-note-play")
             .accessibilityLabel(player.isPlaying ? Text("Pause voice note") : Text("Play voice note"))
 
@@ -259,12 +252,6 @@ struct VoiceNoteBubble: View {
                     .frame(maxWidth: .infinity)
             } else if loadFailed {
                 failure
-            } else if heldByCall {
-                Text("Voice notes can’t play during a Live call.")
-                    .font(.system(size: 12))
-                    .foregroundStyle(Color.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .accessibilityIdentifier("voice-note-blocked")
             } else {
                 Slider(value: timeBinding, in: 0...Swift.max(duration ?? 1, 0.1))
                     .tint(tint)

@@ -73,7 +73,6 @@ final class ApprovalCardTests: XCTestCase {
         XCTAssertEqual(card.headline, "Send to Linear?")
         XCTAssertEqual(card.summaryLine, "Create linear comment ×2")
         XCTAssertEqual(card.previewLine, "Linear · Create linear comment ×2")
-        XCTAssertEqual(card.spokenLine, "Send to Linear? Create linear comment ×2")
         XCTAssertTrue(card.hasDetails, "the raw request stays one tap away")
         XCTAssertFalse(card.previewLine.contains("{"))
     }
@@ -243,13 +242,6 @@ final class ApprovalCardTests: XCTestCase {
         XCTAssertEqual(previewText(of: message), "Linear · Create linear comment")
         message.card?.answered = "allow"
         XCTAssertEqual(previewText(of: message), "Send to Linear?")
-    }
-
-    func testWalkieReadsTheHeadlineNotTheArguments() {
-        var message = Message(id: "m", role: .bot, kind: .options, at: 0)
-        message.card = outbound(calls: nil)
-        let spoken = Walkie.settledReply(transcript: [message], baseline: [], busy: true)
-        XCTAssertEqual(spoken, "Send to Linear? Create linear comment ×2")
     }
 
     // MARK: - Settled cards leave the transcript

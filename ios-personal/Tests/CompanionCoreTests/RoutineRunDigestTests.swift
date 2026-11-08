@@ -95,10 +95,6 @@ final class RoutineRunDigestTests: XCTestCase {
         """)
         XCTAssertEqual(previewText(of: message), "Routine “Inbox sweep” completed: Three replies drafted.")
         XCTAssertEqual(rosterPreview([message], detail: .hidden), "Routine “Inbox sweep” completed: Three replies drafted.")
-        XCTAssertEqual(
-            Walkie.settledReply(transcript: [message], baseline: [], busy: false),
-            "Routine “Inbox sweep” completed: Three replies drafted."
-        )
     }
 
     func testPreviewWithoutAReportIsTheHeadline() {

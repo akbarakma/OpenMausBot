@@ -104,7 +104,7 @@ struct BotAvatarView: View {
 }
 
 /// Decoded faces, shared by every view that draws one. A bot's face is on
-/// screen in its Home row, the chat header, rooms and the Walkie sheet at
+/// screen in its Home row, the chat header, and rooms at
 /// once, and the session caches only the bytes: each view used to decode its
 /// own full-resolution copy — an uploaded avatar may be 10 MB, a 12 MP photo
 /// 48 MB decoded — to fill 26 to 112 points. Stills are now thumbnailed to
