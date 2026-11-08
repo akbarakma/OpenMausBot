@@ -5446,5 +5446,12 @@
   "botPanel.automations.appEvents": "Sự kiện ứng dụng",
   "botPanel.automations.empty": "Chưa có gì tự chạy.",
   "botPanel.automations.new": "Tự động hóa mới",
-  "botPanel.automations.openAll": "Mở trang Tự động hóa"
+  "botPanel.automations.openAll": "Mở trang Tự động hóa",
+  "botPanel.skills.ownTitle": "Kỹ năng của {name}",
+  "botPanel.skills.ownEmpty": "{name} chưa học kỹ năng nào.",
+  "botPanel.skills.globalTitle": "Kỹ năng chung của bạn",
+  "botPanel.skills.globalHint": "{name} tự tải các kỹ năng này.",
+  "botPanel.skills.alwaysOn": "Luôn bật",
+  "botPanel.skills.nativeTitle": "{name} tự tải kỹ năng này",
+  "botPanel.skills.nativeHint": "Sửa hoặc xóa nó trong thư mục đó."
 }

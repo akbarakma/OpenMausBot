@@ -9692,5 +9692,12 @@
   "botPanel.automations.appEvents": "App events",
   "botPanel.automations.empty": "Nothing runs on its own yet.",
   "botPanel.automations.new": "New automation",
-  "botPanel.automations.openAll": "Open Automations page"
+  "botPanel.automations.openAll": "Open Automations page",
+  "botPanel.skills.ownTitle": "{name}'s skills",
+  "botPanel.skills.ownEmpty": "{name} hasn't learned any skills yet.",
+  "botPanel.skills.globalTitle": "Your global skills",
+  "botPanel.skills.globalHint": "{name} loads these on its own.",
+  "botPanel.skills.alwaysOn": "Always on",
+  "botPanel.skills.nativeTitle": "{name} loads this on its own",
+  "botPanel.skills.nativeHint": "Change or remove it in that folder."
 }

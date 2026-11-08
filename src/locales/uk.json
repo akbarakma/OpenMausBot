@@ -3456,5 +3456,12 @@
   "botPanel.automations.appEvents": "Події застосунків",
   "botPanel.automations.empty": "Поки що нічого не запускається саме.",
   "botPanel.automations.new": "Нова автоматизація",
-  "botPanel.automations.openAll": "Відкрити «Автоматизації»"
+  "botPanel.automations.openAll": "Відкрити «Автоматизації»",
+  "botPanel.skills.ownTitle": "Навички {name}",
+  "botPanel.skills.ownEmpty": "{name} ще не вивчив жодної навички.",
+  "botPanel.skills.globalTitle": "Ваші загальні навички",
+  "botPanel.skills.globalHint": "{name} завантажує їх сам.",
+  "botPanel.skills.alwaysOn": "Завжди ввімкнено",
+  "botPanel.skills.nativeTitle": "{name} завантажує її сам",
+  "botPanel.skills.nativeHint": "Змініть або вилучіть її в цій теці."
 }

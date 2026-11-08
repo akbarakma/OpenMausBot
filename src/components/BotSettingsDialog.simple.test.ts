@@ -1282,7 +1282,7 @@ describe("the drill-in pages", () => {
     fixture.skills.working = "triage";
     expect(find(body("skills"), "aria-label", "Use summarise").props.disabled).toBe(true);
     fixture.skills.skills = [];
-    expect(body("skills").html).toContain("No skills yet.");
+    expect(body("skills").html).toContain("Scout hasn&#x27;t learned any skills yet.");
   });
 
   it("keeps the bot's own private folder, or a folder chosen with the native picker, saved through the bot route", async () => {

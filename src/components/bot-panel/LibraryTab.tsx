@@ -66,7 +66,7 @@ export function KnowsCard({ bot, onOpen, onData, folder = bot.cwd, dataLabel = "
   const { capabilities } = useDesktopCapabilities();
   const skills = useManagedSkills(bot);
   const memory = useMemoryDoc(bot);
-  const skillsOn = skills.skills.filter((skill) => skill.enabled).length;
+  const skillsOn = skills.skills.filter((skill) => skill.enabled && skill.origin !== "native").length;
   const notes = memory.docs ? panelMemoryNotes(memory.docs).length : null;
   const memoryValue = bot.memoryEnabled === false ? t("botPanel.memory.off")
     : notes === null ? (memory.error ? t("botPanel.memory.nothingYet") : undefined)

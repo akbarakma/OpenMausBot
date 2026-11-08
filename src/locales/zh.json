@@ -7512,5 +7512,12 @@
   "botPanel.automations.appEvents": "应用事件",
   "botPanel.automations.empty": "还没有会自动运行的内容。",
   "botPanel.automations.new": "新建自动化",
-  "botPanel.automations.openAll": "打开自动化页面"
+  "botPanel.automations.openAll": "打开自动化页面",
+  "botPanel.skills.ownTitle": "{name} 的技能",
+  "botPanel.skills.ownEmpty": "{name} 还没学会任何技能。",
+  "botPanel.skills.globalTitle": "你的全局技能",
+  "botPanel.skills.globalHint": "{name} 会自动加载这些技能。",
+  "botPanel.skills.alwaysOn": "始终开启",
+  "botPanel.skills.nativeTitle": "{name} 会自动加载这个技能",
+  "botPanel.skills.nativeHint": "请在该文件夹中修改或删除。"
 }

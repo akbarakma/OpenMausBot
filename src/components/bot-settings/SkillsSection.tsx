@@ -78,7 +78,7 @@ export function useManagedSkills(bot: Bot) {
     return () => {
       cancelled = true;
     };
-  }, [bot.id]);
+  }, [bot.id, bot.threadId]);
 
   const putAssignments = async (name: string, remove = false) => {
     const listing = (await api(`/api/bots/${bot.id}/skills`)) as { assignedSkills?: string[] };

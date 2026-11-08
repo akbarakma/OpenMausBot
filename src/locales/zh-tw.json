@@ -4838,5 +4838,12 @@
   "botPanel.automations.appEvents": "應用程式事件",
   "botPanel.automations.empty": "還沒有會自動執行的項目。",
   "botPanel.automations.new": "新增自動化",
-  "botPanel.automations.openAll": "開啟自動化頁面"
+  "botPanel.automations.openAll": "開啟自動化頁面",
+  "botPanel.skills.ownTitle": "{name} 的技能",
+  "botPanel.skills.ownEmpty": "{name} 還沒學會任何技能。",
+  "botPanel.skills.globalTitle": "你的全域技能",
+  "botPanel.skills.globalHint": "{name} 會自動載入這些技能。",
+  "botPanel.skills.alwaysOn": "一律開啟",
+  "botPanel.skills.nativeTitle": "{name} 會自動載入這個技能",
+  "botPanel.skills.nativeHint": "請在該資料夾中修改或移除。"
 }

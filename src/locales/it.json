@@ -6570,5 +6570,12 @@
   "botPanel.automations.appEvents": "Eventi delle app",
   "botPanel.automations.empty": "Ancora niente parte da solo.",
   "botPanel.automations.new": "Nuova automazione",
-  "botPanel.automations.openAll": "Apri Automazioni"
+  "botPanel.automations.openAll": "Apri Automazioni",
+  "botPanel.skills.ownTitle": "Skill di {name}",
+  "botPanel.skills.ownEmpty": "{name} non ha ancora imparato nessuna skill.",
+  "botPanel.skills.globalTitle": "Le tue skill globali",
+  "botPanel.skills.globalHint": "{name} le carica da solo.",
+  "botPanel.skills.alwaysOn": "Sempre attiva",
+  "botPanel.skills.nativeTitle": "{name} la carica da solo",
+  "botPanel.skills.nativeHint": "Cambiala o rimuovila in quella cartella."
 }

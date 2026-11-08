@@ -6771,5 +6771,12 @@
   "botPanel.automations.appEvents": "События приложений",
   "botPanel.automations.empty": "Пока ничего не запускается само.",
   "botPanel.automations.new": "Новая автоматизация",
-  "botPanel.automations.openAll": "Открыть «Автоматизации»"
+  "botPanel.automations.openAll": "Открыть «Автоматизации»",
+  "botPanel.skills.ownTitle": "Навыки {name}",
+  "botPanel.skills.ownEmpty": "{name} пока не выучил ни одного навыка.",
+  "botPanel.skills.globalTitle": "Ваши общие навыки",
+  "botPanel.skills.globalHint": "{name} загружает их сам.",
+  "botPanel.skills.alwaysOn": "Всегда включён",
+  "botPanel.skills.nativeTitle": "{name} загружает его сам",
+  "botPanel.skills.nativeHint": "Измените или удалите его в этой папке."
 }

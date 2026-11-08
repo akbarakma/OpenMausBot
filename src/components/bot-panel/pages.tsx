@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState, type ReactNode } from "react";
-import { FolderOpen, Plus, Server } from "lucide-react";
+import { ChevronRight, FolderOpen, Plus, Server } from "lucide-react";
 
 import { appSwitchPatch } from "@/lib/bot-app-access";
 import { cn } from "@/lib/cn";
@@ -56,6 +56,8 @@ const dateFormat = (date: string) => {
 export const pageSurfaceCls = "flex flex-col gap-3";
 
 const SKILLS_SITE = "https://skills.sh";
+
+const homePath = (path: string, home: string | undefined) => shortPath(path, home).replace(/^(?:\/home\/[^/]+|\/Users\/[^/]+|\/root)(?=\/|$)/, "~");
 
 function errorText(error: unknown, fallback: string): string {
   return error instanceof Error && error.message ? error.message : fallback;
@@ -286,7 +288,11 @@ export function SkillsPage({ bot, detail, onDetail }: PageContext & DetailContex
   const [importing, setImporting] = useState(false);
   const [confirming, setConfirming] = useState<ManagedSkill | null>(null);
   const [imported, setImported] = useState<string[]>([]);
+  const [showGlobal, setShowGlobal] = useState(false);
+  const home = useDesktopCapabilities().capabilities.host?.homeDir;
   const libraryOn = skillsLibraryEnabled(state.config);
+  const own = skills.skills.filter((skill) => skill.origin !== "native");
+  const native = skills.skills.filter((skill) => skill.origin === "native");
   const open = detail === null || skills.loading ? null : skills.skills.find((skill) => skill.name === detail) ?? null;
   const gone = detail !== null && !skills.loading && open === null;
 
@@ -322,6 +328,20 @@ export function SkillsPage({ bot, detail, onDetail }: PageContext & DetailContex
       className="disabled:cursor-not-allowed"
     />
   );
+  const skillRow = (skill: ManagedSkill, control: ReactNode) => (
+    <div key={skill.name} data-panel-row={`skill:${skill.name}`} className={openRowCls}>
+      <button
+        type="button"
+        data-panel-open={`skill:${skill.name}`}
+        onClick={() => { skills.setError(""); onDetail(skill.name); }}
+        className={cn(openRowButtonCls, "flex-col items-stretch gap-0")}
+      >
+        <span className="truncate text-[14px] font-medium text-ink">{skill.name}</span>
+        {(skill.description || skill.source) && <span className="mt-px truncate text-[13px] leading-[1.35] text-ink-secondary">{skill.description || skill.source}</span>}
+      </button>
+      {control}
+    </div>
+  );
   const reviewDialog = skills.reviewing && (
     <SkillReviewDialog
       skill={skills.reviewing.skill}
@@ -355,13 +375,22 @@ export function SkillsPage({ bot, detail, onDetail }: PageContext & DetailContex
         <h3 className="mx-1 break-words text-[18px] font-semibold text-ink">{open.name}</h3>
         {open.description && <p data-skill-description className="mx-1 -mt-1 whitespace-pre-wrap break-words text-[14px] leading-[1.5] text-ink-secondary">{open.description}</p>}
         <Card>
-          <label data-panel-row={`skill:${open.name}`} className={switchRowCls}>
-            <RowText title={t("botSettings.simple.skillToggle", { name: open.name })} hint={open.source && open.source !== open.description ? <span className="break-all">{open.source}</span> : undefined} />
-            {switchFor(open)}
-          </label>
+          {open.origin === "native" ? (
+            <div data-panel-row={`skill:${open.name}`} className={rowCls}>
+              <RowText
+                title={t("botPanel.skills.nativeTitle", { name: bot.name })}
+                hint={<><span className="my-0.5 block break-all font-mono text-[12px]">{homePath(`${open.source}/${open.name}`, home)}</span>{t("botPanel.skills.nativeHint")}</>}
+              />
+            </div>
+          ) : (
+            <label data-panel-row={`skill:${open.name}`} className={switchRowCls}>
+              <RowText title={t("botSettings.simple.skillToggle", { name: open.name })} hint={open.source && open.source !== open.description ? <span className="break-all">{open.source}</span> : undefined} />
+              {switchFor(open)}
+            </label>
+          )}
           {skills.error && !skills.reviewing && <NoteRow tone="warn">{skills.error}</NoteRow>}
         </Card>
-        <div className="mx-1 mt-1">
+        {open.origin !== "native" && open.origin !== "imported" && <div className="mx-1 mt-1">
           <button
             type="button"
             data-panel-action={`remove-skill:${open.name}`}
@@ -371,7 +400,7 @@ export function SkillsPage({ bot, detail, onDetail }: PageContext & DetailContex
           >
             {t("botPanel.skills.removeAction")}
           </button>
-        </div>
+        </div>}
         {reviewDialog}
         {confirmDialog}
       </>
@@ -405,27 +434,33 @@ export function SkillsPage({ bot, detail, onDetail }: PageContext & DetailContex
 
   return (
     <>
-      <Card>
+      <Card label={t("botPanel.skills.ownTitle", { name: bot.name })} anchor="own-skills">
         {skills.loading ? (
           <NoteRow>{t("skills.loading")}</NoteRow>
-        ) : skills.skills.length === 0 ? (
-          <NoteRow>{t("botSettings.simple.noSkills")}</NoteRow>
-        ) : skills.skills.map((skill) => (
-          <div key={skill.name} data-panel-row={`skill:${skill.name}`} className={openRowCls}>
-            <button
-              type="button"
-              data-panel-open={`skill:${skill.name}`}
-              onClick={() => { skills.setError(""); onDetail(skill.name); }}
-              className={cn(openRowButtonCls, "flex-col items-stretch gap-0")}
-            >
-              <span className="truncate text-[14px] font-medium text-ink">{skill.name}</span>
-              {(skill.description || skill.source) && <span className="mt-px truncate text-[13px] leading-[1.35] text-ink-secondary">{skill.description || skill.source}</span>}
-            </button>
-            {switchFor(skill)}
-          </div>
-        ))}
+        ) : own.length === 0 ? (
+          <NoteRow>{t("botPanel.skills.ownEmpty", { name: bot.name })}</NoteRow>
+        ) : own.map((skill) => skillRow(skill, switchFor(skill)))}
         {skills.error && !skills.reviewing && <NoteRow tone="warn">{skills.error}</NoteRow>}
       </Card>
+      {native.length > 0 && (
+        <Card anchor="global-skills">
+          <button
+            type="button"
+            data-panel-action="toggle-global-skills"
+            aria-expanded={showGlobal}
+            onClick={() => setShowGlobal((shown) => !shown)}
+            className={cn(rowCls, "w-full cursor-pointer text-left hover:bg-ink/[0.03]")}
+          >
+            <RowText
+              title={t("botPanel.skills.globalTitle")}
+              hint={t("botPanel.skills.globalHint", { name: bot.name })}
+            />
+            <span className="shrink-0 text-[13px] text-ink-secondary">{native.length}</span>
+            <ChevronRight size={15} className={cn("shrink-0 text-ink-tertiary transition-transform", showGlobal && "rotate-90")} aria-hidden="true" />
+          </button>
+          {showGlobal && native.map((skill) => skillRow(skill, <span className="mr-[5px] shrink-0 text-[13px] text-ink-secondary">{t("botPanel.skills.alwaysOn")}</span>))}
+        </Card>
+      )}
       <Card>
         <TextRow
           data-panel-form="skill-import"

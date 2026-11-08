@@ -6709,5 +6709,12 @@
   "botPanel.automations.appEvents": "Zdarzenia w aplikacjach",
   "botPanel.automations.empty": "Nic jeszcze nie działa samo.",
   "botPanel.automations.new": "Nowa automatyzacja",
-  "botPanel.automations.openAll": "Otwórz Automatyzacje"
+  "botPanel.automations.openAll": "Otwórz Automatyzacje",
+  "botPanel.skills.ownTitle": "Umiejętności: {name}",
+  "botPanel.skills.ownEmpty": "{name} nie nauczył się jeszcze żadnych umiejętności.",
+  "botPanel.skills.globalTitle": "Twoje globalne umiejętności",
+  "botPanel.skills.globalHint": "{name} wczytuje je samodzielnie.",
+  "botPanel.skills.alwaysOn": "Zawsze włączona",
+  "botPanel.skills.nativeTitle": "{name} wczytuje ją samodzielnie",
+  "botPanel.skills.nativeHint": "Zmień ją lub usuń w tym folderze."
 }

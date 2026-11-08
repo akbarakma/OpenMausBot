@@ -3163,5 +3163,12 @@
   "botPanel.automations.appEvents": "Événements d'apps",
   "botPanel.automations.empty": "Rien ne s'exécute encore tout seul.",
   "botPanel.automations.new": "Nouvelle automatisation",
-  "botPanel.automations.openAll": "Ouvrir les automatisations"
+  "botPanel.automations.openAll": "Ouvrir les automatisations",
+  "botPanel.skills.ownTitle": "Compétences de {name}",
+  "botPanel.skills.ownEmpty": "{name} n'a encore appris aucune compétence.",
+  "botPanel.skills.globalTitle": "Tes compétences globales",
+  "botPanel.skills.globalHint": "{name} les charge tout seul.",
+  "botPanel.skills.alwaysOn": "Toujours active",
+  "botPanel.skills.nativeTitle": "{name} la charge tout seul",
+  "botPanel.skills.nativeHint": "Modifie-la ou retire-la dans ce dossier."
 }

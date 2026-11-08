@@ -7626,5 +7626,12 @@
   "botPanel.automations.appEvents": "アプリのイベント",
   "botPanel.automations.empty": "まだ自動で動くものはありません。",
   "botPanel.automations.new": "新しい自動化",
-  "botPanel.automations.openAll": "自動化ページを開く"
+  "botPanel.automations.openAll": "自動化ページを開く",
+  "botPanel.skills.ownTitle": "{name} のスキル",
+  "botPanel.skills.ownEmpty": "{name} はまだスキルを覚えていません。",
+  "botPanel.skills.globalTitle": "グローバルスキル",
+  "botPanel.skills.globalHint": "{name} が自動で読み込みます。",
+  "botPanel.skills.alwaysOn": "常にオン",
+  "botPanel.skills.nativeTitle": "{name} が自動で読み込むスキル",
+  "botPanel.skills.nativeHint": "そのフォルダで変更または削除できます。"
 }

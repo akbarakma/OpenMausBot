@@ -80,8 +80,17 @@ where a chevron's drawn stroke ends, so their right edges line up.
 - **Memories:** one row per note showing only its text; a struck or expired
   note is left out, as the server no longer reads it. A tap opens the note
   with its source and date and a Delete button.
-- **Skills:** one row per skill with a one-line description and its switch.
-  A tap opens the full description with the switch and Remove.
+- **Skills:** two cards, split by the `origin` each skill carries. The bot's
+  own card lists every skill it can switch (learned, added by link, library,
+  from this computer), or says it has learned none yet. A tap opens the full
+  description with the switch and Remove. A skill from this computer has no
+  Remove, because the server keeps it for every bot. The global card lists
+  `native` skills, the ones the engine loads from a skills folder such as
+  bb-1's `~/.claude/skills`. It starts folded, with the count and "{bot} loads
+  these on its own", and each row reads "Always on". A tap shows "{bot} loads
+  this on its own" and the skill's folder, with no switch or Remove, because
+  the server rejects both for a native skill.
+  `SkillsPage.dom.test.ts` covers the split.
 
 Delete on a note and Remove on a skill confirm in `ConfirmDialog` first.
 
@@ -231,7 +240,7 @@ the same state, motion beat and working ring.
 | `src/components/TriggersPage.tsx` | Each row shows its bot's avatar with the status mark on it and the bot's name first in the status line; the name and the sentence keep one line each, in full on hover; `compose` focus opens the New box |
 | `src/components/SidebarTiles.tsx` | A tile is 100×112: the face, the name, and the job title in `TITLE_CHIP` under it. 100px keeps two tiles across the 240px minimum sidebar, scrollbar included. A tile has no fill at rest, `bg-ink/[0.06]` on hover and `bg-ink/[0.10]` when open; badges ring in `panel`; avatar takes `useBotFace` |
 | `src/components/ComputerPanel.tsx` | A data request without a card opens Data and focuses no card |
-| `src/components/bot-panel/LibraryTab.tsx` | `KnowsCard`, `MadeHere` and `chatFolder`, shared with the first page; Advanced's library still sends `openDataResult` with no card |
+| `src/components/bot-panel/LibraryTab.tsx` | `KnowsCard`, `MadeHere` and `chatFolder`, shared with the first page; the Skills row counts only the bot's own switched-on skills, not native ones; Advanced's library still sends `openDataResult` with no card |
 | `src/components/bot-panel/ComputerTab.tsx` | `ComputerCard` (live card, Works in, browser switch); `WherePage` pinned-place note |
 | `src/components/bot-panel/SettingsPage.tsx` | Grouped cards, full-width pickers |
 | `src/components/bot-panel/BackupAis.tsx` | Only the list and Add; the page intro holds the explanation |

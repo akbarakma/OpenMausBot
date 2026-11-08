@@ -7292,5 +7292,12 @@
   "botPanel.automations.appEvents": "앱 이벤트",
   "botPanel.automations.empty": "아직 저절로 실행되는 것이 없습니다.",
   "botPanel.automations.new": "새 자동화",
-  "botPanel.automations.openAll": "자동화 페이지 열기"
+  "botPanel.automations.openAll": "자동화 페이지 열기",
+  "botPanel.skills.ownTitle": "{name}의 스킬",
+  "botPanel.skills.ownEmpty": "{name}은(는) 아직 배운 스킬이 없어요.",
+  "botPanel.skills.globalTitle": "내 전역 스킬",
+  "botPanel.skills.globalHint": "{name}이(가) 알아서 불러와요.",
+  "botPanel.skills.alwaysOn": "항상 켜짐",
+  "botPanel.skills.nativeTitle": "{name}이(가) 알아서 불러오는 스킬",
+  "botPanel.skills.nativeHint": "그 폴더에서 바꾸거나 지우세요."
 }

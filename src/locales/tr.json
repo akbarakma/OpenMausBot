@@ -5446,5 +5446,12 @@
   "botPanel.automations.appEvents": "Uygulama olayları",
   "botPanel.automations.empty": "Henüz kendi kendine çalışan bir şey yok.",
   "botPanel.automations.new": "Yeni otomasyon",
-  "botPanel.automations.openAll": "Otomasyonlar sayfasını aç"
+  "botPanel.automations.openAll": "Otomasyonlar sayfasını aç",
+  "botPanel.skills.ownTitle": "{name} becerileri",
+  "botPanel.skills.ownEmpty": "{name} henüz bir beceri öğrenmedi.",
+  "botPanel.skills.globalTitle": "Genel becerilerin",
+  "botPanel.skills.globalHint": "{name} bunları kendiliğinden yükler.",
+  "botPanel.skills.alwaysOn": "Her zaman açık",
+  "botPanel.skills.nativeTitle": "{name} bunu kendiliğinden yükler",
+  "botPanel.skills.nativeHint": "Bu klasörde değiştir veya kaldır."
 }

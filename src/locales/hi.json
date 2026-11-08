@@ -3015,5 +3015,12 @@
   "botPanel.automations.appEvents": "ऐप इवेंट",
   "botPanel.automations.empty": "अभी कुछ भी अपने आप नहीं चलता।",
   "botPanel.automations.new": "नया ऑटोमेशन",
-  "botPanel.automations.openAll": "ऑटोमेशन पेज खोलें"
+  "botPanel.automations.openAll": "ऑटोमेशन पेज खोलें",
+  "botPanel.skills.ownTitle": "{name} की स्किल्स",
+  "botPanel.skills.ownEmpty": "{name} ने अभी तक कोई स्किल नहीं सीखी है।",
+  "botPanel.skills.globalTitle": "आपकी ग्लोबल स्किल्स",
+  "botPanel.skills.globalHint": "{name} इन्हें अपने आप लोड करता है।",
+  "botPanel.skills.alwaysOn": "हमेशा चालू",
+  "botPanel.skills.nativeTitle": "{name} इसे अपने आप लोड करता है",
+  "botPanel.skills.nativeHint": "इसे उसी फ़ोल्डर में बदलें या हटाएँ।"
 }

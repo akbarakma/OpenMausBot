@@ -5947,5 +5947,12 @@
   "botPanel.automations.appEvents": "Eventos de apps",
   "botPanel.automations.empty": "Todavía nada se ejecuta solo.",
   "botPanel.automations.new": "Nueva automatización",
-  "botPanel.automations.openAll": "Abrir Automatizaciones"
+  "botPanel.automations.openAll": "Abrir Automatizaciones",
+  "botPanel.skills.ownTitle": "Habilidades de {name}",
+  "botPanel.skills.ownEmpty": "{name} aún no ha aprendido ninguna habilidad.",
+  "botPanel.skills.globalTitle": "Tus habilidades globales",
+  "botPanel.skills.globalHint": "{name} las carga por su cuenta.",
+  "botPanel.skills.alwaysOn": "Siempre activa",
+  "botPanel.skills.nativeTitle": "{name} la carga por su cuenta",
+  "botPanel.skills.nativeHint": "Cámbiala o quítala en esa carpeta."
 }

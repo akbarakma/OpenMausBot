@@ -3297,5 +3297,12 @@
   "botPanel.automations.appEvents": "App-Ereignisse",
   "botPanel.automations.empty": "Noch läuft nichts von selbst.",
   "botPanel.automations.new": "Neue Automatisierung",
-  "botPanel.automations.openAll": "Automatisierungen öffnen"
+  "botPanel.automations.openAll": "Automatisierungen öffnen",
+  "botPanel.skills.ownTitle": "Skills von {name}",
+  "botPanel.skills.ownEmpty": "{name} hat noch keine Skills gelernt.",
+  "botPanel.skills.globalTitle": "Deine globalen Skills",
+  "botPanel.skills.globalHint": "{name} lädt diese von selbst.",
+  "botPanel.skills.alwaysOn": "Immer an",
+  "botPanel.skills.nativeTitle": "{name} lädt diesen Skill von selbst",
+  "botPanel.skills.nativeHint": "Ändere oder entferne ihn in diesem Ordner."
 }
