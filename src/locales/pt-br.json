@@ -9688,5 +9688,9 @@
   "botPanel.automations.appEvents": "Eventos de apps",
   "botPanel.automations.empty": "Nada roda sozinho ainda.",
   "botPanel.automations.new": "Nova automação",
-  "botPanel.automations.openAll": "Abrir Automações"
+  "botPanel.automations.openAll": "Abrir Automações",
+  "botPanel.face.auto": "Automático",
+  "botPanel.face.orbit": "Órbita",
+  "botPanel.face.radar": "Radar",
+  "botPanel.face.progress": "Progresso"
 }
