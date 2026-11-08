@@ -197,11 +197,9 @@ mean losing the ability to lock it out.
 
 ## Design notes
 
-- **One third-party dependency.** `stasel/WebRTC` (a prebuilt XCFramework of
-  Google's WebRTC, BSD) carries Live-call audio straight from the phone to
-  OpenAI; it is pinned in `project.yml`, app target only. The raw-byte SSE
-  reader, Keychain, `NWBrowser`, and notifications are all first-party, and
-  `CompanionCore` stays dependency-free so `swift test` runs on any Mac.
+- **No third-party dependencies.** The raw-byte SSE reader, Keychain,
+  `NWBrowser`, and notifications are all first-party, and `CompanionCore`
+  stays dependency-free so `swift test` runs on any Mac.
 - **QR scan confirms before connecting.** The QR carries a short-lived,
   high-entropy credential rather than relying on the visible six-digit code.
   The app validates the target, asks the user to confirm it, exchanges the
