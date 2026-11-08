@@ -564,9 +564,11 @@ struct ChatView: View {
         var versions: [Message] = []
         var routineRun: ThreadRef?
         var revealed: String?
+        var quoted: Message?
         switch row {
         case let .message(message):
             if message.role == .user, message.kind == .text { versions = shared.versions[message.parentId] ?? [] }
+            quoted = message.replyToId.flatMap(shared.actions.quoted)
             if message.kind == .routineRun, let card = message.routineRun {
                 routineRun = session.state.routineExecutionRef(for: card)
             }
@@ -583,6 +585,7 @@ struct ChatView: View {
             versions: versions,
             isPendingEdit: shared.pendingEditId == row.id,
             routineRun: routineRun,
+            quoted: quoted,
             context: shared.context,
             revealedMessageId: revealed,
             actions: shared.actions
@@ -612,6 +615,8 @@ struct ChatView: View {
         case let .reply(message, author):
             replyingTo = (threadId, message, author)
             composerFocused = true
+        case let .quote(messageId):
+            reveal(messageId, proxy, in: transcriptSnapshot.rows)
         }
     }
 
@@ -765,6 +770,11 @@ struct ChatView: View {
         guard let messageId = session.focusedMessageId,
               messages.contains(where: { $0.id == messageId })
         else { return }
+        reveal(messageId, proxy, in: transcript)
+        session.consumeFocus(messageId)
+    }
+
+    private func reveal(_ messageId: String, _ proxy: ScrollViewProxy, in transcript: [TranscriptRow]) {
         revealedMessageId = messageId
         // Materialize the lazy folded row first. Its target bubble
         // scrolls itself into view once expansion has laid it out.
@@ -775,7 +785,6 @@ struct ChatView: View {
             return false
         }
         proxy.scrollTo(folded?.id ?? messageId, anchor: .center)
-        session.consumeFocus(messageId)
     }
 
     // MARK: - Thread lifecycle
@@ -1182,7 +1191,8 @@ struct ChatView: View {
     /// question never reads a line steered into its turn, so while exactly
     /// one question waits (and nothing is attached) Send answers it instead.
     private var composerQuestion: ComposerQuestion.Target? {
-        ComposerQuestion.target(in: messages, chatName: current.name, hasAttachments: !attachments.isEmpty)
+        guard replyingTo?.threadId != threadId else { return nil }
+        return ComposerQuestion.target(in: messages, chatName: current.name, hasAttachments: !attachments.isEmpty)
     }
 
     private var composerPrompt: String {
@@ -1569,7 +1579,7 @@ struct ChatView: View {
             composerSuggestions(text, pendingApproval: snapshot.hasPendingApproval)
 
             if let reply = replyingTo, reply.threadId == threadId {
-                ReplyQuote(author: reply.author, text: reply.message.text ?? "") { replyingTo = nil }
+                ReplyQuote(author: reply.author, text: MessagePresentations.of(reply.message).visibleText) { replyingTo = nil }
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
 
@@ -1982,6 +1992,8 @@ struct MessageRow: View, Equatable {
     /// thread list. Nil (the run was deleted, or the phone holds no bot
     /// owning it) means no button.
     var routineRun: ThreadRef? = nil
+    /// The message this one replies to, when the phone holds it.
+    var quoted: Message? = nil
     let context: TranscriptRowContext
     let actions: TranscriptActions
     @State private var editingText = ""
@@ -1995,7 +2007,7 @@ struct MessageRow: View, Equatable {
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.message == rhs.message && lhs.versions == rhs.versions && lhs.endsRun == rhs.endsRun
             && lhs.isPendingEdit == rhs.isPendingEdit && lhs.routineRun == rhs.routineRun
-            && lhs.context == rhs.context && lhs.actions == rhs.actions
+            && lhs.quoted == rhs.quoted && lhs.context == rhs.context && lhs.actions == rhs.actions
     }
 
     var body: some View {
@@ -2007,8 +2019,8 @@ struct MessageRow: View, Equatable {
         // text-selection UI. Parsed once per message: MessagePresentation.
         let presentation = MessagePresentations.of(message)
         VStack(alignment: message.role == .user ? .trailing : .leading, spacing: 6) {
-            if let id = message.replyToId, let quoted = actions.quoted(id) {
-                Button { actions.reveal(messageId: id) } label: {
+            if let quoted {
+                Button { actions.showQuoted(quoted.id) } label: {
                     ReplyQuote(author: author(of: quoted), text: MessagePresentations.of(quoted).visibleText)
                         .frame(maxWidth: 300)
                 }

@@ -182,6 +182,7 @@ final class Session: ObservableObject {
         let destination: MessageDestination
         let text: String
         let attachmentIDs: [UUID]
+        let replyToId: String?
     }
 
     private var registry = CompanionConnectionRegistry()
@@ -1300,7 +1301,8 @@ final class Session: ObservableObject {
             let draftKey = AttachmentDraftKey(
                 destination: destination,
                 text: text,
-                attachmentIDs: attachments.map(\.id)
+                attachmentIDs: attachments.map(\.id),
+                replyToId: replyToId
             )
             if attachmentSendIDs.count >= 20, attachmentSendIDs[draftKey] == nil {
                 attachmentSendIDs.removeAll(keepingCapacity: true)

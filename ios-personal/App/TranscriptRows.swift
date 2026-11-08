@@ -24,6 +24,8 @@ enum TranscriptNavigation {
     /// A folded reply asked to be scrolled into view once it is laid out.
     case reveal(messageId: String)
     case reply(Message, author: String)
+    /// A reply's quote, opening the fold that holds the quoted message.
+    case quote(messageId: String)
 }
 
 /// Where a row's taps go once they leave the row: ChatView's handlers, held
@@ -104,6 +106,9 @@ struct TranscriptActions: Equatable {
 
     @MainActor
     func reply(to message: Message, author: String) { navigate(.reply(message, author: author)) }
+
+    @MainActor
+    func showQuoted(_ messageId: String) { navigate(.quote(messageId: messageId)) }
 
     @MainActor
     func quoted(_ id: String) -> Message? { session.state.messages[threadId]?.first { $0.id == id } }
@@ -265,6 +270,7 @@ struct TranscriptRowView: View, Equatable {
     let isPendingEdit: Bool
     /// Where a routine card's Open run goes; nil, no button.
     let routineRun: ThreadRef?
+    let quoted: Message?
     let context: TranscriptRowContext
     /// The message a search landed on, for the fold that holds it only.
     let revealedMessageId: String?
@@ -274,6 +280,7 @@ struct TranscriptRowView: View, Equatable {
         lhs.row == rhs.row && lhs.stamp == rhs.stamp && lhs.today == rhs.today
             && lhs.endsRun == rhs.endsRun && lhs.versions == rhs.versions
             && lhs.isPendingEdit == rhs.isPendingEdit && lhs.routineRun == rhs.routineRun
+            && lhs.quoted == rhs.quoted
             && lhs.context == rhs.context && lhs.revealedMessageId == rhs.revealedMessageId
             && lhs.actions == rhs.actions
     }
@@ -311,7 +318,7 @@ struct TranscriptRowView: View, Equatable {
         case let .message(message):
             MessageRow(
                 message: message, versions: versions, endsRun: endsRun,
-                isPendingEdit: isPendingEdit, routineRun: routineRun,
+                isPendingEdit: isPendingEdit, routineRun: routineRun, quoted: quoted,
                 context: context, actions: actions
             )
         case let .activityRun(items):

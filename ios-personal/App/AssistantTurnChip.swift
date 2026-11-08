@@ -36,6 +36,7 @@ struct AssistantTurnChip: View {
                 ForEach(Array(turn.messages.enumerated()), id: \.element.id) { index, message in
                     MessageRow(
                         message: message, endsRun: index == turn.messages.count - 1,
+                        quoted: message.replyToId.flatMap(actions.quoted),
                         context: context, actions: actions
                     )
                     .equatable()
