@@ -210,6 +210,17 @@ extension OptionCard {
         !isPending && presentation != .standard
     }
 
+    /// A decided proposal is one line with the proposal under Details. A
+    /// question keeps its answer in view.
+    public var foldsWhenSettled: Bool {
+        guard !isPending, presentation == .standard, requestType != "question" else { return false }
+        switch outcome {
+        case .answered: return false
+        case nil: return expired == true
+        default: return true
+        }
+    }
+
     /// The "why this asked" note is for deciding. Once the card is settled
     /// it has done its job; an outbound card's headline already says it. A
     /// free-text note written after the decision (an error, no catalog key)

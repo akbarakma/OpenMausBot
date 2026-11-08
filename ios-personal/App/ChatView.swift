@@ -2955,8 +2955,8 @@ struct CardView: View {
     private var tint: Color { MausPalette.color(context.color) }
 
     var body: some View {
-        if let card = message.card, let skill = card.skillRequest, !card.isPending {
-            settledSkill(card, skill)
+        if let card = message.card, card.foldsWhenSettled {
+            settledProposal(card)
         } else if let card = message.card {
             VStack(alignment: .leading, spacing: 10) {
                 if card.isPending {
@@ -3186,44 +3186,56 @@ struct CardView: View {
         return Text("Send on your behalf?")
     }
 
-    private func settledSkill(_ card: OptionCard, _ skill: SkillRequestCardData) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+    private func settledProposal(_ card: OptionCard) -> some View {
+        let shown = card.skillRequest.map { $0.preview ?? "" } ?? card.subtitle
+        let more = shown.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : shown
+        return VStack(alignment: .leading, spacing: 8) {
             Button {
                 withAnimation(.easeInOut(duration: 0.2)) { showingDetails.toggle() }
             } label: {
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Image(systemName: card.outcome?.isPositive == false ? "xmark" : "checkmark")
+                    Image(systemName: card.outcome?.isPositive == true ? "checkmark" : "xmark")
                         .font(.system(size: 12, weight: .semibold))
-                    skillLine(card, skill)
+                    settledLine(card)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                    if skill.preview != nil {
+                    if more != nil {
                         Text(showingDetails ? "Hide details" : "Details")
                             .fontWeight(.semibold)
                     }
                 }
                 .font(.system(size: 13))
                 .foregroundStyle(Color.secondary)
+                .frame(minHeight: 44)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .disabled(skill.preview == nil)
-            .accessibilityIdentifier("settled-skill")
+            .disabled(more == nil)
+            .accessibilityIdentifier("settled-proposal")
             .accessibilityAddTraits(showingDetails ? .isSelected : [])
 
-            if showingDetails, let preview = skill.preview {
-                detailsText(preview)
+            if card.showsHeldNote, let held = card.held {
+                Label(held, systemImage: "exclamationmark.shield")
+                    .font(.system(size: 13))
+                    .foregroundStyle(.orange)
+            }
+            if showingDetails, let more {
+                detailsText(more)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func skillLine(_ card: OptionCard, _ skill: SkillRequestCardData) -> Text {
-        let name = context.name
-        let title = skill.name
-        guard card.outcome?.isPositive != false else {
+    /// "Team setup applied", or "Update @Kara's profile · Cancel" when it
+    /// did not go through. The title's question mark belongs to the ask.
+    private func settledLine(_ card: OptionCard) -> Text {
+        let asked = card.title.trimmingCharacters(in: .whitespaces)
+        let title = card.skillRequest?.name ?? (asked.hasSuffix("?") ? String(asked.dropLast()) : asked)
+        guard card.outcome?.isPositive == true else {
             let verdict = card.outcome.map(outcomeText) ?? Text("Expired")
             return Text(verbatim: "\(title) · ") + verdict
         }
+        guard let skill = card.skillRequest else { return Text(verbatim: title) }
+        let name = context.name
         switch skill.action {
         case "create": return Text("\(name) added a skill: \(title)")
         case "enable": return Text("\(name) turned on a skill: \(title)")

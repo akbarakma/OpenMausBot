@@ -196,6 +196,35 @@ final class ApprovalCardTests: XCTestCase {
         XCTAssertEqual(setup.outcome, .chose("Apply setup", positive: true))
     }
 
+    func testOnlyADecidedProposalFolds() {
+        var setup = OptionCard(title: "Team setup applied", subtitle: "Create @Test Bot 3", options: ["Apply setup", "Cancel"])
+        setup.requestId = "t"
+        setup.tool = "set_up_team"
+        XCTAssertFalse(setup.foldsWhenSettled, "pending")
+        setup.answered = "allow"
+        XCTAssertTrue(setup.foldsWhenSettled)
+        setup.answered = "deny"
+        XCTAssertTrue(setup.foldsWhenSettled)
+        setup.answered = nil
+        setup.expired = true
+        XCTAssertTrue(setup.foldsWhenSettled)
+
+        var question = OptionCard(title: "Your bot has a question", subtitle: "Which branch?", options: ["main", "dev"])
+        question.requestType = "question"
+        question.answered = "answer"
+        question.answeredText = "dev"
+        XCTAssertFalse(question.foldsWhenSettled)
+
+        var permission = OptionCard(title: "Approval needed", subtitle: "git push", options: ["Allow", "Deny"])
+        permission.requestType = "permission"
+        permission.tool = "Bash"
+        permission.answered = "allow"
+        XCTAssertFalse(permission.foldsWhenSettled)
+
+        let informational = OptionCard(title: "Note", subtitle: "Nothing to decide", options: [])
+        XCTAssertFalse(informational.foldsWhenSettled)
+    }
+
     func testTeamMemoryReadsAsRememberedOrSkipped() {
         var memory = OptionCard(title: "Remember this for the team?", subtitle: "Person: Ana", options: ["Remember", "Skip"])
         memory.tool = "propose_team_memory"
