@@ -12,3 +12,7 @@ ShareExtension/OpenMausShareExtension.entitlements
 Widgets/OpenMausCompanionWidgets.entitlements
 # Before and after screenshots; they show private chats.
 proof/
+# Your Apple team ID, read by run-device.sh.
+.dev-team
+# The phone build's filtered spec, made and removed by run-device.sh.
+project.phone.yml

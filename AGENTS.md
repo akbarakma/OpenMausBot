@@ -12,7 +12,7 @@ Before starting Personal development or packaging, read
 - Keep mb-0 as a client; do not start a local agent server during normal use.
 - Keep bb-1 on official upstream builds; do not deploy this fork there or change its services.
 - Preserve the server's existing API contracts and authentication.
-- Keep the iOS app in `ios-personal/`, simulator only for now; build and install it with `ios-personal/run-sim.sh`. Upstream has no `ios/`, so leave upstream files alone for iOS work.
+- Keep the iOS app in `ios-personal/`; install it with `ios-personal/run-sim.sh` on the simulator and `ios-personal/run-device.sh` on Akbar's iPhone. Upstream has no `ios/`, so leave upstream files alone for iOS work.
 - Defer release notifications until Akbar requests them.
 - Use isolated fixtures for development and verification; do not mutate live conversations or settings during tests.
 - Give the fork a separate app identity and profile before installing it alongside the official app.
