@@ -1,5 +1,6 @@
 #!/bin/sh
 # Pair the iPhone with this Mac and turn on Developer Mode first.
+# For Wi-Fi installs, open the plugged-in iPhone once in Xcode's Devices window (Shift-Cmd-2).
 set -eu
 cd "$(dirname "$0")"
 
