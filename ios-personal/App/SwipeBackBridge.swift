@@ -49,9 +49,7 @@ private enum SwipeBackArm {
     private static var key: UInt8 = 0
 
     static func arm(from controller: UIViewController) {
-        guard let navigation = controller.navigationController,
-              let recognizer = navigation.interactivePopGestureRecognizer
-        else { return }
+        guard let navigation = controller.navigationController else { return }
         // The delegate must outlive this screen: it keeps answering for the
         // recognizer after the chat pops, including "no" at the root. Parking
         // it on the navigation controller also makes re-arming idempotent —
@@ -62,8 +60,12 @@ private enum SwipeBackArm {
             delegate = PopDelegate(navigation: navigation)
             objc_setAssociatedObject(navigation, &key, delegate, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
         }
-        recognizer.delegate = delegate
-        recognizer.isEnabled = true
+        // iOS 26 pops from anywhere on screen through the content recognizer, and
+        // its system delegate refuses while the bar is hidden, same as the edge one.
+        for recognizer in [navigation.interactivePopGestureRecognizer, navigation.interactiveContentPopGestureRecognizer] {
+            recognizer?.delegate = delegate
+            recognizer?.isEnabled = true
+        }
     }
 }
 
