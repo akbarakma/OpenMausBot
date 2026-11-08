@@ -2036,15 +2036,21 @@ final class Session: ObservableObject {
         } catch { actionError = error.localizedDescription; return false }
     }
 
-    @discardableResult
     func setBotPinned(_ bot: Bot, pinned: Bool) async {
         guard let client else { return }
+        setBotPinnedLocally(bot.id, pinned ? true : nil)
         do {
             try await client.setBotPinned(botId: bot.id, pinned: pinned)
             await refresh()
         } catch {
+            setBotPinnedLocally(bot.id, bot.pinned)
             actionError = error.localizedDescription
         }
+    }
+
+    private func setBotPinnedLocally(_ botId: String, _ pinned: Bool?) {
+        guard let index = state.bots.firstIndex(where: { $0.id == botId }) else { return }
+        state.bots[index].pinned = pinned
     }
 
     func setTaskPinned(_ task: BotTask, pinned: Bool, in chat: Chat) async -> Bool {

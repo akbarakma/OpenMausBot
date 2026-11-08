@@ -600,6 +600,16 @@ struct ChatListView: View {
                     entry.row.equatable()
                 }
                 .buttonStyle(.plain)
+                .contextMenu {
+                    if case let .bot(bot) = entry.row.chat {
+                        Button {
+                            Haptics.selection()
+                            Task { await session.setBotPinned(bot, pinned: bot.pinned != true) }
+                        } label: {
+                            Label(bot.pinned == true ? "Unpin" : "Pin", systemImage: bot.pinned == true ? "pin.slash" : "pin")
+                        }
+                    }
+                }
                 .accessibilityIdentifier("chat-row.\(entry.id)")
                 if case let .bot(bot) = entry.row.chat {
                     threadTree(bot, queued: entry.queued, held: entry.held)

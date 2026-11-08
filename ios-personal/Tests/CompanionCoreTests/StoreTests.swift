@@ -174,13 +174,13 @@ final class StoreTests: XCTestCase {
         state.rooms = [generalChannel, researchChannel, directChat]
 
         XCTAssertEqual(state.sidebarSections.map(\.name), ["Research", "Personal"])
-        XCTAssertEqual(state.sidebarSections[0].chiefs.map(\.id), ["research-chief"])
+        XCTAssertTrue(state.sidebarSections[0].chiefs.isEmpty)
         XCTAssertEqual(state.sidebarSections[0].bots.map(\.id), ["research-1"])
         XCTAssertEqual(state.sidebarSections[0].channels.map(\.id), ["research-channel"])
         XCTAssertTrue(state.sidebarSections[1].channels.isEmpty)
         XCTAssertEqual(state.unsectionedChief?.id, "default-chief")
         XCTAssertTrue(state.unsectionedBots.isEmpty)
-        XCTAssertEqual(state.pinnedBots.map(\.id), ["research-2", "pinned-only"])
+        XCTAssertEqual(state.pinnedBots.map(\.id), ["research-chief", "research-2", "pinned-only"])
         XCTAssertEqual(state.unsectionedChannels.map(\.id), ["general-channel"])
         XCTAssertEqual(state.botChats.map(\.id), ["direct-chat"])
     }

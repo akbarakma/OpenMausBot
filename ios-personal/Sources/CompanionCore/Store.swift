@@ -245,7 +245,7 @@ public struct CompanionState: Sendable {
         let visibleBots = bots.filter { $0.hidden != true }
         let visibleChannels = rooms.filter { $0.dm != true }
         let sectionChiefs = visibleBots.filter {
-            $0.chiefOfStaff == true && Self.sectionName($0.section) != nil
+            $0.chiefOfStaff == true && !Self.isSidebarPinned($0) && Self.sectionName($0.section) != nil
         }
         let sectionBots = visibleBots.filter {
             $0.chiefOfStaff != true && !Self.isSidebarPinned($0) && Self.sectionName($0.section) != nil
@@ -305,8 +305,10 @@ public struct CompanionState: Sendable {
         return name
     }
 
+    /// The main Chief keeps its top slot; a pinned Chief of a section joins
+    /// the other pinned bots, as on the desktop.
     private static func isSidebarPinned(_ bot: Bot) -> Bool {
-        bot.pinned == true && bot.chiefOfStaff != true
+        bot.pinned == true && (bot.chiefOfStaff != true || sectionName(bot.section) != nil)
     }
 
     /// Every unanswered approval or question, newest first. This is the
