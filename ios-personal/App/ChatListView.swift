@@ -594,14 +594,15 @@ struct ChatListView: View {
     private func comfortableRows(_ rows: [ChatSummary], waiting: Set<String>) -> some View {
         ForEach(comfortableEntries(rows, waiting: waiting)) { entry in
             VStack(spacing: 0) {
-                Button {
+                let row = Button {
                     path.append(session.threadSelection.restoringThread(entry.row.chat, connectionID: session.connection?.id))
                 } label: {
                     entry.row.equatable()
                 }
                 .buttonStyle(.plain)
-                .contextMenu {
-                    if case let .bot(bot) = entry.row.chat {
+                .accessibilityIdentifier("chat-row.\(entry.id)")
+                if case let .bot(bot) = entry.row.chat {
+                    row.contextMenu {
                         Button {
                             Haptics.selection()
                             Task { await session.setBotPinned(bot, pinned: bot.pinned != true) }
@@ -609,10 +610,9 @@ struct ChatListView: View {
                             Label(bot.pinned == true ? "Unpin" : "Pin", systemImage: bot.pinned == true ? "pin.slash" : "pin")
                         }
                     }
-                }
-                .accessibilityIdentifier("chat-row.\(entry.id)")
-                if case let .bot(bot) = entry.row.chat {
                     threadTree(bot, queued: entry.queued, held: entry.held)
+                } else {
+                    row
                 }
             }
         }

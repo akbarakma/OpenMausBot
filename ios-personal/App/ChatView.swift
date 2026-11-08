@@ -775,6 +775,13 @@ struct ChatView: View {
     }
 
     private func reveal(_ messageId: String, _ proxy: ScrollViewProxy, in transcript: [TranscriptRow]) {
+        // A fold opens only when this id changes, so a repeat request
+        // clears it for one turn of the run loop first.
+        if revealedMessageId == messageId {
+            revealedMessageId = nil
+            Task { reveal(messageId, proxy, in: transcript) }
+            return
+        }
         revealedMessageId = messageId
         // Materialize the lazy folded row first. Its target bubble
         // scrolls itself into view once expansion has laid it out.
