@@ -2895,7 +2895,9 @@ struct CardView: View {
     private var tint: Color { MausPalette.color(context.color) }
 
     var body: some View {
-        if let card = message.card {
+        if let card = message.card, let skill = card.skillRequest, !card.isPending {
+            settledSkill(card, skill)
+        } else if let card = message.card {
             VStack(alignment: .leading, spacing: 10) {
                 if card.isPending {
                     Label("\(context.name) is waiting on you", systemImage: "hand.raised.fill")
@@ -2932,29 +2934,8 @@ struct CardView: View {
                 }
 
                 if let skill = card.skillRequest {
-                    if let preview = skill.preview, let sha256 = skill.reviewedSha256 {
-                        VStack(alignment: .leading, spacing: 7) {
-                            HStack {
-                                Text("Review the complete SKILL.md")
-                                    .font(.system(size: 12, weight: .semibold))
-                                Spacer()
-                                Text("sha256 \(String(sha256.prefix(8)))")
-                                    .font(.system(size: 10, design: .monospaced))
-                                    .foregroundStyle(Color.secondary)
-                            }
-                            Text(skill.source.map { LocalizedStringKey("Source: \($0)") } ?? "Source: unknown")
-                                .font(.system(size: 11))
-                                .foregroundStyle(Color.secondary)
-                                .textSelection(.enabled)
-                            Text(preview)
-                                .font(.system(size: 12, design: .monospaced))
-                                .foregroundStyle(Color.primary)
-                                .textSelection(.enabled)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .fixedSize(horizontal: false, vertical: true)
-                                .padding(10)
-                            .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
-                        }
+                    if let preview = skill.preview, skill.reviewedSha256 != nil {
+                        details(preview, label: "Review the complete SKILL.md")
                     } else {
                         Label(
                             "This proposal was created by an older build and cannot be safely applied. Deny it and ask the bot to create it again.",
@@ -3145,13 +3126,71 @@ struct CardView: View {
         return Text("Send on your behalf?")
     }
 
-    private func details(_ text: String) -> some View {
+    private func settledSkill(_ card: OptionCard, _ skill: SkillRequestCardData) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) { showingDetails.toggle() }
+            } label: {
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Image(systemName: card.outcome?.isPositive == false ? "xmark" : "checkmark")
+                        .font(.system(size: 12, weight: .semibold))
+                    skillLine(card, skill)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    if skill.preview != nil {
+                        Text(showingDetails ? "Hide details" : "Details")
+                            .fontWeight(.semibold)
+                    }
+                }
+                .font(.system(size: 13))
+                .foregroundStyle(Color.secondary)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .disabled(skill.preview == nil)
+            .accessibilityIdentifier("settled-skill")
+            .accessibilityAddTraits(showingDetails ? .isSelected : [])
+
+            if showingDetails, let preview = skill.preview {
+                detailsText(preview)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func skillLine(_ card: OptionCard, _ skill: SkillRequestCardData) -> Text {
+        let name = context.name
+        let title = skill.name
+        guard card.outcome?.isPositive != false else {
+            let verdict = card.outcome.map(outcomeText) ?? Text("Expired")
+            return Text(verbatim: "\(title) · ") + verdict
+        }
+        switch skill.action {
+        case "create": return Text("\(name) added a skill: \(title)")
+        case "enable": return Text("\(name) turned on a skill: \(title)")
+        case "disable": return Text("\(name) turned off a skill: \(title)")
+        case "delete": return Text("\(name) deleted a skill: \(title)")
+        default: return Text("\(name) updated a skill: \(title)")
+        }
+    }
+
+    private func detailsText(_ text: String) -> some View {
+        Text(verbatim: text)
+            .font(.system(size: 12, design: .monospaced))
+            .foregroundStyle(Color.primary)
+            .textSelection(.enabled)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(10)
+            .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
+    }
+
+    private func details(_ text: String, label: LocalizedStringKey = "Details") -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Button {
                 withAnimation(.easeInOut(duration: 0.2)) { showingDetails.toggle() }
             } label: {
                 HStack(spacing: 4) {
-                    Text("Details")
+                    Text(label)
                     Image(systemName: "chevron.right")
                         .font(.system(size: 11, weight: .semibold))
                         .rotationEffect(.degrees(showingDetails ? 90 : 0))
@@ -3165,15 +3204,8 @@ struct CardView: View {
             .accessibilityAddTraits(showingDetails ? .isSelected : [])
 
             if showingDetails {
-                Text(verbatim: text)
-                    .font(.system(size: 12, design: .monospaced))
-                    .foregroundStyle(Color.primary)
-                    .textSelection(.enabled)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(10)
-                .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
-                .accessibilityIdentifier("approval-details")
+                detailsText(text)
+                    .accessibilityIdentifier("approval-details")
             }
         }
     }
