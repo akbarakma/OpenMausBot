@@ -33,6 +33,7 @@ final class TranscriptPresentationTests: XCTestCase {
         [
           {"id":"user","role":"user","kind":"text","at":1000,"text":"browse again"},
           {"id":"progress","role":"bot","kind":"text","at":2000,"text":"Browsing again","turnId":"t"},
+          {"id":"steer","role":"user","kind":"text","at":2500,"text":"a random one"},
           {"id":"open","role":"bot","kind":"activity","at":3000,"turnId":"t","tool":{"name":"Open browser","ok":true}},
           {"id":"read","role":"bot","kind":"activity","at":4000,"turnId":"t","tool":{"name":"Read page","ok":true}},
           {"id":"retry","role":"bot","kind":"activity","at":5000,"turnId":"t","tool":{"name":"notice: retrying","ok":true}},
@@ -41,13 +42,13 @@ final class TranscriptPresentationTests: XCTestCase {
         ]
         """)
         let reduced = transcriptRows(transcript, detail: .reduced, foldsNarration: false)
-        XCTAssertEqual(reduced.map(\.id), ["user", "progress", "turn.t", "retry", "broke", "answer"])
-        guard case let .assistantTurn(turn) = reduced[2] else { return XCTFail("Missing tool step fold") }
+        XCTAssertEqual(reduced.map(\.id), ["user", "progress", "steer", "turn.t", "retry", "broke", "answer"])
+        guard case let .assistantTurn(turn) = reduced[3] else { return XCTFail("Missing tool step fold") }
         XCTAssertEqual(turn.messages.map(\.id), ["open", "read"])
         XCTAssertEqual(turn.label, "Worked for 10s")
 
         XCTAssertEqual(transcriptRows(transcript, detail: .hidden, foldsNarration: false).map(\.id),
-                       ["user", "progress", "retry", "answer"])
+                       ["user", "progress", "steer", "retry", "answer"])
         XCTAssertEqual(transcriptRows(transcript, detail: .full, foldsNarration: false).map(\.id),
                        transcript.map(\.id))
     }

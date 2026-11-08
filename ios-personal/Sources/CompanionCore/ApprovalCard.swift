@@ -210,8 +210,7 @@ extension OptionCard {
         !isPending && presentation != .standard
     }
 
-    /// A decided proposal is one line with the proposal under Details. A
-    /// question keeps its answer in view.
+    /// A question keeps its answer in view; only a decided proposal folds.
     public var foldsWhenSettled: Bool {
         guard !isPending, presentation == .standard, requestType != "question" else { return false }
         switch outcome {

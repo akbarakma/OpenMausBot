@@ -3235,16 +3235,15 @@ struct CardView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .onAppear { showingDetails = false }
     }
 
-    /// "Team setup applied", or "Update @Kara's profile · Cancel" when it
-    /// did not go through. The title's question mark belongs to the ask.
     private func settledLine(_ card: OptionCard) -> Text {
         let asked = card.title.trimmingCharacters(in: .whitespaces)
         let title = card.skillRequest?.name ?? (asked.hasSuffix("?") ? String(asked.dropLast()) : asked)
         guard card.outcome?.isPositive == true else {
             let verdict = card.outcome.map(outcomeText) ?? Text("Expired")
-            return Text(verbatim: "\(title) · ") + verdict
+            return Text("\(Text(verbatim: title)) · \(verdict)")
         }
         guard let skill = card.skillRequest else { return Text(verbatim: title) }
         let name = context.name
