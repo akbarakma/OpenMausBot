@@ -6,8 +6,7 @@ public struct LiveCallState: Codable, Hashable, Sendable {
     public enum Status: String, Codable, Sendable {
         case connecting, live, ending, ended
         /// A status this build has never heard of. Read as "still running":
-        /// the harness says `ended` when it is over, and guessing that early
-        /// would hide a bar for a call that is still on the line.
+        /// the harness says `ended` when it is over.
         case unknown
 
         public init(from decoder: any Decoder) throws {

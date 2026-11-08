@@ -22,10 +22,9 @@ struct ComputerView: View {
     let bot: Bot
     @EnvironmentObject private var session: Session
     @State private var showingBrowser = false
-    /// The picture on screen, decoded once per new frame. Decoding in `body`
-    /// base64- and PNG-decoded the same desktop frame on every Session
-    /// publish (~12 a second while a fleet streams). Until the next one is
-    /// decoded, the last stays up.
+    /// The picture on screen, decoded once per new frame rather than in
+    /// `body`: Session publishes about 12 times a second while a fleet
+    /// streams. Until the next one is decoded, the last stays up.
     @State private var shownImage: UIImage?
 
     private var frame: ScreenFrame? { session.state.screens[bot.id] }
