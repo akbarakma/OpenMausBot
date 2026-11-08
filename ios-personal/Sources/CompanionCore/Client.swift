@@ -1545,7 +1545,8 @@ public struct CompanionClient: Sendable {
     public func send(
         text: String,
         to destination: MessageDestination,
-        sendId: String
+        sendId: String,
+        replyToId: String? = nil
     ) async throws -> SendReceipt {
         let route: String
         let threadId: String
@@ -1560,11 +1561,12 @@ public struct CompanionClient: Sendable {
             threadId = selectedThreadId
         }
         guard Self.validRouteID(threadId), Self.validSendID(sendId) else { throw APIError.badURL }
-        return try await sendForReceipt(try makeRequest(
-            "POST",
-            route,
-            body: ["text": text, "threadId": threadId, "sendId": sendId]
-        ))
+        var body = ["text": text, "threadId": threadId, "sendId": sendId]
+        if let replyToId {
+            guard Self.validRouteID(replyToId) else { throw APIError.badURL }
+            body["replyToId"] = replyToId
+        }
+        return try await sendForReceipt(try makeRequest("POST", route, body: body))
     }
 
     /// Take back a message the harness is holding.

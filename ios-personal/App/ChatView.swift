@@ -63,6 +63,7 @@ struct ChatView: View {
     @State private var sendingMessage = false
     @State private var steering = false
     @State private var attachmentError: String?
+    @State private var replyingTo: (threadId: String, message: Message, author: String)?
     @State private var openingFileName: String?
     @State private var fileOpenError: String?
     @State private var filePreview: FilePreviewItem?
@@ -608,6 +609,9 @@ struct ChatView: View {
             fileOpenError = "This link can't be opened securely."
         case let .reveal(messageId):
             proxy.scrollTo(messageId, anchor: .center)
+        case let .reply(message, author):
+            replyingTo = (threadId, message, author)
+            composerFocused = true
         }
     }
 
@@ -1209,6 +1213,7 @@ struct ChatView: View {
         let chatAtSend = current
         // Only the typed line answers; a chip or a command is its own ask.
         let question = explicitText == nil ? composerQuestion : nil
+        let replyAtSend = replyingTo.flatMap { $0.threadId == chatAtSend.threadId ? $0.message.id : nil }
         guard !text.isEmpty || !outgoingAttachments.isEmpty,
               !preparingAttachments,
               !sendingMessage
@@ -1230,7 +1235,7 @@ struct ChatView: View {
                 case .gone:
                     // The question closed before the line reached it: say
                     // it as an ordinary message rather than lose it.
-                    sent = await session.send(text: text, attachments: [], to: chatAtSend)
+                    sent = await session.send(text: text, attachments: [], to: chatAtSend, replyToId: replyAtSend)
                 case let .failed(failure):
                     // Keep the words in the field, with the reason under it.
                     session.actionError = failure
@@ -1240,7 +1245,8 @@ struct ChatView: View {
                 sent = await session.send(
                     text: text,
                     attachments: outgoingAttachments,
-                    to: chatAtSend
+                    to: chatAtSend,
+                    replyToId: replyAtSend
                 )
             }
             sendingMessage = false
@@ -1263,6 +1269,9 @@ struct ChatView: View {
             // text, so the command clears without erasing a newer edit.
             if draft == draftAtSend {
                 draft = ""
+            }
+            if let replyAtSend, replyingTo?.message.id == replyAtSend {
+                replyingTo = nil
             }
             if attachments.map(\.id) == outgoingAttachments.map(\.id) {
                 attachments = []
@@ -1558,6 +1567,11 @@ struct ChatView: View {
             composerNotices
 
             composerSuggestions(text, pendingApproval: snapshot.hasPendingApproval)
+
+            if let reply = replyingTo, reply.threadId == threadId {
+                ReplyQuote(author: reply.author, text: reply.message.text ?? "") { replyingTo = nil }
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
 
             if !attachments.isEmpty {
                 attachmentStrip
@@ -1993,6 +2007,14 @@ struct MessageRow: View, Equatable {
         // text-selection UI. Parsed once per message: MessagePresentation.
         let presentation = MessagePresentations.of(message)
         VStack(alignment: message.role == .user ? .trailing : .leading, spacing: 6) {
+            if let id = message.replyToId, let quoted = actions.quoted(id) {
+                Button { actions.reveal(messageId: id) } label: {
+                    ReplyQuote(author: author(of: quoted), text: MessagePresentations.of(quoted).visibleText)
+                        .frame(maxWidth: 300)
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("reply-quote-\(message.id)")
+            }
             content(presentation)
 
             if message.isViaCall {
@@ -2074,6 +2096,11 @@ struct MessageRow: View, Equatable {
     @ViewBuilder
     private func menu(_ presentation: MessagePresentation) -> some View {
         let visibleText = presentation.visibleText
+        if !isPendingEdit, message.kind == .text, !visibleText.isEmpty {
+            Button("Reply", systemImage: "arrowshape.turn.up.left") {
+                actions.reply(to: message, author: author(of: message))
+            }
+        }
         if !visibleText.isEmpty {
             Button("Copy", systemImage: "doc.on.doc") {
                 PlatformBridge.copyToPasteboard(visibleText)
@@ -2174,6 +2201,10 @@ struct MessageRow: View, Equatable {
         }
     }
 
+    private func author(of message: Message) -> String {
+        message.role == .user ? String(localized: "You") : (message.from?.name ?? context.name)
+    }
+
     private func bubble(_ presentation: MessagePresentation) -> TextBubble {
         TextBubble(message: message, presentation: presentation, context: context, tailed: endsRun, actions: actions)
     }
@@ -2188,6 +2219,46 @@ struct MessageRow: View, Equatable {
 private struct ShareFile: Identifiable {
     let url: URL
     var id: String { url.path }
+}
+
+struct ReplyQuote: View {
+    let author: String
+    let text: String
+    var cancel: (() -> Void)?
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Capsule()
+                .fill(Color.accentColor)
+                .frame(width: 3)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(verbatim: author)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Color.accentColor)
+                Text(verbatim: text.split(whereSeparator: \.isNewline).first.map(String.init) ?? "")
+                    .font(.system(size: 13))
+                    .foregroundStyle(Color.secondary)
+                    .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            if let cancel {
+                Button(action: cancel) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 12, weight: .semibold))
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(Color.secondary)
+                .accessibilityLabel("Cancel reply")
+            }
+        }
+        .fixedSize(horizontal: false, vertical: true)
+        .padding(.leading, 10)
+        .padding(.trailing, cancel == nil ? 10 : 0)
+        .padding(.vertical, cancel == nil ? 6 : 0)
+        .background(Color.secondary.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
+    }
 }
 
 /// A message's text on its way to the selection sheet.

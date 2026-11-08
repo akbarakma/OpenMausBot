@@ -244,6 +244,35 @@ final class ShareClientTests: XCTestCase {
         XCTAssertEqual(ShareRequestStub.capturedRequest?.url?.path, "/api/groups/room_1/messages")
     }
 
+    func testSendCarriesTheQuotedMessage() async throws {
+        try await client.send(
+            text: "On it",
+            to: .bot(id: "bot-1", threadId: "task_1"),
+            sendId: "8E50CD29-DBB2-4D76-971B-112DD962C9FA",
+            replyToId: "msg_42"
+        )
+
+        let data = try XCTUnwrap(ShareRequestStub.capturedBody)
+        let body = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: String])
+        XCTAssertEqual(body["replyToId"], "msg_42")
+    }
+
+    func testSendRejectsAnUnsafeQuotedMessageBeforeNetworking() async {
+        do {
+            try await client.send(
+                text: "No",
+                to: .bot(id: "bot-1", threadId: "task_1"),
+                sendId: "share_1234567890123456",
+                replyToId: "../x"
+            )
+            XCTFail("expected unsafe reply id rejection")
+        } catch APIError.badURL {
+            XCTAssertNil(ShareRequestStub.capturedRequest)
+        } catch {
+            XCTFail("unexpected error: \(error)")
+        }
+    }
+
     func testImageCapabilityInventoryFailsClosedWhenMissing() async throws {
         ShareRequestStub.responseBody = Data(#"{"instances":[{"instanceId":"vision","capabilities":{"images":true}},{"instanceId":"text","capabilities":{"images":false}},{"instanceId":"legacy"}]}"#.utf8)
 

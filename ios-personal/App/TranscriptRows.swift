@@ -23,6 +23,7 @@ enum TranscriptNavigation {
     case refusedLink
     /// A folded reply asked to be scrolled into view once it is laid out.
     case reveal(messageId: String)
+    case reply(Message, author: String)
 }
 
 /// Where a row's taps go once they leave the row: ChatView's handlers, held
@@ -100,6 +101,12 @@ struct TranscriptActions: Equatable {
 
     @MainActor
     func reveal(messageId: String) { navigate(.reveal(messageId: messageId)) }
+
+    @MainActor
+    func reply(to message: Message, author: String) { navigate(.reply(message, author: author)) }
+
+    @MainActor
+    func quoted(_ id: String) -> Message? { session.state.messages[threadId]?.first { $0.id == id } }
 
     // MARK: Messages
 

@@ -280,6 +280,7 @@ public struct Message: Codable, Hashable, Identifiable, Sendable {
     /// The message this one follows; nil at the thread root. Two messages
     /// sharing a parent are a fork.
     public var parentId: String?
+    public var replyToId: String?
     /// Set when this line began as a queued send: the id the harness quoted
     /// when it held the message, echoed back on the line that finally landed.
     /// Clients match it against their held-send rows to retire them.
