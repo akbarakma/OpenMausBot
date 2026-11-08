@@ -99,6 +99,12 @@ Each page and gear page keeps its scroll position per bot (`lastScroll` in
 `PanelShell.tsx`). Back returns to where the list was; a newly opened page
 starts at the top.
 
+The panel body always keeps its 8 px scrollbar gutter (`[scrollbar-gutter:stable]`
+with `pl-4 pr-2`), so a page that scrolls is as wide as one that does not. A
+child that runs to both edges uses `-ml-4 -mr-2`, as the Activity list does;
+`-mx-4` would push it 8 px into the gutter. Its rows take `pr-2`, so their text
+ends on the cards' right edge.
+
 `useSimpleSidePanel` in App also redirects every request for the computer
 popup and the Activity panel, so upstream's callers need no change:
 
@@ -229,7 +235,7 @@ the same state, motion beat and working ring.
 | `src/components/bot-panel/ComputerTab.tsx` | `ComputerCard` (live card, Works in, browser switch); `WherePage` pinned-place note |
 | `src/components/bot-panel/SettingsPage.tsx` | Grouped cards, full-width pickers |
 | `src/components/bot-panel/BackupAis.tsx` | Only the list and Add; the page intro holds the explanation |
-| `src/components/bot-panel/PanelShell.tsx` | `detail` state: the note or skill open in place of its list |
+| `src/components/bot-panel/PanelShell.tsx` | `detail` state: the note or skill open in place of its list; the body keeps its scrollbar gutter with `pl-4 pr-2` |
 | `src/components/bot-panel/pages.tsx` | Memory note and skill pages, confirm dialogs, Backup AIs and Bot API pages; `routines` renders `AutomationsPage`; Data, Files and Activity pages; the chat's folder on the Folder page |
 | `src/components/ComposerContextMeter.tsx` | New: the composer's context ring, left of the call and Send slot, with a card on hover or click that always shows the token table, since only Advanced mounts it; Compact now from 80%. `ContextBar` and `CompactButton` are shared with the panel's Context card |
 | `src/lib/context-meter.ts` | New: the ring's reading (red above 90%) and the Advanced card's token rows |

@@ -561,7 +561,7 @@ export function FilesPage({ bot }: PageContext) {
 }
 
 export function ActivityPage({ bot, refresh }: PageContext & { refresh: number }) {
-  return <ActivityList bot={bot} className="-mx-4" refresh={refresh} dayBg="bg-app" toolbar={() => null} />;
+  return <ActivityList bot={bot} className="-ml-4 -mr-2 [&_button]:pr-2" refresh={refresh} dayBg="bg-app" toolbar={() => null} />;
 }
 
 export function BackupsPage({ bot, derived }: PageContext) {

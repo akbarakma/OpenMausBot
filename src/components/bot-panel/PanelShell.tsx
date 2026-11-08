@@ -144,7 +144,7 @@ export function BotPanel({ bot, derived, linkedSection, onClose }: {
         ref={bodyRef}
         data-panel-body
         onScroll={(event) => scrolls.set(scrollKey(page, detail), event.currentTarget.scrollTop)}
-        className="@container relative min-h-0 flex-1 overflow-y-auto px-4 pb-7"
+        className="@container relative min-h-0 flex-1 overflow-y-auto pb-7 pl-4 pr-2 [scrollbar-gutter:stable]"
       >
         {page === null ? (
           <>
