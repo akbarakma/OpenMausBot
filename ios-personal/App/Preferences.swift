@@ -17,6 +17,7 @@ enum PrefKey {
     /// Per device, like the desktop's sidebar density: a phone and a laptop
     /// have different room for a list.
     static let rosterDensity = "companion.prefs.rosterDensity"
+    static let collapsedSections = "companion.prefs.collapsedSections"
 }
 
 extension ActivityDetail {

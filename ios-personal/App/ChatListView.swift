@@ -14,6 +14,7 @@ struct ChatListView: View {
     @State private var query = ""
     @AppStorage(PrefKey.activityDetail) private var activityDetail = ActivityDetail.phoneDefault.rawValue
     @AppStorage(PrefKey.rosterDensity) private var rosterDensity = RosterDensity.default.rawValue
+    @AppStorage(PrefKey.collapsedSections) private var collapsedSections = ""
     /// Driven so that making a bot can open it. Value-based navigation alone
     /// cannot push without a tap, and a new bot appearing silently at the
     /// bottom of the roster is a poor answer to pressing +.
@@ -326,11 +327,12 @@ struct ChatListView: View {
 
         let pinned = summaries(for: session.state.pinnedBots, from: allSummaries)
         if !pinned.isEmpty {
-            sectionLabel(Text("Pinned"))
+            sectionHeader(Text("Pinned"), id: "pinned")
                 // a compact row above it leaves little air of its own
-                .padding(.top, density == .compact ? sectionSpacing : 2)
-                .padding(.bottom, 4)
-            botRows(pinned, waiting: waiting)
+                .padding(.top, density == .compact ? sectionSpacing - 6 : 0)
+            if !isCollapsed("pinned") {
+                botRows(pinned, waiting: waiting)
+            }
         }
 
         switch density {
@@ -359,39 +361,77 @@ struct ChatListView: View {
 
         let unsectioned = summaries(for: session.state.unsectionedBots, from: allSummaries)
         if !unsectioned.isEmpty {
-            sectionLabel(Text("Bots"))
-                .padding(.top, sectionSpacing)
-                .padding(.bottom, 4)
-            botRows(unsectioned, waiting: waiting)
+            sectionHeader(Text("Bots"), id: "bots")
+                .padding(.top, sectionSpacing - 6)
+            if !isCollapsed("bots") {
+                botRows(unsectioned, waiting: waiting)
+            }
         }
 
         ForEach(session.state.sidebarSections) { section in
+            let sectionId = "section:\(section.id)"
             VStack(alignment: .leading, spacing: 0) {
-                switch density {
-                case .comfortable:
-                    sectionLabel(Text(verbatim: section.name))
-                        .padding(.top, 18)
-                        .padding(.bottom, section.chiefs.isEmpty && !section.channels.isEmpty ? 10 : 4)
-                    if !section.chiefs.isEmpty {
-                        botRows(summaries(for: section.chiefs, from: allSummaries), waiting: waiting)
-                    }
-                    if !section.channels.isEmpty {
-                        channelTiles(section.channels, showsCreate: false)
-                            .padding(.top, section.chiefs.isEmpty ? 0 : 8)
-                            .padding(.bottom, section.bots.isEmpty ? 4 : 8)
-                    }
-                case .compact:
-                    sectionLabel(Text(verbatim: section.name))
-                        .padding(.top, sectionSpacing)
-                        .padding(.bottom, 4)
-                    if !section.chiefs.isEmpty {
-                        botRows(summaries(for: section.chiefs, from: allSummaries), waiting: waiting)
-                    }
-                    compactRoomRows(section.channels, waiting: waiting)
+                sectionHeader(Text(verbatim: section.name), id: sectionId)
+                    .padding(.top, sectionSpacing - 6)
+                if !isCollapsed(sectionId) {
+                    sectionRows(section, allSummaries: allSummaries, waiting: waiting)
                 }
-                botRows(summaries(for: section.bots, from: allSummaries), waiting: waiting)
             }
         }
+    }
+
+    @ViewBuilder
+    private func sectionRows(_ section: SidebarSection, allSummaries: [ChatSummary], waiting: Set<String>) -> some View {
+        switch density {
+        case .comfortable:
+            Color.clear
+                .frame(height: section.chiefs.isEmpty && !section.channels.isEmpty ? 4 : 0)
+            if !section.chiefs.isEmpty {
+                botRows(summaries(for: section.chiefs, from: allSummaries), waiting: waiting)
+            }
+            if !section.channels.isEmpty {
+                channelTiles(section.channels, showsCreate: false)
+                    .padding(.top, section.chiefs.isEmpty ? 0 : 8)
+                    .padding(.bottom, section.bots.isEmpty ? 4 : 8)
+            }
+        case .compact:
+            if !section.chiefs.isEmpty {
+                botRows(summaries(for: section.chiefs, from: allSummaries), waiting: waiting)
+            }
+            compactRoomRows(section.channels, waiting: waiting)
+        }
+        botRows(summaries(for: section.bots, from: allSummaries), waiting: waiting)
+    }
+
+    private func isCollapsed(_ id: String) -> Bool {
+        collapsedSections.split(separator: "\n").contains { $0 == id }
+    }
+
+    private func sectionHeader(_ title: Text, id: String) -> some View {
+        let collapsed = isCollapsed(id)
+        return Button {
+            Haptics.selection()
+            withAnimation(.snappy(duration: 0.25)) {
+                var ids = collapsedSections.split(separator: "\n").map(String.init).filter { $0 != id }
+                if !collapsed { ids.append(id) }
+                collapsedSections = ids.joined(separator: "\n")
+            }
+        } label: {
+            HStack(spacing: 0) {
+                sectionLabel(title)
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Color.secondary)
+                    .rotationEffect(.degrees(collapsed ? -90 : 0))
+                    .padding(.trailing, 20)
+            }
+            .padding(.vertical, 6)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityValue(collapsed ? Text("Collapsed") : Text("Expanded"))
+        .accessibilityIdentifier("section-header.\(id)")
     }
 
     /// Between one section and the next title.
