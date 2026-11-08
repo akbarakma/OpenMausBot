@@ -59,9 +59,9 @@ const __APP_VERSION__: string;
       message?: string;
       driverPath?: string;
       driverVersion?: string;
-      driverSource?: "bundled" | "environment" | "user-local" | "path";
+      driverSource?: "bundled" | "environment" | "user-local" | "path" | "system-package";
       session?: "x11" | "wayland" | "headless" | "unknown";
-      compositor?: "gnome-mutter";
+      compositor?: "gnome-mutter" | "hyprland";
     };
   };
 
@@ -176,9 +176,12 @@ const __APP_VERSION__: string;
         /** Opens a circle main listed, by its id, through main's own switch: only from the person's click. */
         /** Nothing for a place of the account in use; for another account's, how its switch went. */
         open?: (id: string) => Promise<import("../../electron/cloud-account.mjs").RailOpenResult | undefined>;
-        /** ＋'s fixed choices: buy a Cloud (this computer's own sheet), a server's pairing link (`link`: the one pasted on the
-         * sheet; without it, the clipboard's), or type its address. Resolves false when the person cancels Connect. */
-        add?: (choice: "cloud" | "link" | "address", link?: string) => Promise<unknown>;
+        /** ＋'s fixed choices: buy a Cloud (this computer's own sheet), connect to a server (`link`: the sheet's link or
+         * address, `code` the pairing code typed apart; without `link`, the clipboard's), or type its address. With `code`
+         * (even empty) it resolves with the outcome; without, false when the person cancels Connect. */
+        add?: (choice: "cloud" | "link" | "address", link?: string, code?: string) => Promise<import("../../electron/server-probe.mjs").ConnectOutcome | boolean | void>;
+        /** Finds the MausBot server at what the Connect sheet holds, without connecting. Absent on an older app. */
+        probe?: (address: string, code?: string) => Promise<import("../../electron/server-probe.mjs").ServerProbe>;
         /** The colour of the place this page is (This computer's too), and whether it can be changed here. Absent on an
          * older app. */
         look?: () => Promise<import("../../electron/place-look.mjs").PlaceLook | null>;
@@ -258,6 +261,12 @@ const __APP_VERSION__: string;
         forget: (id: string, purge?: boolean) => Promise<{ ok: boolean; error?: string } | void>;
         /** `panel` "copy": that server's Copy this computer here panel; otherwise its Computer access. */
         onOpenSettings?: (callback: (computerId?: string | null) => void) => () => void;
+        /** How each server saved by hand is doing (checks start on the first ask). Absent on an older app. */
+        status?: () => Promise<import("../../electron/server-status.mjs").ServerStatus[]>;
+        /** Look again now: one server (Try now, after Pair again), or every one with a passing problem. */
+        retry?: (id?: string) => Promise<void>;
+        /** Main's word that a server's status changed: read status() again. */
+        onStatus?: (callback: () => void) => () => void;
       };
       /** Local main-window only. Hosted renderers cannot grant themselves access. */
       computerSharing?: {
@@ -267,6 +276,13 @@ const __APP_VERSION__: string;
         revoke(id: string): Promise<DesktopComputerSharing>;
         /** This computer's own record of what that server's bots did here, newest first. */
         activity(id: string): Promise<DesktopLendingActivity[]>;
+        /** Each saved server of the person's own (this desktop is its admin) and how lending to it is. */
+        servers?(): Promise<Array<{ id: string; enabled: boolean; connected: boolean; paused: boolean }>>;
+        /** Asks in main's own popup, then lends that server of the person's own the apps on the screen; null on Not now. */
+        allow?(id: string): Promise<DesktopComputerSharing | null>;
+        /** Every Cloud and server of the person's own stops using this computer until resume(), as the icon's menu does. */
+        pause?(): Promise<void>;
+        resume?(): Promise<void>;
       };
       confirm(message: string): Promise<boolean>;
       getCapabilities(): Promise<DesktopCapabilities>;
@@ -460,9 +476,9 @@ export interface LinuxLocalControlStatus {
   message?: string;
   driverPath?: string;
   driverVersion?: string;
-  driverSource?: "bundled" | "environment" | "user-local" | "path";
+  driverSource?: "bundled" | "environment" | "user-local" | "path" | "system-package";
   session?: "x11" | "wayland" | "headless" | "unknown";
-  compositor?: "gnome-mutter";
+  compositor?: "gnome-mutter" | "hyprland";
   warnings?: Array<{ label: string; status: string; message: string; detail?: string }>;
 }
 

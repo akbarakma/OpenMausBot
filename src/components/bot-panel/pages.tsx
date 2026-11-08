@@ -19,7 +19,7 @@ import { ServiceIcon } from "../ServiceIcon";
 import { useWorkingFolder } from "../bot-settings/AccessSection";
 import { BotApiCard } from "../bot-settings/BotApiCard";
 import { useBotEditor } from "../bot-settings/BotEditorContext";
-import { SkillReviewDialog, useManagedSkills, type ManagedSkill } from "../bot-settings/SkillsSection";
+import { SkillReviewDialog, skillSwitchOn, useManagedSkills, type ManagedSkill } from "../bot-settings/SkillsSection";
 import { useBotApps, type BotApp } from "../bot-settings/useBotApps";
 import type { useBotSettingsDerived } from "../bot-settings/useBotSettingsDerived";
 import { AutomationsPage } from "./AutomationsPage";
@@ -321,7 +321,7 @@ export function SkillsPage({ bot, detail, onDetail }: PageContext & DetailContex
   const switchFor = (skill: ManagedSkill) => (
     <BotSwitch
       color={bot.color}
-      checked={skill.enabled}
+      checked={skillSwitchOn(skill)}
       aria-label={t("botSettings.simple.skillToggle", { name: skill.name })}
       disabled={Boolean(skills.working)}
       onClick={() => void skills.toggle(skill)}

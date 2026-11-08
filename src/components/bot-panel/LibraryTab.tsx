@@ -10,7 +10,7 @@ import { useStore, visibleMessages, type Bot, type Message } from "@/state/store
 import { AttachedFileChip } from "../AttachmentPreview";
 import { recentChangedFiles, sharedFileReferences } from "../ComputerFilesPane";
 import { useDesktopCapabilities } from "../DesktopCapabilities";
-import { useManagedSkills } from "../bot-settings/SkillsSection";
+import { skillSwitchOn, useManagedSkills } from "../bot-settings/SkillsSection";
 import type { SimplePageId } from "./page-registry";
 import { Card, CardLabel, CardSurface, NavRow } from "./rows";
 import { panelMemoryNotes } from "./memory-notes";
@@ -66,7 +66,7 @@ export function KnowsCard({ bot, onOpen, onData, folder = bot.cwd, dataLabel = "
   const { capabilities } = useDesktopCapabilities();
   const skills = useManagedSkills(bot);
   const memory = useMemoryDoc(bot);
-  const skillsOn = skills.skills.filter((skill) => skill.enabled && skill.origin !== "native").length;
+  const skillsOn = skills.skills.filter((skill) => skillSwitchOn(skill) && skill.origin !== "native").length;
   const notes = memory.docs ? panelMemoryNotes(memory.docs).length : null;
   const memoryValue = bot.memoryEnabled === false ? t("botPanel.memory.off")
     : notes === null ? (memory.error ? t("botPanel.memory.nothingYet") : undefined)
