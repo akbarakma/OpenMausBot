@@ -1977,8 +1977,6 @@ struct MessageRow: View, Equatable {
     /// A digest chip's parts, and its sheet's presentation.
     @State private var digest: DigestSummary?
 
-    private static let reactionChoices = ["👍", "❤️", "😂", "🎉", "👀"]
-
     /// Everything the row draws, its own state aside.
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.message == rhs.message && lhs.versions == rhs.versions && lhs.endsRun == rhs.endsRun
@@ -2075,17 +2073,8 @@ struct MessageRow: View, Equatable {
 
     @ViewBuilder
     private func menu(_ presentation: MessagePresentation) -> some View {
-        if !isPendingEdit {
-            ForEach(Self.reactionChoices, id: \.self) { emoji in
-                Button(emoji) {
-                    Haptics.selection()
-                    Task { await actions.react(to: message, emoji: emoji) }
-                }
-            }
-        }
         let visibleText = presentation.visibleText
         if !visibleText.isEmpty {
-            Divider()
             Button("Copy", systemImage: "doc.on.doc") {
                 PlatformBridge.copyToPasteboard(visibleText)
             }
