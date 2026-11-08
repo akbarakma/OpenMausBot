@@ -9,7 +9,7 @@
 # below are the part that is easy to miss.
 name: OpenMausCompanion
 options:
-  bundleIdPrefix: com.openmausbot
+  bundleIdPrefix: com.akbarakma
   deploymentTarget:
     iOS: "26.0"
   createIntermediateGroups: true
@@ -63,7 +63,7 @@ targets:
       - target: OpenMausShareExtension
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.openmausbot.app
+        PRODUCT_BUNDLE_IDENTIFIER: com.akbarakma.mausbot
         MARKETING_VERSION: "1.0.0"
         CURRENT_PROJECT_VERSION: "6"
         SWIFT_VERSION: "5.9"
@@ -74,10 +74,10 @@ targets:
       path: App/OpenMausCompanion.entitlements
       properties:
         com.apple.security.application-groups:
-          - group.com.openmausbot.shared
+          - group.com.akbarakma.mausbot
         keychain-access-groups:
-          - $(AppIdentifierPrefix)com.openmausbot.app
-          - $(AppIdentifierPrefix)group.com.openmausbot.shared
+          - $(AppIdentifierPrefix)com.akbarakma.mausbot
+          - $(AppIdentifierPrefix)group.com.akbarakma.mausbot
     info:
       path: App/Info.plist
       properties:
@@ -91,7 +91,7 @@ targets:
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         LSApplicationCategoryType: public.app-category.productivity
         ITSAppUsesNonExemptEncryption: false
-        OpenMausKeychainAccessGroup: $(AppIdentifierPrefix)group.com.openmausbot.shared
+        OpenMausKeychainAccessGroup: $(AppIdentifierPrefix)group.com.akbarakma.mausbot
         # The bot's Live Activity — its face and ask in the Dynamic Island
         # and on the lock screen.
         NSSupportsLiveActivities: true
@@ -162,7 +162,7 @@ targets:
       - target: OpenMausCompanion
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.openmausbot.app.uitests
+        PRODUCT_BUNDLE_IDENTIFIER: com.akbarakma.mausbot.uitests
         SWIFT_VERSION: "5.9"
         TARGETED_DEVICE_FAMILY: "1,2"
         GENERATE_INFOPLIST_FILE: YES
@@ -183,7 +183,7 @@ targets:
         product: CompanionCore
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.openmausbot.app.share
+        PRODUCT_BUNDLE_IDENTIFIER: com.akbarakma.mausbot.share
         MARKETING_VERSION: "1.0.0"
         CURRENT_PROJECT_VERSION: "6"
         SWIFT_VERSION: "5.9"
@@ -194,16 +194,16 @@ targets:
       path: ShareExtension/OpenMausShareExtension.entitlements
       properties:
         com.apple.security.application-groups:
-          - group.com.openmausbot.shared
+          - group.com.akbarakma.mausbot
         keychain-access-groups:
-          - $(AppIdentifierPrefix)group.com.openmausbot.shared
+          - $(AppIdentifierPrefix)group.com.akbarakma.mausbot
     info:
       path: ShareExtension/Info.plist
       properties:
         CFBundleDisplayName: MausBot
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
-        OpenMausKeychainAccessGroup: $(AppIdentifierPrefix)group.com.openmausbot.shared
+        OpenMausKeychainAccessGroup: $(AppIdentifierPrefix)group.com.akbarakma.mausbot
         # ATS is evaluated for URLSession work performed by the extension too.
         # Mirror the containing app's narrow local/Tailscale exceptions so a
         # share can reach the same already-paired routes. Local-network privacy
@@ -251,7 +251,7 @@ targets:
         product: CompanionCore
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.openmausbot.app.widgets
+        PRODUCT_BUNDLE_IDENTIFIER: com.akbarakma.mausbot.widgets
         MARKETING_VERSION: "1.0.0"
         CURRENT_PROJECT_VERSION: "6"
         SWIFT_VERSION: "5.9"
@@ -266,15 +266,15 @@ targets:
       path: Widgets/OpenMausCompanionWidgets.entitlements
       properties:
         com.apple.security.application-groups:
-          - group.com.openmausbot.shared
+          - group.com.akbarakma.mausbot
         keychain-access-groups:
-          - $(AppIdentifierPrefix)group.com.openmausbot.shared
+          - $(AppIdentifierPrefix)group.com.akbarakma.mausbot
     info:
       path: Widgets/Info.plist
       properties:
         CFBundleDisplayName: MausBot
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
-        OpenMausKeychainAccessGroup: $(AppIdentifierPrefix)group.com.openmausbot.shared
+        OpenMausKeychainAccessGroup: $(AppIdentifierPrefix)group.com.akbarakma.mausbot
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension

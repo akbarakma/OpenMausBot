@@ -26,6 +26,6 @@
 		<string>com.apple.widgetkit-extension</string>
 	</dict>
 	<key>OpenMausKeychainAccessGroup</key>
-	<string>$(AppIdentifierPrefix)group.com.openmausbot.shared</string>
+	<string>$(AppIdentifierPrefix)group.com.akbarakma.mausbot</string>
 </dict>
 </plist>

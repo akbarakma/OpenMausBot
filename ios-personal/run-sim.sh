@@ -42,7 +42,7 @@ xcodebuild -project OpenMausCompanion.xcodeproj -scheme OpenMausCompanion \
 
 if [ "$(state)" = Booted ]; then
   xcrun simctl install "$udid" "$APP"
-  echo "Installed on $NAME ($udid). Launch com.openmausbot.app from T3's Device panel."
+  echo "Installed on $NAME ($udid). Launch com.akbarakma.mausbot from T3's Device panel."
 else
   echo "Built for $NAME ($udid). Open it in T3's Device panel, then run this again to install."
 fi
