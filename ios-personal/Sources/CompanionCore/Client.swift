@@ -1795,6 +1795,11 @@ public struct CompanionClient: Sendable {
         ]))
     }
 
+    public func setBotPinned(botId: String, pinned: Bool) async throws {
+        guard Self.validRouteID(botId) else { throw APIError.badURL }
+        try await send(try makeRequest("PATCH", "/api/bots/\(botId)", body: ["pinned": pinned]))
+    }
+
     public func setTaskPinned(botId: String, threadId: String, pinned: Bool) async throws {
         try await send(try makeRequest("PATCH", "/api/bots/\(botId)/tasks/\(threadId)", body: [
             "pinned": pinned,

@@ -177,6 +177,13 @@ struct CompactBotEntry: View, Equatable {
                 Button { manage(.bot(bot)) } label: {
                     Label("Manage threads", systemImage: "list.bullet")
                 }
+                let pinned = bot.pinned == true
+                Button {
+                    Haptics.selection()
+                    Task { await session.setBotPinned(bot, pinned: !pinned) }
+                } label: {
+                    Label(pinned ? "Unpin" : "Pin", systemImage: pinned ? "pin.slash" : "pin")
+                }
             }
             .accessibilityIdentifier("chat-row.\(bot.id)")
 
