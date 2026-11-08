@@ -370,6 +370,7 @@ export function SkillsPage({ bot, detail, onDetail }: PageContext & DetailContex
   );
 
   if (open) {
+    const openUnlisted = open.enabled && !skillSwitchOn(open);
     return (
       <>
         <h3 className="mx-1 break-words text-[18px] font-semibold text-ink">{open.name}</h3>
@@ -384,7 +385,13 @@ export function SkillsPage({ bot, detail, onDetail }: PageContext & DetailContex
             </div>
           ) : (
             <label data-panel-row={`skill:${open.name}`} className={switchRowCls}>
-              <RowText title={t("botSettings.simple.skillToggle", { name: open.name })} hint={open.source && open.source !== open.description ? <span className="break-all">{open.source}</span> : undefined} />
+              <RowText
+                title={t("botSettings.simple.skillToggle", { name: open.name })}
+                hint={(open.source && open.source !== open.description) || openUnlisted ? <>
+                  {open.source && open.source !== open.description && <span className="block break-all">{open.source}</span>}
+                  {openUnlisted && <span data-skill-unlisted className="block">{t("skills.foundWhenNeeded")}</span>}
+                </> : undefined}
+              />
               {switchFor(open)}
             </label>
           )}

@@ -90,7 +90,11 @@ where a chevron's drawn stroke ends, so their right edges line up.
   these on its own", and each row reads "Always on". A tap shows "{bot} loads
   this on its own" and the skill's folder, with no switch or Remove, because
   the server rejects both for a native skill.
-  `SkillsPage.dom.test.ts` covers the split.
+  A switch reads `skillSwitchOn`, not `enabled`: a skill from this computer
+  can be on but left out of the bot's list (`listed: false`), and the bot
+  finds it by search. Its switch shows off, the Skills count leaves it out,
+  and its page says "Not in this bot's list". A tap puts it in the list.
+  `SkillsPage.dom.test.ts` covers the split and the unlisted skill.
 
 Delete on a note and Remove on a skill confirm in `ConfirmDialog` first.
 
@@ -122,6 +126,11 @@ popup and the Activity panel, so upstream's callers need no change:
   full-window browser.
 - A screen place, or a bot with its browser off, keeps upstream's popup.
 - Activity opens the Activity page.
+
+Upstream's Watch pill (`WatchScreenButton`) shows in the chat header in both
+modes while a tool call uses the bot's screen. In Simple it goes through the
+same redirect: a browser call opens the full-window browser, and a screen call
+opens upstream's popup. The monitor button stays hidden in Simple.
 
 Advanced mode and the remote client keep upstream's popup, monitor button and
 Activity panel.
@@ -303,7 +312,9 @@ The ring's `composer.context.*` keys sit after `contextWarning.roomRequested`,
 also in every language pack. The `botPanel.automations.*` keys sit at the end
 of every pack. `browser.window.title`, `browser.window.back` and the
 `browser.card.*` keys (title, browsing, done, switch) sit after
-`botPanel.knows` in every pack.
+`botPanel.knows` in every pack. `zh-tw.json` is the exception: upstream sorts
+it, so the fork's keys sit in upstream's order, and keys new to it go at the
+end.
 
 ## Merging an upstream release
 
@@ -318,5 +329,12 @@ of every pack. `browser.window.title`, `browser.window.back` and the
    it goes through `toggleComputer` or `toggleActivity`, so the redirect in
    `simple-side-panel.ts` covers it. Check that it does.
    If upstream brings back a Usage item in `useChatMoreItems`, leave it out.
-5. Run `corepack pnpm exec vitest run BotSettingsDialog.simple MemoryPage.team memory-notes PanelShell.dom page-registry panel-link simple-side-panel Conversations.dom BackupAis.dom ModelPicker ComputerPanel.android ComposerContextMeter context-meter ChatMoreMenu ChatView.controls Sidebar.header Sidebar.simple-layout SidebarTiles electron/window-chrome BrowserPanel ChromeRow StreamSurface guided-tour`,
+   Upstream changes to `DetailsTab.tsx` do not apply: `PanelHome` replaced it.
+   Delete any new `DetailsTab` test with it.
+5. Resolve locale conflicts key by key, not by line. Keep both sides' new
+   keys. When upstream re-sorts a pack, start from upstream's copy, then apply
+   the fork's added, changed and deleted keys. In `source-hashes.json`, drop
+   upstream's entries for keys the fork deleted, and keep the fork's hash for
+   keys whose English the fork changed. `i18n:check` fails on any miss.
+6. Run `corepack pnpm exec vitest run BotSettingsDialog.simple MemoryPage.team memory-notes PanelShell.dom page-registry panel-link simple-side-panel Conversations.dom BackupAis.dom ModelPicker ComputerPanel.android ComposerContextMeter context-meter ChatMoreMenu ChatView.controls Sidebar.header Sidebar.simple-layout SidebarTiles electron/window-chrome BrowserPanel ChromeRow StreamSurface guided-tour SkillsPage.dom`,
    `corepack pnpm i18n:check`, `typecheck` and `lint`.
