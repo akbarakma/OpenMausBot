@@ -15,14 +15,12 @@ struct WebhookMessageBody: View {
                 .fixedSize(horizontal: false, vertical: true)
             if let payload = content.payload {
                 DisclosureGroup("Event payload", isExpanded: $expanded) {
-                    ScrollView {
-                        Text(payload)
-                            .font(.system(.caption, design: .monospaced))
-                            .textSelection(.enabled)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .accessibilityIdentifier("webhook-payload")
-                    }
-                    .frame(maxHeight: 180)
+                    Text(payload)
+                        .font(.system(.caption, design: .monospaced))
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier("webhook-payload")
                 }
                 .font(.caption)
                 .tint(BubbleColor.mineText)

@@ -2946,15 +2946,13 @@ struct CardView: View {
                                 .font(.system(size: 11))
                                 .foregroundStyle(Color.secondary)
                                 .textSelection(.enabled)
-                            ScrollView(.vertical) {
-                                Text(preview)
-                                    .font(.system(size: 12, design: .monospaced))
-                                    .foregroundStyle(Color.primary)
-                                    .textSelection(.enabled)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                            }
-                            .frame(maxHeight: 220)
-                            .padding(10)
+                            Text(preview)
+                                .font(.system(size: 12, design: .monospaced))
+                                .foregroundStyle(Color.primary)
+                                .textSelection(.enabled)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .padding(10)
                             .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
                         }
                     } else {
@@ -3147,9 +3145,6 @@ struct CardView: View {
         return Text("Send on your behalf?")
     }
 
-    /// Long requests scroll inside a capped box; short ones just show.
-    private static let detailsScrollThreshold = 480
-
     private func details(_ text: String) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Button {
@@ -3170,20 +3165,13 @@ struct CardView: View {
             .accessibilityAddTraits(showingDetails ? .isSelected : [])
 
             if showingDetails {
-                let request = Text(verbatim: text)
+                Text(verbatim: text)
                     .font(.system(size: 12, design: .monospaced))
                     .foregroundStyle(Color.primary)
                     .textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                Group {
-                    if text.count > Self.detailsScrollThreshold {
-                        ScrollView(.vertical) { request }
-                            .frame(height: 220)
-                    } else {
-                        request.fixedSize(horizontal: false, vertical: true)
-                    }
-                }
-                .padding(10)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(10)
                 .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
                 .accessibilityIdentifier("approval-details")
             }
