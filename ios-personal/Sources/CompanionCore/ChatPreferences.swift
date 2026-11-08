@@ -100,7 +100,7 @@ public struct QuickReply: Codable, Hashable, Identifiable, Sendable {
     }
 }
 
-/// A completed turn's intermediate replies. The terminal answer stays outside.
+/// What a completed turn folds away before its answer, which stays outside.
 public struct AssistantTurnFold: Hashable, Sendable {
     public let turnId: String
     public let messages: [Message]
@@ -233,6 +233,15 @@ extension ToolActivity {
     public var label: String { failedTurnCause(name) ?? name }
 }
 
+/// A tool call that went through, as desktop's `isToolStep`: not a status
+/// row, a failure, a message to another bot or a link to another thread.
+func isFinishedToolStep(_ message: Message) -> Bool {
+    guard message.kind == .activity, let tool = message.tool, tool.ok == true,
+          message.comm == nil, message.threadRef == nil, failedTurnCause(tool.name) == nil
+    else { return false }
+    return !["recovery:", "notice:", "stopped:"].contains { tool.name.hasPrefix($0) }
+}
+
 public func isActivityReceipt(_ message: Message) -> Bool {
     switch message.kind {
     case .activity, .digest, .compaction: return true
@@ -255,8 +264,8 @@ public struct LiveNarration: Equatable, Sendable {
 /// are one grey status line rather than a pile of bubbles (Omkar, 2026-10-03).
 ///
 /// Only the turn answering the latest message, only while the bot works, and
-/// only until the server marks the turn's final reply: then the turn folds
-/// into its "Worked for" row as at every other level. A turn that ends
+/// only until the server marks the turn's final reply: then the transcript
+/// shows the turn as at every other level. A turn that ends
 /// without that mark (an older desktop, a crash) is no longer busy, so its
 /// messages show as bubbles and nothing it said is lost.
 public func liveNarration(_ messages: [Message], busy: Bool, detail: ActivityDetail) -> LiveNarration {
@@ -279,28 +288,35 @@ public func liveNarration(_ messages: [Message], busy: Bool, detail: ActivityDet
 /// A digest is a row of its own, drawn as a chip: never folded into a run
 /// of the tool chips it summarises, never counted as one of their steps,
 /// and gone with them when activity is hidden.
-public func transcriptRows(_ messages: [Message], detail: ActivityDetail) -> [TranscriptRow] {
+///
+/// A finished turn folds behind "Worked for" as on desktop: in a group, the
+/// members' narration (`foldsNarration`); in a bot chat, only its finished
+/// tool steps at Reduced, while Hidden and Full fold nothing.
+public func transcriptRows(_ messages: [Message], detail: ActivityDetail, foldsNarration: Bool = true) -> [TranscriptRow] {
+    func folded(_ message: Message) -> Bool {
+        if foldsNarration { return message.role == .bot && message.kind == .text }
+        return detail == .reduced && isFinishedToolStep(message)
+    }
     // Fold only explicitly completed turns; never guess that the last reply
     // is final on an older server or while the bot is still working.
-    var narration: [String: [Message]] = [:]
+    var pending: [String: [Message]] = [:]
     var startedAt: [String: Double] = [:]
     var lastUserAt: Double?
     var folds: [String: AssistantTurnFold] = [:]
     var hiddenIDs = Set<String>()
     for message in messages {
         if message.role == .user { lastUserAt = message.at }
-        guard message.role == .bot, message.kind == .text,
-              let turnID = message.turnId, !turnID.isEmpty else { continue }
-        if message.turnTerminal == true {
-            guard let items = narration.removeValue(forKey: turnID), !items.isEmpty else { continue }
+        guard let turnID = message.turnId, !turnID.isEmpty else { continue }
+        if message.role == .bot, message.kind == .text, message.turnTerminal == true {
+            guard let items = pending.removeValue(forKey: turnID), !items.isEmpty else { continue }
             folds[items[0].id] = AssistantTurnFold(
                 turnId: turnID, messages: items,
                 elapsed: max(0, message.at - (startedAt[turnID] ?? items[0].at))
             )
             hiddenIDs.formUnion(items.map(\.id))
-        } else {
-            if narration[turnID] == nil { startedAt[turnID] = lastUserAt ?? message.at }
-            narration[turnID, default: []].append(message)
+        } else if folded(message) {
+            if pending[turnID] == nil { startedAt[turnID] = lastUserAt ?? message.at }
+            pending[turnID, default: []].append(message)
         }
     }
 

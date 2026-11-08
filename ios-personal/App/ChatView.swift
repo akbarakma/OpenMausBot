@@ -193,7 +193,7 @@ struct ChatView: View {
         let shown = live.hiddenIds.isEmpty ? messages : messages.filter { !live.hiddenIds.contains($0.id) }
         let snapshot = TranscriptSnapshot(
             messages: messages,
-            rows: transcriptRows(shown, detail: detail),
+            rows: transcriptRows(shown, detail: detail, foldsNarration: !current.isBot),
             versions: session.state.userMessageVersions(inThread: threadId),
             live: live,
             hasPendingApproval: messages.contains { $0.card?.isPending == true }

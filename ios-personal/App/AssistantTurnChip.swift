@@ -1,8 +1,6 @@
 import SwiftUI
 import CompanionCore
 
-/// The same reversible narration fold as desktop. Activity preferences apply
-/// to tool receipts independently, so Hidden still offers this compact row.
 struct AssistantTurnChip: View {
     let turn: AssistantTurnFold
     let context: TranscriptRowContext
@@ -31,7 +29,7 @@ struct AssistantTurnChip: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel(turn.label)
-            .accessibilityHint(expanded ? "Hides intermediate replies" : "Shows intermediate replies")
+            .accessibilityHint(expanded ? "Hides the work before the answer" : "Shows the work before the answer")
             .accessibilityIdentifier("assistant-turn.\(turn.turnId)")
 
             if expanded {
