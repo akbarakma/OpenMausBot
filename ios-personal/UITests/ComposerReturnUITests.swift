@@ -35,7 +35,7 @@ final class ComposerReturnUITests: XCTestCase {
         app.launchArguments = [
             "-store-preview", "-threads-preview",
             "-AppleLanguages", "(en)", "-AppleLocale", "en_US",
-            "-companion.prefs.islandIntro", "never",
+            "-companion.prefs.islandIntro", "never", "-companion.prefs.collapsedSections", "",
             "-companion.onboarding.welcomeSeen", "YES",
             "-companion.onboarding.notificationsSeen", "YES"
         ]

@@ -269,7 +269,7 @@ final class ThreadNavigationUITests: XCTestCase {
         app.launchArguments = [
             "-store-preview", "-threads-preview",
             "-AppleLanguages", "(en)", "-AppleLocale", "en_US",
-            "-companion.prefs.islandIntro", islandIntro,
+            "-companion.prefs.islandIntro", islandIntro, "-companion.prefs.collapsedSections", "",
             "-companion.onboarding.welcomeSeen", "YES",
             "-companion.onboarding.notificationsSeen", "YES"
         ] + extraArguments
