@@ -178,34 +178,29 @@ final class ChatPreferencesTests: XCTestCase {
         XCTAssertEqual(QuickReply.decode(QuickReply.encode(mine)), mine)
     }
 
-    func testAnEmptyStoreFallsBackToDefaults() {
-        // First launch: nothing written yet.
-        XCTAssertEqual(QuickReply.decode(""), QuickReply.defaults)
+    func testANeverWrittenStoreHasNoChips() {
+        XCTAssertEqual(QuickReply.decode(""), [])
     }
 
-    func testCorruptStoreFallsBackToDefaultsRatherThanNoChips() {
-        // A composer with no chips is worse than a composer with the stock
-        // ones, so a bad decode is not allowed to empty the row.
-        XCTAssertEqual(QuickReply.decode("{not json"), QuickReply.defaults)
+    func testACorruptStoreHasNoChips() {
+        XCTAssertEqual(QuickReply.decode("{not json"), [])
     }
 
-    func testDeletingEveryChipIsRespectedRatherThanReset() {
-        // Distinct from a corrupt store: an explicit empty list means the
-        // user cleared the row on purpose and it must stay cleared.
+    func testDeletingEveryChipStaysCleared() {
         XCTAssertEqual(QuickReply.decode(QuickReply.encode([])), [])
     }
 
-    func testEmptyQuickReplyIDFallsBackToDefaults() {
+    func testAnEmptyQuickReplyIDDropsTheList() {
         let replies = [QuickReply(id: " ", title: "Deploy", prompt: "Deploy", icon: "paperplane")]
-        XCTAssertEqual(QuickReply.decode(QuickReply.encode(replies)), QuickReply.defaults)
+        XCTAssertEqual(QuickReply.decode(QuickReply.encode(replies)), [])
     }
 
-    func testDuplicateQuickReplyIDsFallBackToDefaults() {
+    func testDuplicateQuickReplyIDsDropTheList() {
         let replies = [
             QuickReply(id: "same", title: "Deploy", prompt: "Deploy", icon: "paperplane"),
             QuickReply(id: "same", title: "Logs", prompt: "Show logs", icon: "doc.text"),
         ]
-        XCTAssertEqual(QuickReply.decode(QuickReply.encode(replies)), QuickReply.defaults)
+        XCTAssertEqual(QuickReply.decode(QuickReply.encode(replies)), [])
     }
 
     // MARK: - Island intro

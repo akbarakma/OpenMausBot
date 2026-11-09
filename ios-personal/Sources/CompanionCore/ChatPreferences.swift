@@ -67,7 +67,7 @@ public struct QuickReply: Codable, Hashable, Identifiable, Sendable {
         self.icon = icon
     }
 
-    /// The four the composer shipped with, kept as the reset target.
+    /// Four starter chips, offered by the editor's reset.
     public static let defaults: [QuickReply] = [
         QuickReply(id: "default.diff", title: "Show diff", prompt: "Show latest git diff", icon: "arrow.triangle.pull"),
         QuickReply(id: "default.tests", title: "Run tests", prompt: "Run all automated tests", icon: "checkmark.seal"),
@@ -88,14 +88,13 @@ public struct QuickReply: Codable, Hashable, Identifiable, Sendable {
         return String(decoding: data, as: UTF8.self)
     }
 
-    /// Anything unreadable becomes the defaults. An empty *string* is a
-    /// store that has never been written; an empty *list* is a row the user
-    /// deliberately cleared, and those must not mean the same thing.
+    /// A store never written, or one that cannot be read, holds no chips,
+    /// so the row stays hidden until the person adds one.
     public static func decode(_ json: String) -> [QuickReply] {
-        guard !json.isEmpty, let data = json.data(using: .utf8) else { return defaults }
-        guard let decoded = try? JSONDecoder().decode([QuickReply].self, from: data) else { return defaults }
+        guard let data = json.data(using: .utf8),
+              let decoded = try? JSONDecoder().decode([QuickReply].self, from: data) else { return [] }
         let ids = decoded.map { $0.id.trimmingCharacters(in: .whitespacesAndNewlines) }
-        guard ids.allSatisfy({ !$0.isEmpty }), Set(ids).count == ids.count else { return defaults }
+        guard ids.allSatisfy({ !$0.isEmpty }), Set(ids).count == ids.count else { return [] }
         return decoded
     }
 }

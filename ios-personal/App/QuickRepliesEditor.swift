@@ -1,8 +1,5 @@
-// The composer's chip row, editable.
-//
-// The four chips the app shipped with are now just the default contents of
-// a list you own: rename them, throw out the ones you never tap, add the
-// prompt you actually type every day.
+// The composer's chip row, editable. It starts empty; Reset to Defaults
+// fills it with four starter chips.
 import SwiftUI
 import CompanionCore
 
@@ -97,7 +94,7 @@ struct QuickRepliesEditor: View {
             Button("Reset to Defaults", role: .destructive) { write(QuickReply.defaults) }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("This restores the four chips the app came with and discards your own.")
+            Text("This fills the list with four starter chips and discards your own.")
         }
     }
 }
