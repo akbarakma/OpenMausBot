@@ -15,6 +15,9 @@ enum PrefKey {
     static let quickReplies = "companion.prefs.quickReplies"
     static let language = "companion.prefs.language"
     static let pinnedAtBottom = "companion.prefs.pinnedAtBottom"
+    /// One id per line (`SavedOrder`): pinned bot ids, and home section ids.
+    static let pinnedOrder = "companion.prefs.pinnedOrder"
+    static let sectionOrder = "companion.prefs.sectionOrder"
     static let collapsedSections = "companion.prefs.collapsedSections"
 }
 

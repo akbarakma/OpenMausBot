@@ -54,7 +54,6 @@ final class Session: ObservableObject {
     @Published private(set) var state = CompanionState()
     @Published private(set) var connection: Connection?
     @Published private(set) var connections: [Connection] = []
-    let threadSelection = BotThreadSelection()
     /// Whether the live pairing may administer the workspace — see
     /// `Connection.canAdminister`. Views hide owner-only controls when this
     /// is false rather than offer buttons the server would answer 403 to.
@@ -2655,61 +2654,24 @@ struct ChatSummary: Identifiable, Hashable {
     let chat: Chat
     let preview: String
     let lastActivity: Double
-    let pinned: Bool
 
     var id: String { chat.id }
 }
 
 extension CompanionState {
-    /// Everything worth showing in the chat list: pinned first, then unread,
-    /// then most recently active. Hidden bots stay hidden.
-    ///
-    /// The derived fields are computed once here rather than asked for as the
-    /// list is sorted and filtered. Each one walks a thread's messages to
-    /// reach the last of them, and a comparator is called O(n log n) times
-    /// while the search predicate runs over every chat on every keystroke —
-    /// so the same transcript was being traversed dozens of times per frame
-    /// to produce an answer that had not changed. One pass, then sort the
-    /// results.
-    /// - Parameter activity: how much of a bot's working-out the reader has
-    ///   asked to see. The preview honours it the same way the transcript
-    ///   does; `lastActivity` deliberately does not, because a thread that
-    ///   just ran a tool has still moved and should still rise in the list.
-    /// - Parameter previews: false leaves every preview empty. Compact rows
-    ///   never show one, and without it a summary needs only the thread's
-    ///   last message rather than its whole visible branch and a fold of it,
-    ///   for every chat, on every render of a busy roster.
-    func chatSummaries(activity: ActivityDetail = .full, previews: Bool = true) -> [ChatSummary] {
-        let bots = self.bots.filter { $0.hidden != true }.map(Chat.bot)
-        let rooms = self.rooms.map(Chat.room)
-        return (bots + rooms)
-            .map { chat in
-                guard previews else {
-                    return ChatSummary(
-                        chat: chat,
-                        preview: "",
-                        lastActivity: lastVisibleMessage(forThread: chat.threadId)?.at ?? 0,
-                        pinned: Self.pinned(chat)
-                    )
-                }
-                let messages = visibleTranscript(forThread: chat.threadId)
-                return ChatSummary(
-                    chat: chat,
-                    preview: rosterPreview(messages, detail: activity),
-                    lastActivity: messages.last?.at ?? 0,
-                    pinned: Self.pinned(chat)
-                )
-            }
-            .sorted { left, right in
-                if left.pinned != right.pinned { return left.pinned }
-                if left.chat.unread != right.chat.unread { return left.chat.unread }
-                return left.lastActivity > right.lastActivity
-            }
-    }
-
-    private static func pinned(_ chat: Chat) -> Bool {
-        if case let .bot(bot) = chat { return bot.pinned ?? false }
-        return false
+    /// Every visible bot and room for home, newest first. A bot stands for
+    /// its thread with the latest message, so its row shows that thread's
+    /// line and a tap opens it. Previews are left empty for the list's
+    /// cache to fill.
+    func chatSummaries() -> [ChatSummary] {
+        let bots = self.bots.filter { $0.hidden != true }.map { bot -> ChatSummary in
+            let newest = newestThread(of: bot)
+            return ChatSummary(chat: .bot(bot.projected(forThread: newest.threadId) ?? bot), preview: "", lastActivity: newest.at)
+        }
+        let rooms = self.rooms.map { room in
+            ChatSummary(chat: .room(room), preview: "", lastActivity: lastVisibleMessage(forThread: room.threadId)?.at ?? 0)
+        }
+        return (bots + rooms).sorted { $0.lastActivity > $1.lastActivity }
     }
 
 }

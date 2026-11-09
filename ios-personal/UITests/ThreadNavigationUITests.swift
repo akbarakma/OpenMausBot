@@ -4,20 +4,13 @@ import XCTest
 /// paired computer, message sends, or server mutations are involved.
 final class ThreadNavigationUITests: XCTestCase {
     @MainActor
-    func testReopeningBotRemembersSelectedThreadAcrossAppLaunches() {
+    func testHomeRowOpensTheBotsNewestThread() {
         let app = launchPreview()
-        openGmail(in: app)
-        selectThread("preview-icloud", title: "Triage iCloud", in: app)
-        app.buttons["Back"].tap()
-        app.buttons.containing(.staticText, identifier: "Pepper").firstMatch.tap()
-        recordScreenshot("Bot reopened after choosing iCloud", in: app)
-        assertThread("Triage iCloud", in: app)
-        app.terminate()
-        app.launch()
-        XCTAssertTrue(app.buttons["threads-toggle.preview-pepper"].waitForExistence(timeout: 10))
-        app.buttons.containing(.staticText, identifier: "Pepper").firstMatch.tap()
-        assertThread("Triage iCloud", in: app)
-        recordScreenshot("Remembered iCloud thread after relaunch", in: app)
+        // Plan weekend has Pepper's latest message; the routine run is newer
+        // but is not a thread the person keeps.
+        app.buttons["chat-row.preview-pepper"].tap()
+        assertThread("Plan weekend", in: app)
+        recordScreenshot("Home row opened Pepper's newest thread", in: app)
     }
 
     @MainActor
@@ -48,22 +41,9 @@ final class ThreadNavigationUITests: XCTestCase {
     }
 
     @MainActor
-    func testRosterShowsFolderThreadsAndSwitchesLocally() {
-        rosterShowsFolderThreadsAndSwitchesLocally(density: nil)
-    }
-
-    /// Comfortable is still a choice in Settings: its Threads row and folder
-    /// disclosure get the same check.
-    @MainActor
-    func testRosterShowsFolderThreadsAndSwitchesLocallyInComfortable() {
-        rosterShowsFolderThreadsAndSwitchesLocally(density: "comfortable")
-    }
-
-    @MainActor
-    private func rosterShowsFolderThreadsAndSwitchesLocally(density: String?) {
-        let app = launchPreview(density: density)
+    func testThreadPickerShowsStatesAndSwitchesLocally() {
+        let app = launchPreview()
         openGmail(in: app)
-        assertThread("Triage Gmail", in: app)
         XCTAssertTrue(transcriptContains("I’m reviewing Gmail here", in: app))
 
         app.buttons["header-threads"].tap()
@@ -77,13 +57,6 @@ final class ThreadNavigationUITests: XCTestCase {
         assertThread("Triage iCloud", in: app)
         XCTAssertTrue(transcriptContains("I am reviewing iCloud here", in: app))
         XCTAssertFalse(transcriptContains("I’m reviewing Gmail here", in: app))
-
-        app.buttons["Back"].tap()
-        XCTAssertTrue(app.buttons["threads-toggle.preview-pepper"].waitForExistence(timeout: 5))
-        app.buttons["thread.preview-gmail"].tap()
-        assertThread("Triage Gmail", in: app)
-        XCTAssertTrue(transcriptContains("I’m reviewing Gmail here", in: app))
-        XCTAssertFalse(transcriptContains("I am reviewing iCloud here", in: app))
     }
 
     @MainActor
@@ -157,48 +130,15 @@ final class ThreadNavigationUITests: XCTestCase {
     }
 
     @MainActor
-    func testHomeSearchFindsSiblingTitlesAndFolders() {
-        homeSearchFindsSiblingTitlesAndFolders(density: nil)
-    }
-
-    @MainActor
-    func testHomeSearchFindsSiblingTitlesAndFoldersInComfortable() {
-        homeSearchFindsSiblingTitlesAndFolders(density: "comfortable")
-    }
-
-    @MainActor
-    private func homeSearchFindsSiblingTitlesAndFolders(density: String?) {
-        let app = launchPreview(density: density)
-        app.buttons["threads-toggle.preview-pepper"].tap()
-        app.buttons["Search"].tap()
-        let search = app.textFields["Search threads"]
+    func testHomeSearchFindsABotByItsThreadTitle() {
+        let app = launchPreview()
+        app.buttons["open-search"].tap()
+        let search = app.textFields["Search bots"]
         XCTAssertTrue(search.waitForExistence(timeout: 5))
         search.tap()
         search.typeText("iCloud")
         recordScreenshot("Home search for iCloud", in: app)
-
-        XCTAssertTrue(app.buttons["thread.preview-icloud"].waitForExistence(timeout: 5))
-        XCTAssertFalse(app.buttons["thread.preview-gmail"].exists)
-        XCTAssertFalse(app.buttons["thread.preview-weekend"].exists)
-
-        app.buttons["Cancel"].tap()
-        app.buttons["Search"].tap()
-        XCTAssertTrue(search.waitForExistence(timeout: 5))
-        search.tap()
-        search.typeText("Email")
-        XCTAssertTrue(app.buttons["thread.preview-gmail"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["thread.preview-icloud"].exists)
-        XCTAssertFalse(app.buttons["thread.preview-weekend"].exists)
-        XCTAssertFalse(app.buttons["thread.preview-routine"].exists)
-        recordScreenshot("Home search for Email folder", in: app)
-
-        app.buttons["thread.preview-icloud"].tap()
-        assertThread("Triage iCloud", in: app)
-        app.buttons["Back"].tap()
-        XCTAssertTrue(app.buttons["Cancel"].waitForExistence(timeout: 5))
-        app.buttons["Cancel"].tap()
-        XCTAssertTrue(app.buttons["threads-toggle.preview-pepper"].exists)
-        XCTAssertEqual(app.buttons["threads-toggle.preview-pepper"].value as? String, "Expanded, 3 threads")
+        XCTAssertTrue(app.buttons["chat-row.preview-pepper"].waitForExistence(timeout: 5))
     }
 
     @MainActor
@@ -288,10 +228,7 @@ final class ThreadNavigationUITests: XCTestCase {
         assertThread("Triage Gmail", in: app)
         XCTAssertTrue(transcriptContains("I’m reviewing Gmail here", in: app))
         app.buttons["Back"].tap()
-        // One thread left is the bot itself: the compact roster drops the
-        // thread control, and the row opens that thread.
         XCTAssertTrue(app.buttons["chat-row.preview-pepper"].waitForExistence(timeout: 5))
-        assertMissing(app.buttons["threads-toggle.preview-pepper"])
     }
 
     @MainActor
@@ -320,26 +257,22 @@ final class ThreadNavigationUITests: XCTestCase {
         recordScreenshot("Partial bulk deletion keeps the remaining thread selected", in: app)
     }
 
-    /// `density` nil starts from the install default (compact), whatever an
-    /// earlier run saved; otherwise that density for this launch only.
     @MainActor
     private func launchPreview(
-        extraArguments: [String] = [], islandIntro: String = "never", density: String? = nil
+        extraArguments: [String] = [], islandIntro: String = "never"
     ) -> XCUIApplication {
         continueAfterFailure = false
         let app = XCUIApplication()
         // Xcode may prelaunch the app after installing an updated build.
         // Restart it so Session initializes with the offline fixture flags.
         app.terminate()
-        let densityArguments = density.map { ["-companion.prefs.rosterDensity", $0] }
-            ?? ["-reset-list-density"]
         app.launchArguments = [
             "-store-preview", "-threads-preview",
             "-AppleLanguages", "(en)", "-AppleLocale", "en_US",
             "-companion.prefs.islandIntro", islandIntro,
             "-companion.onboarding.welcomeSeen", "YES",
             "-companion.onboarding.notificationsSeen", "YES"
-        ] + densityArguments + extraArguments
+        ] + extraArguments
         app.launch()
         // Simulator installation can restore an unpaired, prewarmed scene
         // without the preview arguments once. Restart only that wrong route;
@@ -348,23 +281,16 @@ final class ThreadNavigationUITests: XCTestCase {
             app.terminate()
             app.launch()
         }
-        XCTAssertTrue(app.buttons["threads-toggle.preview-pepper"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["chat-row.preview-pepper"].waitForExistence(timeout: 10))
         return app
     }
 
+    /// Home opens Pepper on its newest thread; Gmail is one switch away.
     @MainActor
     private func openGmail(in app: XCUIApplication) {
-        let toggle = app.buttons["threads-toggle.preview-pepper"]
-        toggle.tap()
-        XCTAssertEqual(toggle.value as? String, "Expanded, 3 threads")
-        let gmail = app.buttons["thread.preview-gmail"]
-        XCTAssertTrue(gmail.waitForExistence(timeout: 5))
-        XCTAssertTrue(gmail.label.contains("Working"))
-        XCTAssertTrue(app.buttons["thread.preview-icloud"].label.contains("Unread"))
-        XCTAssertTrue(app.buttons["thread.preview-weekend"].label.contains("Queued"))
-        XCTAssertFalse(app.buttons["thread.preview-routine"].exists)
-        recordScreenshot("Expanded home threads with Email folder", in: app)
-        gmail.tap()
+        app.buttons["chat-row.preview-pepper"].tap()
+        assertThread("Plan weekend", in: app)
+        selectThread("preview-gmail", title: "Triage Gmail", in: app)
     }
 
     @MainActor

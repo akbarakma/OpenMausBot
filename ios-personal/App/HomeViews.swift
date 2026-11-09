@@ -305,3 +305,66 @@ extension Session {
         return nil
     }
 }
+
+/// Drag pinned bots and sections into the order home shows them in. The
+/// order is kept on this phone; the desktop keeps its own.
+struct ReorderSheet: View {
+    struct Item: Identifiable, Equatable {
+        let id: String
+        let title: String
+        var bot: Bot?
+        var count = 0
+    }
+
+    let save: (_ pinnedIds: [String], _ sectionIds: [String]) -> Void
+    @State var pinned: [Item]
+    @State var sections: [Item]
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            List {
+                if !pinned.isEmpty {
+                    Section("Pinned") {
+                        ForEach(pinned) { item in
+                            HStack(spacing: 12) {
+                                if let bot = item.bot {
+                                    BotAvatarView(bot: bot, size: 28, state: .idle, animated: false)
+                                }
+                                Text(verbatim: item.title)
+                            }
+                        }
+                        .onMove { pinned.move(fromOffsets: $0, toOffset: $1) }
+                    }
+                }
+                if !sections.isEmpty {
+                    Section("Sections") {
+                        ForEach(sections) { item in
+                            HStack {
+                                Text(verbatim: item.title)
+                                Spacer()
+                                Text(verbatim: "\(item.count)").foregroundStyle(Color.secondary)
+                            }
+                        }
+                        .onMove { sections.move(fromOffsets: $0, toOffset: $1) }
+                    }
+                }
+            }
+            .environment(\.editMode, .constant(.active))
+            .navigationTitle("Order")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        save(pinned.map(\.id), sections.map(\.id))
+                        dismiss()
+                    }
+                    .accessibilityIdentifier("reorder-done")
+                }
+            }
+        }
+    }
+}

@@ -11,10 +11,7 @@ final class GeneratedImageUITests: XCTestCase {
             "-companion.onboarding.welcomeSeen", "YES",
             "-companion.onboarding.notificationsSeen", "YES"]
         app.launch()
-        let toggle = app.buttons["threads-toggle.preview-pepper"]
-        XCTAssertTrue(toggle.waitForExistence(timeout: 10))
-        toggle.tap()
-        app.buttons["thread.preview-gmail"].tap()
+        app.openThread("preview-gmail", of: "preview-pepper")
         let image = app.buttons["Image: screenshot.png"]
         let appeared = image.waitForExistence(timeout: 5)
         record("Agent image in transcript", app)

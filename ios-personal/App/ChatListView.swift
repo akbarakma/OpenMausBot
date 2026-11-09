@@ -13,6 +13,9 @@ struct ChatListView: View {
     @AppStorage(PrefKey.activityDetail) private var activityDetail = ActivityDetail.phoneDefault.rawValue
     @AppStorage(PrefKey.collapsedSections) private var collapsedSections = ""
     @AppStorage(PrefKey.pinnedAtBottom) private var pinnedAtBottom = true
+    @AppStorage(PrefKey.pinnedOrder) private var pinnedOrder = ""
+    @AppStorage(PrefKey.sectionOrder) private var sectionOrder = ""
+    @State private var reordering = false
     /// Driven so a notification or a deep link can open a chat without a tap.
     @State private var path = NavigationPath()
     @State private var searchHits: [SearchHit] = []
@@ -117,6 +120,9 @@ struct ChatListView: View {
                     path.append(chat)
                 }
             }
+            .sheet(isPresented: $reordering) {
+                reorderSheet(homeSections(summaries))
+            }
             .sheet(item: $managingThreads) { chat in
                 TaskManagerView(chat: chat) { threadId in
                     guard let bot = session.state.bot(forThread: threadId) else { return }
@@ -179,9 +185,12 @@ struct ChatListView: View {
         session.state.unsectionedChief ?? session.state.pinnedBots.first { $0.chiefOfStaff == true }
     }
 
+    /// In the order set in the reorder sheet; a newly pinned bot goes last.
     private var pinned: [Bot] {
         let chiefId = chief?.id
-        return session.state.pinnedBots.filter { $0.id != chiefId }
+        let bots = session.state.pinnedBots.filter { $0.id != chiefId }
+        let byId = Dictionary(bots.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        return SavedOrder.apply(SavedOrder.decode(pinnedOrder), to: bots.map(\.id)).compactMap { byId[$0] }
     }
 
     @ViewBuilder
@@ -214,7 +223,25 @@ struct ChatListView: View {
             } label: {
                 Label(isPinned ? "Unpin" : "Pin", systemImage: isPinned ? "pin.slash" : "pin")
             }
+            if isPinned { reorderButton }
         }
+    }
+
+    private var reorderButton: some View {
+        Button { reordering = true } label: {
+            Label("Reorder", systemImage: "arrow.up.arrow.down")
+        }
+    }
+
+    private func reorderSheet(_ sections: [HomeSection]) -> ReorderSheet {
+        ReorderSheet(
+            save: { pinnedIds, sectionIds in
+                pinnedOrder = SavedOrder.encode(pinnedIds)
+                sectionOrder = SavedOrder.encode(sectionIds)
+            },
+            pinned: pinned.map { ReorderSheet.Item(id: $0.id, title: $0.name, bot: $0) },
+            sections: sections.map { ReorderSheet.Item(id: $0.id, title: $0.title, count: $0.rows.count) }
+        )
     }
 
     // MARK: - Sections
@@ -247,7 +274,8 @@ struct ChatListView: View {
             add("section:\(section.name)", section.name,
                 section.chiefs.map(\.id) + section.bots.map(\.id) + section.channels.map(\.id))
         }
-        return result
+        let sectionsById = Dictionary(result.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        return SavedOrder.apply(SavedOrder.decode(sectionOrder), to: result.map(\.id)).compactMap { sectionsById[$0] }
     }
 
     private func isCollapsed(_ id: String) -> Bool {
@@ -283,6 +311,7 @@ struct ChatListView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .contextMenu { reorderButton }
         .accessibilityValue(collapsed ? Text("Collapsed") : Text("Expanded"))
         .accessibilityIdentifier("section-header.\(section.id)")
     }
@@ -452,19 +481,25 @@ struct ChatListView: View {
     private var activity: ActivityDetail { ActivityDetail(rawValue: activityDetail) ?? .phoneDefault }
 
     /// Every chat with its preview line, which `previewCache` folds again
-    /// only once its thread has changed.
+    /// only once its thread has changed. A thread whose messages this phone
+    /// has not loaded shows its title instead.
     private func rosterSummaries() -> [ChatSummary] {
         let state = session.state
-        let all = state.chatSummaries(activity: activity, previews: false)
+        let all = state.chatSummaries()
         previewCache.keepOnly(Set(all.map(\.chat.threadId)))
         return all.map { summary in
-            ChatSummary(
+            let line = previewCache.preview(forThread: summary.chat.threadId, in: state, detail: activity)
+            return ChatSummary(
                 chat: summary.chat,
-                preview: previewCache.preview(forThread: summary.chat.threadId, in: state, detail: activity),
-                lastActivity: summary.lastActivity,
-                pinned: summary.pinned
+                preview: line.isEmpty ? threadTitle(summary.chat) : line,
+                lastActivity: summary.lastActivity
             )
         }
+    }
+
+    private func threadTitle(_ chat: Chat) -> String {
+        guard case let .bot(bot) = chat else { return "" }
+        return bot.tasks?.first { $0.threadId == bot.threadId }?.displayTitle ?? ""
     }
 
     private func searchMatches(_ all: [ChatSummary]) -> [ChatSummary] {
@@ -483,15 +518,13 @@ struct ChatListView: View {
     }
 
     private func open(_ summary: ChatSummary) {
-        if case let .bot(bot) = summary.chat {
-            open(bot)
-        } else {
-            path.append(summary.chat)
-        }
+        path.append(summary.chat)
     }
 
+    /// A face opens the bot's newest thread, as its row would.
     private func open(_ bot: Bot) {
-        path.append(session.threadSelection.restoringThread(.bot(bot), connectionID: session.connection?.id))
+        let newest = session.state.newestThread(of: bot).threadId
+        path.append(Chat.bot(bot.projected(forThread: newest) ?? bot))
     }
 
     private func createThread(for bot: Bot) {

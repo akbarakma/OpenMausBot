@@ -137,10 +137,6 @@ final class TranscriptPresentationUITests: XCTestCase {
             "-AppleLanguages", "(en)", "-AppleLocale", "en_US",
             "-companion.prefs.islandIntro", "never",
             "-companion.prefs.activityDetail", detail,
-            // These tests open Pepper through its "Threads" row. The update
-            // fixture gives Pepper one thread, which only the comfortable
-            // density lists; the roster itself is RosterDensityUITests' job.
-            "-companion.prefs.rosterDensity", "comfortable",
             "-companion.onboarding.welcomeSeen", "YES",
             "-companion.onboarding.notificationsSeen", "YES"
         ]
@@ -151,10 +147,7 @@ final class TranscriptPresentationUITests: XCTestCase {
         if live { app.launchArguments.append("-chat-live-narration-preview") }
         if typing { app.launchArguments.append("-chat-typing-preview") }
         app.launch()
-        let threads = app.buttons["threads-toggle.preview-pepper"]
-        XCTAssertTrue(threads.waitForExistence(timeout: 10))
-        threads.tap()
-        app.buttons["thread.preview-gmail"].tap()
+        app.openThread("preview-gmail", of: "preview-pepper")
         return app
     }
 

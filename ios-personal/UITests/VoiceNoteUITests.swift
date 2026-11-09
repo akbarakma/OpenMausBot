@@ -11,10 +11,7 @@ final class VoiceNoteUITests: XCTestCase {
             "-companion.onboarding.welcomeSeen", "YES",
             "-companion.onboarding.notificationsSeen", "YES"]
         app.launch()
-        let toggle = app.buttons["threads-toggle.preview-pepper"]
-        XCTAssertTrue(toggle.waitForExistence(timeout: 10))
-        toggle.tap()
-        app.buttons["thread.preview-gmail"].tap()
+        app.openThread("preview-gmail", of: "preview-pepper")
 
         let time = app.staticTexts["voice-note-time"]
         XCTAssertTrue(scrollTo(time, app: app), "voice note clock never appeared")

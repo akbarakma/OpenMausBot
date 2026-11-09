@@ -12,10 +12,10 @@ final class SwipeBackUITests: XCTestCase {
 
         edgeSwipeUntilPopped(in: app)
 
-        // The roster's thread toggle only exists on Home, so this is the
-        // proof the swipe performed a pop rather than a sideways scroll.
+        // The bot's row only exists on Home, so this is the proof the swipe
+        // performed a pop rather than a sideways scroll.
         XCTAssertTrue(
-            app.buttons["threads-toggle.preview-pepper"].waitForExistence(timeout: 10),
+            app.buttons["chat-row.preview-pepper"].waitForExistence(timeout: 10),
             "an edge swipe on a conversation should pop back to Home"
         )
         recordScreenshot("Home after edge swipe", in: app)
@@ -32,12 +32,12 @@ final class SwipeBackUITests: XCTestCase {
         let right = app.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5))
         center.press(forDuration: 0.05, thenDragTo: right)
 
-        assertOnThread("Triage Gmail", in: app)
-        assertGone(app.buttons["threads-toggle.preview-pepper"], in: app)
+        assertOnThread("Plan weekend", in: app)
+        assertGone(app.buttons["chat-row.preview-pepper"], in: app)
 
         // Vertical scrolling in the transcript keeps working.
         app.swipeUp()
-        assertOnThread("Triage Gmail", in: app)
+        assertOnThread("Plan weekend", in: app)
     }
 
     @MainActor
@@ -52,12 +52,12 @@ final class SwipeBackUITests: XCTestCase {
         // root guard is proven by cycling, not by dragging across Home.)
         openConversation(in: app)
         edgeSwipeUntilPopped(in: app)
-        XCTAssertTrue(app.buttons["threads-toggle.preview-pepper"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["chat-row.preview-pepper"].waitForExistence(timeout: 10))
 
         openConversation(in: app)
         edgeSwipeUntilPopped(in: app)
         XCTAssertTrue(
-            app.buttons["threads-toggle.preview-pepper"].waitForExistence(timeout: 10),
+            app.buttons["chat-row.preview-pepper"].waitForExistence(timeout: 10),
             "the second swipe pop should land on Home exactly like the first"
         )
         recordScreenshot("Home after two back-to-back swipe pops", in: app)
@@ -101,10 +101,7 @@ final class SwipeBackUITests: XCTestCase {
             "-AppleLanguages", "(en)", "-AppleLocale", "en_US",
             "-companion.prefs.islandIntro", "never",
             "-companion.onboarding.welcomeSeen", "YES",
-            "-companion.onboarding.notificationsSeen", "YES",
-            // Home starts from the install default (compact), whatever an
-            // earlier run saved; Pepper's threads open from its "› 3".
-            "-reset-list-density"
+            "-companion.onboarding.notificationsSeen", "YES"
         ]
         app.launch()
         // Simulator installation can restore an unpaired, prewarmed scene
@@ -113,27 +110,14 @@ final class SwipeBackUITests: XCTestCase {
             app.terminate()
             app.launch()
         }
-        XCTAssertTrue(app.buttons["threads-toggle.preview-pepper"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["chat-row.preview-pepper"].waitForExistence(timeout: 10))
         return app
     }
 
     @MainActor
     private func openConversation(in app: XCUIApplication) {
-        // On a fresh launch the bot row is collapsed, so expand it first.
-        // After a swipe pop the roster still carries that expanded state —
-        // tapping the toggle again would collapse it — and the bot row
-        // itself reopens the remembered thread, the same route
-        // ThreadNavigationUITests takes after tapping Back.
-        let gmail = app.buttons["thread.preview-gmail"]
-        if gmail.waitForExistence(timeout: 2) {
-            gmail.tap()
-        } else {
-            let toggle = app.buttons["threads-toggle.preview-pepper"]
-            toggle.tap()
-            XCTAssertTrue(gmail.waitForExistence(timeout: 5))
-            gmail.tap()
-        }
-        assertOnThread("Triage Gmail", in: app)
+        app.buttons["chat-row.preview-pepper"].tap()
+        assertOnThread("Plan weekend", in: app)
     }
 
     @MainActor

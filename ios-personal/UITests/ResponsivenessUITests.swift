@@ -24,10 +24,7 @@ final class ResponsivenessUITests: XCTestCase {
     @MainActor
     func testShortChatTypingAndThreadSwitchingDuringBusyFleet() {
         let app = launchBusyFleet()
-        let threads = app.buttons["threads-toggle.preview-pepper"]
-        XCTAssertTrue(threads.waitForExistence(timeout: 10))
-        threads.tap()
-        app.buttons["thread.preview-gmail"].tap()
+        app.openThread("preview-gmail", of: "preview-pepper")
 
         let progress = app.staticTexts["busy-fleet-progress"]
         let redraws = app.staticTexts["transcript-row-redraws"]

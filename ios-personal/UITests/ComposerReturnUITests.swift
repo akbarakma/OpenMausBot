@@ -8,10 +8,7 @@ final class ComposerReturnUITests: XCTestCase {
     @MainActor
     func testKeyboardReturnInsertsANewlineInsteadOfSending() {
         let app = launchPreview()
-        app.buttons["threads-toggle.preview-pepper"].tap()
-        let gmail = app.buttons["thread.preview-gmail"]
-        XCTAssertTrue(gmail.waitForExistence(timeout: 5))
-        gmail.tap()
+        app.openThread("preview-gmail", of: "preview-pepper")
 
         let input = app.descendants(matching: .any).matching(identifier: "message-input").firstMatch
         XCTAssertTrue(input.waitForExistence(timeout: 5))
@@ -47,7 +44,7 @@ final class ComposerReturnUITests: XCTestCase {
             app.terminate()
             app.launch()
         }
-        XCTAssertTrue(app.buttons["threads-toggle.preview-pepper"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["chat-row.preview-pepper"].waitForExistence(timeout: 10))
         return app
     }
 

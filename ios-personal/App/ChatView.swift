@@ -796,11 +796,10 @@ struct ChatView: View {
 
     // MARK: - Thread lifecycle
 
-    /// Opening a chat: remember it, load it, and mark it read.
+    /// Opening a chat: load it, and mark it read.
     private func enterThread() async {
         if selectedThreadWasRemoved { dismiss(); return }
         let openedChat = current
-        session.threadSelection.rememberThread(openedChat, connectionID: session.connection?.id)
         await session.loadThreadIfNeeded(openedChat.threadId)
         // opening a chat is what marks it read, exactly as on the desktop
         if openedChat.unread { await session.markRead(openedChat) }

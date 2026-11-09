@@ -45,13 +45,13 @@ final class TeamMemoryUITests: XCTestCase {
                                "-companion.onboarding.welcomeSeen", "YES", "-companion.onboarding.notificationsSeen", "YES"]
         if stale { app.launchArguments.append("-memory-stale-preview") }
         app.launch()
-        let threads = app.buttons["threads-toggle.preview-pepper"]
         // Match the existing offline tests: a prewarmed/restored simulator
         // scene can retain its previous navigation on the first launch.
-        if !threads.waitForExistence(timeout: 10) { app.terminate(); app.launch() }
-        XCTAssertTrue(threads.waitForExistence(timeout: 10))
-        threads.tap()
-        app.buttons["thread.preview-gmail"].tap()
+        let pepper = app.buttons["chat-row.preview-pepper"]
+        if !pepper.waitForExistence(timeout: 10) { app.terminate(); app.launch() }
+        XCTAssertTrue(pepper.waitForExistence(timeout: 10))
+        // -open-profile opens Pepper's profile as soon as a chat shows, whichever thread it is.
+        pepper.tap()
         let memory = app.buttons["Team memory"]
         if !memory.waitForExistence(timeout: 3) {
             app.swipeUp()
