@@ -323,15 +323,16 @@ describe("active bots first", () => {
 });
 
 describe("newest bots first", () => {
-  it("puts the bot with the latest thread first, skips archived threads and routine runs, and keeps ties in order", () => {
+  it("puts the bot with the latest thread first, skips archived, snoozed and routine-run threads, and keeps ties in order", () => {
     const bots = [
       { id: "old", createdAt: 1, tasks: [{ updatedAt: 10 }] },
       { id: "archived", createdAt: 1, tasks: [{ updatedAt: 20 }, { updatedAt: 90, archivedAt: 1 }] },
       { id: "routine", createdAt: 1, tasks: [{ updatedAt: 5 }, { updatedAt: 95, routineRunId: "run" }] },
       { id: "fresh", createdAt: 1, tasks: [{ updatedAt: 30 }, { createdAt: 50 }] },
       { id: "tie", createdAt: 10 },
+      { id: "snoozed", createdAt: 1, tasks: [{ updatedAt: 3 }, { updatedAt: 99, snoozedUntil: 0 }, { updatedAt: 98, snoozedUntil: 2_000 }] },
     ];
-    expect(newestBotsFirst(bots).map((bot) => bot.id)).toEqual(["fresh", "archived", "old", "tie", "routine"]);
-    expect(bots.map((bot) => bot.id)).toEqual(["old", "archived", "routine", "fresh", "tie"]);
+    expect(newestBotsFirst(bots, 1_000).map((bot) => bot.id)).toEqual(["fresh", "archived", "old", "tie", "routine", "snoozed"]);
+    expect(bots.map((bot) => bot.id)).toEqual(["old", "archived", "routine", "fresh", "tie", "snoozed"]);
   });
 });

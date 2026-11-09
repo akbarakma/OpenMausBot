@@ -4,6 +4,7 @@ import { t } from "./i18n";
 import type { LocaleKey } from "@/locales";
 import type { DefaultBotFields } from "../../shared/default-bot";
 import { hiddenFromSidebar } from "./default-bot";
+import { isSnoozed } from "../../shared/wire";
 
 export const PINNED_SECTION_ID = "builtin:pinned";
 export const CHANNELS_SECTION_ID = "builtin:channels";
@@ -149,8 +150,8 @@ export function activeBotsFirst<T>(parts: { pinnedBots: T[]; sectionedBots: T[];
 }
 
 /** Newest activity first; bots with the same stamp keep their saved order. */
-export function newestBotsFirst<T extends { createdAt?: number; tasks?: { updatedAt?: number; createdAt?: number; archivedAt?: unknown; routineRunId?: unknown }[] }>(bots: T[]): T[] {
-  const newest = (bot: T) => Math.max(bot.createdAt ?? 0, ...(bot.tasks ?? []).filter((task) => !task.archivedAt && !task.routineRunId).map((task) => task.updatedAt ?? task.createdAt ?? 0));
+export function newestBotsFirst<T extends { createdAt?: number; tasks?: { updatedAt?: number; createdAt?: number; archivedAt?: unknown; routineRunId?: unknown; snoozedUntil?: number }[] }>(bots: T[], now = Date.now()): T[] {
+  const newest = (bot: T) => Math.max(bot.createdAt ?? 0, ...(bot.tasks ?? []).filter((task) => !task.archivedAt && !task.routineRunId && !isSnoozed(task, now)).map((task) => task.updatedAt ?? task.createdAt ?? 0));
   const stamps = new Map(bots.map((bot) => [bot, newest(bot)]));
   return [...bots].sort((a, b) => stamps.get(b)! - stamps.get(a)!);
 }

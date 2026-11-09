@@ -10,8 +10,11 @@ merge an upstream release tag that touches a file in the table below.
   waiting bots first (`activeBotsFirst`).
 - **Every other bot list** (the main list and each department) shows the
   newest activity first: the bot's latest thread `updatedAt`, skipping
-  archived threads and routine runs (`newestBotsFirst`). Ties keep the saved
-  order. The iOS home uses the same rule.
+  archived and snoozed threads and routine runs (`newestBotsFirst`). Ties
+  keep the saved order. The iOS home skips the same threads, and also counts
+  a message that arrived before the thread's `updatedAt` caught up.
+- **A department's chief** stays at the top of its department, as upstream
+  draws it; only the department's other bots sort newest first.
 - **Sections** keep upstream's drag order.
 
 ## Moving bots
