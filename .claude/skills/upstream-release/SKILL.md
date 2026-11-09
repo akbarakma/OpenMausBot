@@ -111,4 +111,6 @@ answers. Stop only at step 6, for Akbar's OK.
    the changed screens.
 7. **Land it:** fast-forward `main` to the branch, run `git push origin main`, run
    `corepack pnpm package:personal --install`, and confirm the running
-   Personal window shows the change.
+   Personal window shows the change. If `electron/resources/speech-helper.swift`
+   changed between the tags, run `corepack pnpm build:speech` first:
+   `package:personal` otherwise copies the old helper out of the installed app.
