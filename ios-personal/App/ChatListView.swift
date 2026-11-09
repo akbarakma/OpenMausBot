@@ -164,7 +164,7 @@ struct ChatListView: View {
             ConnectionChip(status: session.status)
             Spacer(minLength: 8)
             NavigationLink { SettingsView() } label: {
-                AccountPhoto(size: 36)
+                AccountPhoto(size: 40)
                     .frame(width: 44, height: 44)
                     .contentShape(Circle())
             }
@@ -172,8 +172,8 @@ struct ChatListView: View {
             .accessibilityLabel("Settings")
             .accessibilityIdentifier("open-settings")
         }
-        .padding(.leading, 20)
-        .padding(.trailing, 14)
+        .padding(.leading, HomeLayout.margin)
+        .padding(.trailing, HomeLayout.margin - 2)
         .padding(.top, 6)
         .padding(.bottom, 4)
     }
@@ -302,9 +302,9 @@ struct ChatListView: View {
                     .font(.caption.weight(.semibold))
                 Spacer(minLength: 0)
             }
-            .font(.callout)
+            .font(.body)
             .foregroundStyle(Color.secondary)
-            .padding(.horizontal, 20)
+            .padding(.horizontal, HomeLayout.margin)
             .padding(.top, 18)
             .padding(.bottom, 6)
             .frame(minHeight: 44)
@@ -366,7 +366,7 @@ struct ChatListView: View {
                     SearchHitRow(hit: hit)
                 }
                 .buttonStyle(.plain)
-                .padding(.horizontal, 20)
+                .padding(.horizontal, HomeLayout.margin)
             }
             if !matches.isEmpty {
                 searchLabel(Text("Bots"))
@@ -386,7 +386,7 @@ struct ChatListView: View {
         text
             .font(.callout)
             .foregroundStyle(Color.secondary)
-            .padding(.horizontal, 20)
+            .padding(.horizontal, HomeLayout.margin)
     }
 
     // MARK: - Bottom

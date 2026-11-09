@@ -45,12 +45,12 @@ struct HomeRow: View, Equatable {
     }
 
     var body: some View {
-        HStack(spacing: 14) {
+        HStack(spacing: 16) {
             Group {
                 if case .room = chat {
-                    RoomFaces(members: members, size: 40)
+                    RoomFaces(members: members, size: 48)
                 } else {
-                    ChatAvatarView(chat: chat, size: 40, state: face, animated: face.showsActivity)
+                    ChatAvatarView(chat: chat, size: 48, state: face, animated: face.showsActivity)
                 }
             }
             .accessibilityHidden(true)
@@ -58,26 +58,26 @@ struct HomeRow: View, Equatable {
             VStack(alignment: .leading, spacing: 3) {
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
                     Text(verbatim: chat.name)
-                        .font(.body.weight(.semibold))
+                        .font(.title3.weight(.semibold))
                         .foregroundStyle(Color.primary)
                         .lineLimit(1)
                         .layoutPriority(1)
                     if isChief { ChiefBadge() }
                     if !role.isEmpty {
                         Text(verbatim: role)
-                            .font(.subheadline)
+                            .font(.callout)
                             .foregroundStyle(Color.secondary)
                             .lineLimit(1)
                     }
                     Spacer(minLength: 6)
                     Text(verbatim: RelativeStamp.list(at))
-                        .font(.subheadline)
+                        .font(.callout)
                         .foregroundStyle(Color.secondary)
                         .fixedSize()
                 }
                 HStack(spacing: 8) {
                     Text(verbatim: preview.isEmpty ? " " : preview)
-                        .font(.subheadline)
+                        .font(.callout)
                         .foregroundStyle(Color.secondary)
                         .lineLimit(1)
                     Spacer(minLength: 0)
@@ -96,9 +96,9 @@ struct HomeRow: View, Equatable {
                 }
             }
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 10)
-        .frame(minHeight: 60)
+        .padding(.horizontal, HomeLayout.margin)
+        .padding(.vertical, 12)
+        .frame(minHeight: 72)
         .contentShape(Rectangle())
     }
 }
@@ -132,7 +132,7 @@ struct RoomFaces: View {
 
 /// The Chief of Staff mark after a bot's name: the desktop's crown.
 struct ChiefBadge: View {
-    @ScaledMetric(relativeTo: .body) private var size: CGFloat = 12
+    @ScaledMetric(relativeTo: .title3) private var size: CGFloat = 14
 
     var body: some View {
         Image(systemName: "crown.fill")
@@ -145,6 +145,10 @@ struct ChiefBadge: View {
 
 /// The day a home render words its stamps on, so a row whose bot has not
 /// moved still redraws once the day turns over.
+enum HomeLayout {
+    static let margin: CGFloat = 24
+}
+
 enum RosterDay {
     static var today: Date { Calendar.current.startOfDay(for: Date()) }
 }
@@ -167,16 +171,16 @@ struct FavoritesBlock: View {
             if let chief {
                 Button { open(chief) } label: {
                     VStack(spacing: 6) {
-                        faceView(chief, size: 76)
+                        faceView(chief, size: 88)
                         HStack(spacing: 5) {
                             Text(verbatim: chief.name)
-                                .font(.headline)
+                                .font(.title3.weight(.semibold))
                                 .foregroundStyle(Color.primary)
                             if chief.chiefOfStaff == true { ChiefBadge() }
                         }
                         if !chief.title.isEmpty {
                             Text(verbatim: chief.title)
-                                .font(.subheadline)
+                                .font(.callout)
                                 .foregroundStyle(Color.secondary)
                         }
                     }
@@ -190,13 +194,14 @@ struct FavoritesBlock: View {
             if !pinned.isEmpty {
                 if pinned.count > Self.fitting {
                     ScrollView(.horizontal, showsIndicators: false) {
-                        pinnedFaces.padding(.horizontal, 16)
+                        pinnedFaces.padding(.horizontal, HomeLayout.margin)
                     }
                 } else {
                     pinnedFaces.frame(maxWidth: .infinity)
                 }
             }
         }
+        .frame(maxWidth: .infinity)
     }
 
     private var pinnedFaces: some View {
@@ -204,13 +209,13 @@ struct FavoritesBlock: View {
             ForEach(pinned) { bot in
                 Button { open(bot) } label: {
                     VStack(spacing: 5) {
-                        faceView(bot, size: 52)
+                        faceView(bot, size: 60)
                         Text(verbatim: bot.name)
-                            .font(.caption)
+                            .font(.footnote)
                             .foregroundStyle(Color.primary)
                             .lineLimit(1)
                     }
-                    .frame(width: 66)
+                    .frame(width: 76)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
