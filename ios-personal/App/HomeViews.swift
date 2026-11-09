@@ -55,29 +55,29 @@ struct HomeRow: View, Equatable {
             }
             .accessibilityHidden(true)
 
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: 4) {
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
                     Text(verbatim: chat.name)
-                        .font(.title3.weight(.semibold))
+                        .font(.title3)
                         .foregroundStyle(Color.primary)
                         .lineLimit(1)
                         .layoutPriority(1)
                     if isChief { ChiefBadge() }
                     if !role.isEmpty {
-                        Text(verbatim: role)
-                            .font(.callout)
+                        Text(verbatim: "· \(role)")
+                            .font(.title3)
                             .foregroundStyle(Color.secondary)
                             .lineLimit(1)
                     }
-                    Spacer(minLength: 6)
+                    Spacer(minLength: 8)
                     Text(verbatim: RelativeStamp.list(at))
-                        .font(.callout)
-                        .foregroundStyle(Color.secondary)
+                        .font(.subheadline)
+                        .foregroundStyle(Color.secondary.opacity(0.75))
                         .fixedSize()
                 }
                 HStack(spacing: 8) {
                     Text(verbatim: preview.isEmpty ? " " : preview)
-                        .font(.callout)
+                        .font(.body)
                         .foregroundStyle(Color.secondary)
                         .lineLimit(1)
                     Spacer(minLength: 0)
@@ -174,13 +174,13 @@ struct FavoritesBlock: View {
                         faceView(chief, size: 88)
                         HStack(spacing: 5) {
                             Text(verbatim: chief.name)
-                                .font(.title3.weight(.semibold))
+                                .font(.title3)
                                 .foregroundStyle(Color.primary)
                             if chief.chiefOfStaff == true { ChiefBadge() }
                         }
                         if !chief.title.isEmpty {
                             Text(verbatim: chief.title)
-                                .font(.callout)
+                                .font(.body)
                                 .foregroundStyle(Color.secondary)
                         }
                     }

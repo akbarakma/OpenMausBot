@@ -299,7 +299,8 @@ struct ChatListView: View {
                         .foregroundStyle(Color.secondary.opacity(0.6))
                 }
                 Image(systemName: collapsed ? "chevron.right" : "chevron.down")
-                    .font(.caption.weight(.semibold))
+                    .font(.footnote)
+                    .foregroundStyle(Color.secondary.opacity(0.6))
                 Spacer(minLength: 0)
             }
             .font(.body)
