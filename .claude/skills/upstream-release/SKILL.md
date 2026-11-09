@@ -38,14 +38,14 @@ Change nothing in this part: no merge, no checkout, no service restart.
    or when the release notes already explain each change, do it inline
    from the notes and `git log --first-parent`. Above that, send the sorting
    to a Haiku subagent and verify any claim you report as a risk with git.
-8. For each conflict, decide its kind:
-   - **Mechanical:** imports, locale keys both sides added, tests that follow
-     the code. The sync part resolves these by keeping both sides in the
-     fork's layout.
-   - **Layout:** upstream adds or moves UI the fork redesigned (for example a
-     new row in the bot panel). Each one becomes a question for Akbar. Read
-     [`docs/personal-bot-panel.md`](../../../docs/personal-bot-panel.md)
-     when a conflict touches `src/components/bot-panel/` or a file it lists.
+8. Read [`docs/personal-bot-panel.md`](../../../docs/personal-bot-panel.md),
+   its file table and its "Merging an upstream release" section, then sort
+   each conflict hunk:
+   - **Mechanical:** the doc already decides it (the fork's tiles, one page
+     with no tabs, no `DetailsTab`), or it is imports, locale keys or tests.
+     The sync part resolves these by keeping both sides in the fork's layout.
+   - **Layout:** upstream adds UI the doc does not place, such as a new row
+     whose card is a real choice. Each one becomes a question for Akbar.
 
 ### Report
 
@@ -83,14 +83,14 @@ answers. Stop only at step 6, for Akbar's OK.
    `{"app":"openmausbot"}`. If the start fails, read
    `journalctl --user -u openmausbot -n 50` and report it.
 3. **Merge on a branch.** From `main`, run `git switch -c chore/upstream-<NEW>`
-   and `git merge --no-ff <NEW>`. Resolve the mechanical conflicts, and apply
-   the layout answers. When the fork's layout changes, update
-   `docs/personal-bot-panel.md` in the same merge.
+   and `git merge --no-ff <NEW>`. Follow the doc's "Merging an upstream
+   release" section, and apply the layout answers. Record each answer in the
+   doc's file table in the same merge.
 4. **Commit** the merge as `chore: the fork runs upstream <NEW>`, with a body
    that names each layout choice and each non-obvious resolution.
-5. **Verify:** `corepack pnpm typecheck`, `corepack pnpm lint`, and
-   `corepack pnpm exec vitest run <names of the changed files>`. Run only the
-   tests named after the changed files.
+5. **Verify:** run the doc's test list and `i18n:check`, plus the tests named
+   after any other conflicted file, then `corepack pnpm typecheck` and
+   `corepack pnpm lint`.
 6. **Show it:** run `corepack pnpm dev:personal` and wait for Akbar's OK on
    the changed screens.
 7. **Land it:** fast-forward `main` to the branch, run `git push origin main`, run
