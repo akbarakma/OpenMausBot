@@ -12,6 +12,7 @@ import { recentChangedFiles, sharedFileReferences } from "../ComputerFilesPane";
 import { useDesktopCapabilities } from "../DesktopCapabilities";
 import { skillSwitchOn, useManagedSkills } from "../bot-settings/SkillsSection";
 import type { SimplePageId } from "./page-registry";
+import { HeavyBotRow } from "./HeavyBotRow";
 import { Card, CardLabel, CardSurface, NavRow } from "./rows";
 import { panelMemoryNotes } from "./memory-notes";
 import { useMemoryDoc } from "./use-memory-doc";
@@ -74,6 +75,7 @@ export function KnowsCard({ bot, onOpen, onData, folder = bot.cwd, dataLabel = "
     : notes === 1 ? t("botPanel.memory.note") : t("botPanel.memory.notes", { count: notes });
   return (
     <Card label={t("botPanel.knows", { name: bot.name })} anchor="keeps">
+      <HeavyBotRow bot={bot} />
       <NavRow data-panel-page="memory" icon={Brain} title={t("botPanel.memoryRow")} value={memoryValue} onClick={() => onOpen("memory")} />
       <NavRow
         data-panel-page="skills"

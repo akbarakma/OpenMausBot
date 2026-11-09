@@ -10,7 +10,7 @@ export type PageId =
   | "overview" | "prompt" | "history";
 
 /** The pages Simple mode draws; a link to any other page lands where its section does. */
-export const SIMPLE_PAGES = ["settings", "apps", "backups", "botapi", "routines", "memory", "skills", "folder", "browser", "where", "data", "files", "activity"] as const satisfies readonly PageId[];
+export const SIMPLE_PAGES = ["settings", "apps", "backups", "botapi", "routines", "visibility", "memory", "skills", "folder", "browser", "where", "data", "files", "activity"] as const satisfies readonly PageId[];
 export type SimplePageId = (typeof SIMPLE_PAGES)[number];
 
 export function isSimplePage(page: PageId): page is SimplePageId {

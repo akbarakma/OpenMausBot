@@ -78,7 +78,7 @@ export const SidebarBotTile = memo(function SidebarBotTile({ primary = false, dr
       onKeyDown={onKeyDown}
       onContextMenu={(event) => openBotContextMenu(onMenu, bot.id, event)}
       className={cn(
-        "flex h-[112px] w-[100px] shrink-0 cursor-pointer flex-col items-center rounded-[10px] px-1 pt-1.5 transition-colors duration-150", SIMPLE_ROW_FOCUS,
+        "flex h-[112px] w-[100px] shrink-0 cursor-pointer flex-col items-center rounded-[8px] px-1 pt-1.5 transition-colors duration-150", SIMPLE_ROW_FOCUS,
         selected ? "bg-ink/[0.10]" : "hover:bg-ink/[0.06]",
         pinnedCircleDragClass({ drag, dragging, drop }),
       )}

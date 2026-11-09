@@ -108,7 +108,7 @@ export function CompactButton({ bot, usage }: { bot: Bot; usage: TaskUsage }) {
       disabled={busy || pending}
       title={busy ? t("contextWarning.busy") : undefined}
       onClick={() => run(`/api/bots/${bot.id}/compact`, { threadId: bot.threadId })}
-      className="mt-3 flex h-[30px] w-full cursor-pointer items-center justify-center rounded-[9px] bg-ink/[0.08] text-[13px] font-medium text-ink hover:bg-ink/[0.12] disabled:cursor-not-allowed disabled:opacity-50"
+      className="mt-3 flex h-[30px] w-full cursor-pointer items-center justify-center rounded-[8px] bg-ink/[0.08] text-[13px] font-medium text-ink hover:bg-ink/[0.12] disabled:cursor-not-allowed disabled:opacity-50"
     >
       {pending ? t("contextWarning.compacting") : t("contextWarning.compactNow")}
     </button>

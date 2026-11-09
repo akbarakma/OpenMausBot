@@ -194,7 +194,7 @@ export function ComputerCard({ bot, onOpen }: { bot: Bot; onOpen: (page: SimpleP
                 {streaming ? t(browsing ? "browser.card.browsing" : "browser.card.done") : t("botPanel.face.sleeping")}
               </span>
             </span>
-            <span className="relative flex h-[45px] w-[72px] shrink-0 items-center justify-center overflow-hidden rounded-[7px] bg-ink/[0.04]">
+            <span className="relative flex h-[45px] w-[72px] shrink-0 items-center justify-center overflow-hidden rounded-[8px] bg-ink/[0.04]">
               {streaming ? (
                 <span className="absolute inset-0"><LiveBrowserCard bot={bot} /></span>
               ) : screenSrc ? (
@@ -202,7 +202,7 @@ export function ComputerCard({ bot, onOpen }: { bot: Bot; onOpen: (page: SimpleP
               ) : (
                 <span aria-hidden="true" className="panel-zzz text-[11px] font-semibold text-ink-secondary"><span>z</span><span>z</span><span>Z</span></span>
               )}
-              <span aria-hidden="true" className="pointer-events-none absolute inset-0 rounded-[7px] ring-1 ring-inset ring-ink/[0.08]" />
+              <span aria-hidden="true" className="pointer-events-none absolute inset-0 rounded-[8px] ring-1 ring-inset ring-ink/[0.08]" />
             </span>
           </button>
         )}

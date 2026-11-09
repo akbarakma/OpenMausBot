@@ -24,7 +24,7 @@ describe("the bot panel's page registry", () => {
   });
 
   it("draws the computer popup's Data and Files, and Activity, as Simple pages", () => {
-    expect(SIMPLE_PAGES).toEqual(["settings", "apps", "backups", "botapi", "routines", "memory", "skills", "folder", "browser", "where", "data", "files", "activity"]);
+    expect(SIMPLE_PAGES).toEqual(["settings", "apps", "backups", "botapi", "routines", "visibility", "memory", "skills", "folder", "browser", "where", "data", "files", "activity"]);
     expect(isSimplePage("mcp")).toBe(false);
   });
 

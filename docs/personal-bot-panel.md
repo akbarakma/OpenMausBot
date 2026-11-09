@@ -44,8 +44,13 @@ where a chevron's drawn stroke ends, so their right edges line up.
   - **Setup:** Model and Automations.
   - **What {name} knows:** Memories, Skills, Folder and Data. Folder shows the
     open chat's own folder when it keeps one, else the bot's. Data opens the
-    Data page.
-  - **This conversation:** Files (with a count), Find, and Activity.
+    Data page. Above Memories, upstream's "This bot loads a lot every turn"
+    row with Tidy memory shows only for a heavy bot. It sits here, not on Bot
+    settings as upstream has it, because it acts on memory and people rarely
+    open the gear.
+  - **This conversation:** Files (with a count), Find, and Activity. Upstream's
+    Inspector row is left out: it is a debug log, and it stays in the chat's
+    ⋯ menu.
   - **Context:** the conversation's share of the model's window, its bar, and
     Compact now from 80%. It shows once the conversation reports usage.
   - **Conversations:** the list, shown once the bot has 2 or more.
@@ -73,13 +78,19 @@ where a chevron's drawn stroke ends, so their right edges line up.
   page says Checking; a failed routine load shows its error, not an empty list.
   While one switch's request runs, every switch waits.
 - **Bot settings (gear):** Profile (Job title, Instructions), Rules (Before it
-  acts, Apps it can use), Models (Backup AIs), Calls (Call mode), Advanced
-  (Bot API, Hide from sidebar). Backup AIs and Bot API are rows that open their
-  own pages. "In this conversation" shows only when the thread's approval
-  differs from the bot's.
+  acts, Apps it can use), Models (Backup AIs), Calls (Call mode), Replies
+  (Reply style, Notifications), Advanced (Bot API, Slack, Hide from sidebar).
+  Backup AIs and Bot API are rows that open their own pages. "In this
+  conversation" shows only when the thread's approval differs from the bot's.
+  Always allowed sits under Before it acts and shows only once the bot has an
+  entry. Instruction history (`SoulChanges`) shows inside the open
+  Instructions editor. Slack shows only for a bot with a Slack app. Upstream's
+  Who can see it row is left out, because `useChoosesVisibility` is false in
+  the desktop app; its page stays for links.
 - **Memories:** one row per note showing only its text; a struck or expired
   note is left out, as the server no longer reads it. A tap opens the note
-  with its source and date and a Delete button.
+  with its source and date and a Delete button. Upstream's Memory upkeep
+  switch and its Changes list follow the notes.
 - **Skills:** two cards, split by the `origin` each skill carries. The bot's
   own card lists every skill it can switch (learned, added by link, library,
   from this computer), or says it has learned none yet. A tap opens the full
@@ -227,8 +238,9 @@ the same state, motion beat and working ring.
 | `src/components/BotSettingsDialog.tsx` | Simple panel: Escape does not close it, ✕ records the close, a quiet reopen leaves focus alone |
 | `src/lib/guided-tour.ts` | Simple tour steps never open the computer |
 | `src/components/bot-panel/AutomationsPage.tsx` | New: `useBotAutomations` and the grouped Automations page |
-| `src/components/bot-panel/Conversations.tsx` | No New conversation button; a "Conversations" label with search; renders nothing with one conversation |
+| `src/components/bot-panel/Conversations.tsx` | No New conversation button; a "Conversations" `CardLabel` with a 36px search button; renders nothing with one conversation |
 | `src/components/bot-panel/PanelHero.tsx` | Avatar takes its props from `useBotFace`, with `hops` while it is on screen; no `activeState` prop |
+| `src/components/bot-panel/HeavyBotRow.tsx` | The bare row, with no card, so it sits inside the What {name} knows card |
 | `src/components/bot-panel/ContextCard.tsx` | New: the Context card on the first page; Compact now waits only on the open conversation, not the bot's other work |
 | `src/components/bot-panel/PanelShell.tsx` | No `activeState` passed to `PanelHero`; no tabs, `PanelHome` under the hero; `lastStack` per bot; Back at the root names the bot |
 | `src/components/bot-face.ts` | New: `useBotFace` (`hops` for the sidebar copies and the panel hero), `botFaceState` and `restOrigin` |
@@ -247,7 +259,7 @@ the same state, motion beat and working ring.
 | `src/components/DefaultBotControls.tsx` | `HideFromSidebarRow`, the row without its card |
 | `src/state/store.tsx` | `openDataResult` takes an optional `cardId`; without one it opens the Data tab; `showRoutines` takes `compose` |
 | `src/components/TriggersPage.tsx` | Each row shows its bot's avatar with the status mark on it and the bot's name first in the status line; the name and the sentence keep one line each, in full on hover; `compose` focus opens the New box |
-| `src/components/SidebarTiles.tsx` | A tile is 100×112: the face, the name, and the job title in `TITLE_CHIP` under it. 100px keeps two tiles across the 240px minimum sidebar, scrollbar included. A tile has no fill at rest, `bg-ink/[0.06]` on hover and `bg-ink/[0.10]` when open; badges ring in `panel`; avatar takes `useBotFace` |
+| `src/components/SidebarTiles.tsx` | A tile is 100×112 with an 8px corner: the face, the name, and the job title in `TITLE_CHIP` under it. 100px keeps two tiles across the 240px minimum sidebar, scrollbar included. A tile has no fill at rest, `bg-ink/[0.06]` on hover and `bg-ink/[0.10]` when open; badges ring in `panel`; avatar takes `useBotFace` |
 | `src/components/ComputerPanel.tsx` | A data request without a card opens Data and focuses no card |
 | `src/components/bot-panel/LibraryTab.tsx` | `KnowsCard`, `MadeHere` and `chatFolder`, shared with the first page; the Skills row counts only the bot's own switched-on skills, not native ones; Advanced's library still sends `openDataResult` with no card |
 | `src/components/bot-panel/ComputerTab.tsx` | `ComputerCard` (live card, Works in, browser switch); `WherePage` pinned-place note |
@@ -276,8 +288,9 @@ the same state, motion beat and working ring.
 | `electron/main.mjs`, `electron/personal-dev.mjs`, `electron/window-state-file.mjs` | `window:state` returns `focused`; focus and blur send `window:focus-changed` |
 | `src/components/bot-panel/memory-notes.ts` | `memoryNoteParts` splits `YYYY-MM-DD · from <source> · text` and marks struck or expired notes inactive; `panelMemoryNotes` leaves inactive notes out; `memoryNoteKey` includes the text |
 
-`TryAsking.tsx` and its test are deleted, and so is `src/lib/chat-usage-summary.ts`. `SwitchRow` in `rows.tsx` is deleted too,
-because no page uses it.
+`TryAsking.tsx` and its test are deleted, and so is `src/lib/chat-usage-summary.ts`. `SwitchRow` in `rows.tsx`
+is a `<label>` with `switchRowCls`, so upstream's callers (Notifications,
+Memory upkeep) keep the whole row as the click target.
 
 ## Top band
 
@@ -336,5 +349,5 @@ end.
    the fork's added, changed and deleted keys. In `source-hashes.json`, drop
    upstream's entries for keys the fork deleted, and keep the fork's hash for
    keys whose English the fork changed. `i18n:check` fails on any miss.
-6. Run `corepack pnpm exec vitest run BotSettingsDialog.simple MemoryPage.team memory-notes PanelShell.dom page-registry panel-link simple-side-panel Conversations.dom BackupAis.dom ModelPicker ComputerPanel.android ComposerContextMeter context-meter ChatMoreMenu ChatView.controls Sidebar.header Sidebar.simple-layout SidebarTiles electron/window-chrome BrowserPanel ChromeRow StreamSurface guided-tour SkillsPage.dom`,
+6. Run `corepack pnpm exec vitest run BotSettingsDialog.simple MemoryPage.team memory-notes PanelShell.dom page-registry panel-link simple-side-panel Conversations.dom BackupAis.dom ModelPicker ComputerPanel.android ComposerContextMeter context-meter ChatMoreMenu ChatView.controls Sidebar.header Sidebar.simple-layout SidebarTiles electron/window-chrome BrowserPanel ChromeRow StreamSurface guided-tour SkillsPage.dom HeavyBotRow MemoryUpkeepCards`,
    `corepack pnpm i18n:check`, `typecheck` and `lint`.

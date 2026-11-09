@@ -9,6 +9,7 @@ import { api, currentTaskBot, openBotThread, useStore, visibleMessages, type Bot
 import { lastLine } from "../sidebar-preview";
 import { isArchived, orderedThreadList, SidebarThreadRow, stampClock, threadRecency, threadRowActions, useRelativeNow } from "../SidebarThreadRow";
 import { filterTasks } from "../TaskPicker";
+import { CardLabel } from "./rows";
 
 export const CONVERSATIONS_SHOWN = 3;
 const PANEL_ROW_LOOK = "[&_.font-semibold]:font-medium [&_time]:text-[12px] [&_time]:text-ink-tertiary [&_span.bg-accent]:size-2";
@@ -115,10 +116,9 @@ export function BotConversations({ bot }: { bot: Bot }) {
   );
 
   return (
-    <section data-panel-card="conversations" aria-label={t("botPanel.conversations.title")} className="mt-5">
+    <section data-panel-card="conversations" aria-label={t("botPanel.conversations.title")} className={cn(!listed && "mt-5")}>
       {listed && (
-        <div className="mx-1 mb-2 flex min-h-5 items-center justify-between gap-3 text-[13px] text-ink-secondary">
-          <span className="min-w-0 truncate">{t("botPanel.conversations.title")}</span>
+        <CardLabel action={
           <button
             type="button"
             data-conversations-search
@@ -130,7 +130,7 @@ export function BotConversations({ bot }: { bot: Bot }) {
           >
             <Search size={15} aria-hidden="true" />
           </button>
-        </div>
+        }>{t("botPanel.conversations.title")}</CardLabel>
       )}
       {listed && searching && (
         <input
@@ -147,7 +147,7 @@ export function BotConversations({ bot }: { bot: Bot }) {
           }}
           placeholder={t("botPanel.conversations.searchPlaceholder", { name: bot.name })}
           aria-label={t("botPanel.conversations.searchPlaceholder", { name: bot.name })}
-          className="mb-1.5 w-full rounded-[10px] border border-hairline/60 bg-inset px-3 py-1.5 text-[13px] text-ink outline-none placeholder:text-ink-tertiary focus:border-focus"
+          className="mb-1.5 w-full rounded-[8px] border border-hairline/60 bg-inset px-3 py-1.5 text-[13px] text-ink outline-none placeholder:text-ink-tertiary focus:border-focus"
         />
       )}
       {listed && <div role="list" aria-label={t("botPanel.conversations.title")} className={cn("flex flex-col gap-px", PANEL_ROW_LOOK)}>

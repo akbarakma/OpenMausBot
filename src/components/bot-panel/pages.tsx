@@ -21,6 +21,7 @@ import { BotApiCard } from "../bot-settings/BotApiCard";
 import { useBotEditor } from "../bot-settings/BotEditorContext";
 import { SkillReviewDialog, skillSwitchOn, useManagedSkills, type ManagedSkill } from "../bot-settings/SkillsSection";
 import { useBotApps, type BotApp } from "../bot-settings/useBotApps";
+import { useChoosesVisibility, VisibilitySection } from "../bot-settings/VisibilitySection";
 import type { useBotSettingsDerived } from "../bot-settings/useBotSettingsDerived";
 import { AutomationsPage } from "./AutomationsPage";
 import { BackupAis } from "./BackupAis";
@@ -31,6 +32,7 @@ import { SettingsPage } from "./SettingsPage";
 import { memoryNoteKey, memoryNoteParts, panelMemoryNotes, withMemoryNote, withoutMemoryNote, type PanelMemoryNote } from "./memory-notes";
 import type { SimplePageId } from "./page-registry";
 import { BotSwitch, buttonCls, Card, LinkRow, NavRow, NoteRow, openRowButtonCls, openRowCls, RadioRow, RowIcon, rowCls, RowText, switchRowCls, TextRow } from "./rows";
+import { MemoryUpkeepCards } from "./MemoryUpkeepCards";
 import { useMemoryDoc } from "./use-memory-doc";
 
 type Derived = ReturnType<typeof useBotSettingsDerived>;
@@ -275,6 +277,7 @@ export function MemoryPage({ bot, detail, onDetail }: PageContext & DetailContex
           />
         </Card>
       )}
+      {memoryOn && !memory.mine && <MemoryUpkeepCards bot={bot} onChanged={memory.reload} />}
       {confirmDialog}
     </>
   );
@@ -614,6 +617,10 @@ export function BotApiPage({ bot }: PageContext) {
   return <BotApiCard bot={bot} webhooksLink titled={false} className="mt-3.5" />;
 }
 
+function VisibilityPage({ bot }: PageContext) {
+  return useChoosesVisibility() ? <VisibilitySection bot={bot} /> : null;
+}
+
 export function PageBody({ page, onOpen, detail = null, onDetail = () => {}, editingInstructions, onEditInstructions, activityRefresh = 0, ...context }: PageContext & Partial<DetailContext> & {
   page: SimplePageId;
   /** Counts the Activity page header's Reload presses. */
@@ -635,6 +642,8 @@ export function PageBody({ page, onOpen, detail = null, onDetail = () => {}, edi
       return <BotApiPage {...context} />;
     case "routines":
       return <AutomationsPage {...context} />;
+    case "visibility":
+      return <VisibilityPage {...context} />;
     case "memory":
       return <MemoryPage {...context} detail={detail} onDetail={onDetail} />;
     case "skills":
