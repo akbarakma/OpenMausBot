@@ -59,6 +59,22 @@ Keep it brief, in this order:
 4. **Sync proposals**, in Akbar's proposal layout: update bb-1 to `NEW`, then
    merge `NEW` on `chore/upstream-<NEW>`.
 5. **Layout questions** from step 8, one Q each with a recommended pick.
+   Base each pick on the fork's own choices: its commits since the last tag
+   and the doc. Name the fork choice that decides it.
+
+Akbar doesn't know upstream's code, so a name like "Inspector" or
+"`HeavyBotRow`" means nothing to him on its own. Every UI change you
+mention (a new row, a moved card, a size or radius) gets a before/after
+picture:
+
+- Build a self-contained HTML mockup in a temp folder outside the repo,
+  using the real English strings from `src/locales/en.json` and real sizes.
+- Show it with `html_preview`, then `html_render`, next to the question it
+  explains.
+- Put "before" (the fork today) and "after" (your pick) side by side.
+  Mark new rows, and label any row that shows only in some cases.
+- Say in one sentence what the new thing does for him, with an example.
+- State that it is a mockup drawn from the code, not a screenshot.
 
 Stop there and wait for the go.
 
