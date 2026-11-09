@@ -11,6 +11,8 @@ struct SettingsView: View {
     @AppStorage(PrefKey.islandIntro) private var islandIntro = IslandIntro.oncePerBot.rawValue
     @AppStorage(PrefKey.language) private var language = AppLanguage.system.rawValue
     @AppStorage(PrefKey.pinnedAtBottom) private var pinnedAtBottom = true
+    @State private var showingCalendar = false
+    @State private var showingNewGroup = false
     private let onConnect: (() -> Void)?
 
     init(onConnect: (() -> Void)? = nil) {
@@ -148,6 +150,24 @@ struct SettingsView: View {
                         }
                     }
 
+                    Button { showingCalendar = true } label: {
+                        Label {
+                            Text("Routine calendar").foregroundStyle(Color.primary)
+                        } icon: {
+                            SettingsIcon(symbol: "calendar", color: .red)
+                        }
+                    }
+                    .accessibilityIdentifier("open-calendar")
+
+                    Button { showingNewGroup = true } label: {
+                        Label {
+                            Text("New group").foregroundStyle(Color.primary)
+                        } icon: {
+                            SettingsIcon(symbol: "person.2.fill", color: .green)
+                        }
+                    }
+                    .accessibilityIdentifier("new-group")
+
                     // Connecting apps needs the admin scope; a chat-only
                     // server session leaves it to the owner, in the server's UI.
                     if session.canAdminister {
@@ -167,6 +187,16 @@ struct SettingsView: View {
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
         .task { await session.refreshNotificationAuthorization() }
+        .sheet(isPresented: $showingCalendar) {
+            RoutineCalendarView()
+                .environmentObject(session)
+        }
+        .sheet(isPresented: $showingNewGroup) {
+            NewGroupSheet { room in
+                showingNewGroup = false
+                session.openChat(threadId: room.threadId)
+            }
+        }
     }
 
     private var notificationsAreEnabled: Bool {
