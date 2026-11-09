@@ -45,7 +45,8 @@ Change nothing in this part: no merge, no checkout, no service restart.
      with no tabs, no `DetailsTab`), or it is imports, locale keys or tests.
      The sync part resolves these by keeping both sides in the fork's layout.
    - **Layout:** upstream adds UI the doc does not place, such as a new row
-     whose card is a real choice. Each one becomes a question for Akbar.
+     whose card is a real choice. Decide it yourself, as the designer of
+     this fork (see "Judge, don't ask").
 
 ### Report
 
@@ -58,9 +59,32 @@ Keep it brief, in this order:
 3. **New features:** the user-visible ones, one line each.
 4. **Sync proposals**, in Akbar's proposal layout: update bb-1 to `NEW`, then
    merge `NEW` on `chore/upstream-<NEW>`.
-5. **Layout questions** from step 8, one Q each with a recommended pick.
-   Base each pick on the fork's own choices: its commits since the last tag
-   and the doc. Name the fork choice that decides it.
+5. **Layout decisions** from step 8: what you decided, each with its
+   before/after picture and the fork choice behind it. Akbar can overrule any
+   of them in his go.
+6. **What it means for him:** for each new setting or behaviour, what it does
+   to his bots, with an example, and whether he needs to change anything.
+   Default to "no action needed" and say why.
+
+### Judge, don't ask
+
+Akbar wants decisions, not questions about code he doesn't know. Before
+you put anything to him, find the reason behind the fork's own change:
+read the fork commit that made it (`git log --format='%h %s%n%b' <OLD>..main -- <file>`)
+and its row in the doc. Then decide:
+
+- The fork changed it on purpose and upstream's change would undo that
+  purpose: keep the fork's version.
+- The fork's version only exists to match something upstream has now
+  changed: follow upstream, or find a fix that keeps both working, such as
+  the fork's whole-row `SwitchRow` serving upstream's new switches.
+- Upstream adds something new: place it the way the fork placed similar
+  things (labelled cards, rare items in Advanced or their own page, debug
+  tools off the panel).
+
+Ask Akbar only when no fork choice or doc line points either way, and the
+choice changes what his bots do, not just where a row sits. Even then,
+explain it first and give your pick.
 
 Akbar doesn't know upstream's code, so a name like "Inspector" or
 "`HeavyBotRow`" means nothing to him on its own. Every UI change you
