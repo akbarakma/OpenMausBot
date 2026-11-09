@@ -78,10 +78,12 @@ export function useSidebarBotDrag({ dispatch, announce, onNamed, onRenamed, onEr
     actions.current.announce(t("sidebar.section.moved", { name, position: move.order.indexOf(botId) + 1, count: move.order.length }));
     requestAnimationFrame(() => document.querySelector<HTMLElement>(`[data-sidebar-bot-row="${CSS.escape(botId)}"]`)?.focus());
   };
+  // The sidebar shows each list newest first, so a place inside the bot's own list would never show.
   const allowed = (botId: string, move: BotMove | null): BotMove | null => {
     if (!move) return null;
-    if (!latest.current.withinList) return move;
     const from = botListOf(latest.current.lists, botId);
+    if (move.kind === "move" && move.section === from) return null;
+    if (!latest.current.withinList) return move;
     if (move.kind !== "move" || move.section !== from) return null;
     return move;
   };
@@ -116,10 +118,12 @@ export function useSidebarBotDrag({ dispatch, announce, onNamed, onRenamed, onEr
         if (!carries(event) || !moving.current.botId) return;
         // Within one list only (the collapsed rail): another list's row shows no drop line, since the drop is refused.
         if (latest.current.withinList && botListOf(latest.current.lists, botId) !== botListOf(latest.current.lists, moving.current.botId)) return show(null);
+        const target = botId === moving.current.botId ? null : rowDrop(event, botId);
+        if (!(target?.kind === "row" && target.place === "group") && botListOf(latest.current.lists, botId) === botListOf(latest.current.lists, moving.current.botId)) return show(null);
         event.preventDefault();
         event.stopPropagation();
         event.dataTransfer.dropEffect = "move";
-        show(botId === moving.current.botId ? null : rowDrop(event, botId));
+        show(target);
       },
       onDrop: (event) => {
         if (!carries(event)) return;
@@ -129,7 +133,7 @@ export function useSidebarBotDrag({ dispatch, announce, onNamed, onRenamed, onEr
       },
     }),
     step: (botId, direction) => {
-      const move = latest.current.enabled ? stepBot(latest.current.lists, botId, direction) : null;
+      const move = latest.current.enabled ? allowed(botId, stepBot(latest.current.lists, botId, direction)) : null;
       if (move) apply(botId, move, true);
     },
   };
@@ -185,7 +189,7 @@ export function useSidebarBotDrag({ dispatch, announce, onNamed, onRenamed, onEr
             const list = listFor(sectionId);
             const dragged = moving.current.botId;
             if (!dragged || list === null || !lists.has(list)) return show(null);
-            if (withinList && list !== botListOf(lists, dragged)) return show(null);
+            if (withinList ? list !== botListOf(lists, dragged) : list === botListOf(lists, dragged)) return show(null);
             event.preventDefault();
             event.dataTransfer.dropEffect = "move";
             const target = zoneDrop(event, list);

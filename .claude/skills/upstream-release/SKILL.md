@@ -38,8 +38,9 @@ Change nothing in this part: no merge, no checkout, no service restart.
    or when the release notes already explain each change, do it inline
    from the notes and `git log --first-parent`. Above that, send the sorting
    to a Haiku subagent and verify any claim you report as a risk with git.
-8. Read [`docs/personal-bot-panel.md`](../../../docs/personal-bot-panel.md),
-   its file table and its "Merging an upstream release" section, then sort
+8. Read [`docs/personal-bot-panel.md`](../../../docs/personal-bot-panel.md)
+   and [`docs/personal-sidebar.md`](../../../docs/personal-sidebar.md), their
+   file tables and their "Merging an upstream release" sections, then sort
    each conflict hunk:
    - **Mechanical:** the doc already decides it (the fork's tiles, one page
      with no tabs, no `DetailsTab`), or it is imports, locale keys or tests.

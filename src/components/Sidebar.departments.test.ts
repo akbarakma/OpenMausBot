@@ -157,65 +157,28 @@ describe("Simple's sidebar before anyone drags", () => {
     expect(rows().every((props) => props.botDrag === undefined)).toBe(true);
   });
 
-  it("keeps every row draggable in the icons-only rail, where the whole tile is the drag source", () => {
-    // The rail (density "icons") collapses the sidebar to bot tiles. sections.interactive is false there, so the
-    // arrange used to answer with no drag handles at all and the rail could not be reordered.
+  it("gives the icons-only rail no drag: it shows no department, and its own list goes newest first", () => {
     fixture.storage.set(SIDEBAR_DENSITY_KEY, "avatars");
     const icons = rows();
     expect(icons.length).toBeGreaterThan(0);
     for (const props of icons) {
       expect(props.density).toBe("icons");
-      expect(props.botDragging).toBe(false);
-      expect(props.botDrag!.row(props.bot.id).draggable).toBe(true);
+      expect(props.botDrag).toBeUndefined();
     }
-  });
-
-  it("leaves the rail alone on a phone, where the row menu moves bots", () => {
-    fixture.storage.set(SIDEBAR_DENSITY_KEY, "avatars");
-    fixture.phone = true;
-    const icons = rows();
-    expect(icons.length).toBeGreaterThan(0);
-    for (const props of icons) expect(props.botDrag).toBeUndefined();
-  });
-
-  it("reorders inside the rail's own list, and nothing else: no department is created or left unseen", () => {
-    fixture.storage.set(SIDEBAR_DENSITY_KEY, "avatars");
-    drag("cleo");
-    row("atlas").botDrag!.row("atlas").onDrop(at(5) as never);
-    expect(actions()).toEqual([{ type: "botsOrdered", botIds: ["cleo", "atlas", "bea"] }]);
-    expect(sections()).not.toContain(userSectionId(NEW_DEPARTMENT));
-    fixture.dispatch.mockClear();
-
-    drag("cleo");
-    row("atlas").botDrag!.row("atlas").onDragOver(at() as never);
-    expect(row("atlas").botDrop).toBe("after");
-    row("atlas").botDrag!.row("atlas").onDrop(at() as never);
-    expect(actions()).toEqual([{ type: "botsOrdered", botIds: ["atlas", "cleo", "bea"] }]);
-    expect(sections()).not.toContain(userSectionId(NEW_DEPARTMENT));
-  });
-
-  it("refuses in the rail a drop that would change department, which the person cannot see there", () => {
-    fixture.storage.set(SIDEBAR_DENSITY_KEY, "avatars");
-    drag("dodo");
-    expect(section(userSectionId("Work")).onDragOver).toBeInstanceOf(Function);
-    const over = at();
-    section(BOTS_SECTION_ID).onDragOver(over as never);
-    expect(over.preventDefault).not.toHaveBeenCalled();
-    section(BOTS_SECTION_ID).onDrop(over as never);
-    expect(actions()).toEqual([]);
-    expect(rows().every((props) => !props.botDragging)).toBe(true);
   });
 });
 
 describe("dragging a bot", () => {
-  it("shows a line where it lands and saves the new order", () => {
+  it("refuses a place inside its own list, which shows newest first", () => {
     drag("cleo");
     expect(row("cleo").botDragging).toBe(true);
-    row("atlas").botDrag!.row("atlas").onDragOver(at(5) as never);
-    expect(row("atlas").botDrop).toBe("before");
+    const over = at(5);
+    row("atlas").botDrag!.row("atlas").onDragOver(over as never);
+    expect(over.preventDefault).not.toHaveBeenCalled();
+    expect(row("atlas").botDrop).toBeNull();
     row("atlas").botDrag!.row("atlas").onDrop(at(5) as never);
-    expect(actions()).toEqual([{ type: "botsOrdered", botIds: ["cleo", "atlas", "bea"] }]);
-    expect(fixture.requests).toEqual([{ path: "/api/bots/order", method: "PUT", body: { botIds: ["cleo", "atlas", "bea"] } }]);
+    expect(actions()).toEqual([]);
+    expect(fixture.requests).toEqual([]);
     expect(rows().every((props) => !props.botDrop && !props.botDragging)).toBe(true);
   });
 
@@ -285,8 +248,6 @@ describe("dragging a bot", () => {
     drag("cleo");
     laidOut("atlas", "bea", "cleo");
     section(BOTS_SECTION_ID).onDragOver(at(85) as never);
-    expect(row("bea").botDrop).toBe("before");
-    section(BOTS_SECTION_ID).onDragOver(at(170) as never);
     expect(rows().some((props) => props.botDrop)).toBe(false);
   });
 
@@ -325,13 +286,9 @@ describe("dragging a bot", () => {
     expect(rows().every((props) => !props.botDragging)).toBe(true);
   });
 
-  it("moves with Alt+Up/Down within its list and says where it went", () => {
+  it("never steps inside its list, which shows newest first", () => {
     row("bea").botDrag!.step("bea", 1);
-    expect(actions()).toEqual([{ type: "botsOrdered", botIds: ["atlas", "cleo", "bea"] }]);
-    const live = render().find((node) => node.props["aria-live"] === "polite")!;
-    expect(live.props.children).toBe("bea moved to position 3 of 3");
-    fixture.dispatch.mockClear();
-    row("atlas").botDrag!.step("atlas", -1);
+    row("bea").botDrag!.step("bea", -1);
     expect(actions()).toEqual([]);
   });
 
@@ -343,38 +300,25 @@ describe("dragging a bot", () => {
   });
 });
 
-describe("bots that are working or waiting on the person", () => {
-  const busy = (id: string, extra: Partial<Bot>) => {
-    fixture.state = { ...fixture.state, bots: fixture.state.bots.map((item) => (item.id === id ? { ...item, ...extra } : item)) };
+describe("each list shows its newest bot first", () => {
+  const latest = (id: string, updatedAt: number, extra: Partial<Bot> = {}) => {
+    const task = { threadId: `${id}-t`, title: "Run", createdAt: 1, updatedAt } as Task;
+    fixture.state = { ...fixture.state, bots: fixture.state.bots.map((item) => (item.id === id ? { ...item, ...extra, tasks: [task] } : item)) };
   };
 
-  it("move to the top of their own list, in the person's order, and go back when done", () => {
-    busy("cleo", { busy: true });
-    busy("bea", { activity: "waiting-on-you" });
-    busy("echo", { busy: true });
-    expect(listed()).toEqual(["bea", "cleo", "atlas", "echo", "dodo"]);
-    busy("cleo", { busy: false });
-    busy("bea", { activity: "idle" });
-    busy("echo", { busy: false });
-    expect(listed()).toEqual(["atlas", "bea", "cleo", "dodo", "echo"]);
+  it("by its latest thread, and a working bot gets no head start", () => {
+    latest("cleo", 30);
+    latest("bea", 20, { busy: true });
+    latest("echo", 10);
+    expect(listed()).toEqual(["cleo", "bea", "atlas", "echo", "dodo"]);
   });
 
-  it("count a working thread, but not a wait on a teammate", () => {
-    busy("cleo", { tasks: [{ threadId: "c1", title: "Run", createdAt: 1, busy: true } as Task] });
-    busy("bea", { waitingForTeammates: true });
-    expect(listed()).toEqual(["cleo", "atlas", "bea", "dodo", "echo"]);
-  });
-
-  it("never store the shown order: Alt+Up/Down and drops use the person's own order", () => {
-    busy("cleo", { busy: true });
-    row("atlas").botDrag!.step("atlas", 1);
-    expect(actions()).toEqual([{ type: "botsOrdered", botIds: ["bea", "atlas", "cleo"] }]);
-    fixture.dispatch.mockClear();
-    // A drop on the list itself finds its row in the shown order (cleo first) and places it by the person's own order.
+  it("never stores that order: a drop into another list places it by the person's own order", () => {
+    latest("echo", 10);
+    expect(listed()).toEqual(["atlas", "bea", "cleo", "echo", "dodo"]);
     drag("atlas");
-    laidOut("cleo", "atlas", "bea");
-    section(BOTS_SECTION_ID).onDrop(at(190) as never);
-    expect(actions()).toEqual([{ type: "botsOrdered", botIds: ["bea", "atlas", "cleo"] }]);
+    section(userSectionId("Work")).onDrop(at() as never);
+    expect(actions()).toEqual([{ type: "updateBot", botId: "atlas", patch: { section: "Work" } }, { type: "botsOrdered", botIds: ["dodo", "echo", "atlas"] }]);
   });
 });
 

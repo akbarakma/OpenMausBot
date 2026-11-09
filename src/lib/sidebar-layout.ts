@@ -148,6 +148,13 @@ export function activeBotsFirst<T>(parts: { pinnedBots: T[]; sectionedBots: T[];
   return { pinnedBots: first(parts.pinnedBots), sectionedBots: first(parts.sectionedBots), unsectionedBots: first(parts.unsectionedBots) };
 }
 
+/** Newest activity first; bots with the same stamp keep their saved order. */
+export function newestBotsFirst<T extends { createdAt?: number; tasks?: { updatedAt?: number; createdAt?: number; archivedAt?: unknown; routineRunId?: unknown }[] }>(bots: T[]): T[] {
+  const newest = (bot: T) => Math.max(bot.createdAt ?? 0, ...(bot.tasks ?? []).filter((task) => !task.archivedAt && !task.routineRunId).map((task) => task.updatedAt ?? task.createdAt ?? 0));
+  const stamps = new Map(bots.map((bot) => [bot, newest(bot)]));
+  return [...bots].sort((a, b) => stamps.get(b)! - stamps.get(a)!);
+}
+
 export function partitionSidebarGroups<T extends SidebarGroup>(groups: T[]) {
   const botChats = groups.filter((group) => Boolean(group.dm));
   const rooms = groups.filter((group) => !group.dm);

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   activeBotsFirst,
+  newestBotsFirst,
   BOT_CHATS_SECTION_ID,
   BOTS_SECTION_ID,
   CHANNELS_SECTION_ID,
@@ -318,5 +319,19 @@ describe("active bots first", () => {
     expect(parts.unsectionedBots).toEqual(["a", "b", "c"]);
     expect(parts.pinnedBots).toEqual(["p1", "p2", "p3"]);
     expect(parts.sectionedBots).toEqual(["w1", "h1", "w2"]);
+  });
+});
+
+describe("newest bots first", () => {
+  it("puts the bot with the latest thread first, skips archived threads and routine runs, and keeps ties in order", () => {
+    const bots = [
+      { id: "old", createdAt: 1, tasks: [{ updatedAt: 10 }] },
+      { id: "archived", createdAt: 1, tasks: [{ updatedAt: 20 }, { updatedAt: 90, archivedAt: 1 }] },
+      { id: "routine", createdAt: 1, tasks: [{ updatedAt: 5 }, { updatedAt: 95, routineRunId: "run" }] },
+      { id: "fresh", createdAt: 1, tasks: [{ updatedAt: 30 }, { createdAt: 50 }] },
+      { id: "tie", createdAt: 10 },
+    ];
+    expect(newestBotsFirst(bots).map((bot) => bot.id)).toEqual(["fresh", "archived", "old", "tie", "routine"]);
+    expect(bots.map((bot) => bot.id)).toEqual(["old", "archived", "routine", "fresh", "tie"]);
   });
 });
