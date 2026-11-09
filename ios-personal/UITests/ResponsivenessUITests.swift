@@ -176,7 +176,6 @@ final class ResponsivenessUITests: XCTestCase {
             "-store-preview", "-threads-preview", "-busy-fleet-preview",
             "-AppleLanguages", "(en)", "-AppleLocale", "en_US",
             "-companion.prefs.islandIntro", "never",
-            "-companion.prefs.rosterDensity", "comfortable",
             "-companion.onboarding.welcomeSeen", "YES",
             "-companion.onboarding.notificationsSeen", "YES"
         ] + (detail.map { ["-companion.prefs.activityDetail", $0] } ?? [])

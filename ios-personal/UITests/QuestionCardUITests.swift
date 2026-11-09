@@ -72,7 +72,6 @@ final class QuestionCardUITests: XCTestCase {
             "-store-preview", "-question-preview",
             "-AppleLanguages", "(en)", "-AppleLocale", "en_US",
             "-companion.prefs.islandIntro", "never",
-            "-companion.prefs.rosterDensity", "comfortable",
             "-companion.onboarding.welcomeSeen", "YES",
             "-companion.onboarding.notificationsSeen", "YES"
         ]

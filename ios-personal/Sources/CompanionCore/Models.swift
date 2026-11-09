@@ -1064,6 +1064,8 @@ public struct ConfigFlag: Codable, Hashable, Sendable {
 public struct Profile: Codable, Hashable, Sendable {
     public var name: String
     public var email: String
+    /// An `/api/attachments/…` path, sent only when a picture is set.
+    public var avatarUrl: String?
 }
 
 public struct ConfigStatus: Codable, Sendable {

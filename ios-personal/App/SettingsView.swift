@@ -10,7 +10,7 @@ struct SettingsView: View {
     @AppStorage(PrefKey.activityDetail) private var activityDetail = ActivityDetail.phoneDefault.rawValue
     @AppStorage(PrefKey.islandIntro) private var islandIntro = IslandIntro.oncePerBot.rawValue
     @AppStorage(PrefKey.language) private var language = AppLanguage.system.rawValue
-    @AppStorage(PrefKey.rosterDensity) private var rosterDensity = RosterDensity.default.rawValue
+    @AppStorage(PrefKey.pinnedAtBottom) private var pinnedAtBottom = true
     private let onConnect: (() -> Void)?
 
     init(onConnect: (() -> Void)? = nil) {
@@ -106,25 +106,18 @@ struct SettingsView: View {
             }
 
             Section {
-                // Bound through the resolved value, so a stored value this
-                // build cannot read still shows the density actually in use.
-                Picker(selection: Binding(
-                    get: { RosterDensity(stored: rosterDensity) },
-                    set: { rosterDensity = $0.rawValue }
-                )) {
-                    ForEach(RosterDensity.allCases, id: \.self) { density in
-                        Text(LocalizedStringKey(density.label)).tag(density)
-                    }
-                } label: {
+                Toggle(isOn: $pinnedAtBottom) {
                     Label {
-                        Text("List density")
+                        Text("Pinned at the bottom")
                     } icon: {
-                        SettingsIcon(symbol: "list.bullet", color: .indigo)
+                        SettingsIcon(symbol: "arrow.down.to.line", color: .indigo)
                     }
                 }
-                .accessibilityIdentifier("list-density")
+                .accessibilityIdentifier("pinned-at-bottom")
+            } header: {
+                Text("Home")
             } footer: {
-                Text(LocalizedStringKey(RosterDensity(stored: rosterDensity).caption))
+                Text("Your Chief of Staff and pinned bots sit just above the bottom bar, where your thumb reaches. Turn off to show them at the top.")
             }
 
             Section {

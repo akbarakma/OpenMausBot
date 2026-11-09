@@ -41,7 +41,7 @@ final class TeamMemoryUITests: XCTestCase {
         app.terminate()
         app.launchArguments = ["-store-preview", "-threads-preview", "-memory-preview", "-open-profile",
                                "-AppleLanguages", "(en)", "-AppleLocale", "en_US",
-                               "-companion.prefs.islandIntro", "never", "-companion.prefs.rosterDensity", "comfortable",
+                               "-companion.prefs.islandIntro", "never",
                                "-companion.onboarding.welcomeSeen", "YES", "-companion.onboarding.notificationsSeen", "YES"]
         if stale { app.launchArguments.append("-memory-stale-preview") }
         app.launch()

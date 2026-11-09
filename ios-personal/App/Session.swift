@@ -321,11 +321,6 @@ final class Session: ObservableObject {
                let pages = try? JSONDecoder().decode([String: ThreadPage].self, from: pagesData) {
                 for (threadID, page) in pages { state.merge(page, intoThread: threadID) }
             }
-            if arguments.contains("-reset-list-density") {
-                // The fresh-install default is checked in UI tests; an
-                // earlier run on the same simulator may have saved a choice.
-                UserDefaults.standard.removeObject(forKey: PrefKey.rosterDensity)
-            }
             if arguments.contains("-busy-fleet-preview") { startBusyFleetPreview() }
             status = .live
             return
@@ -1852,28 +1847,8 @@ final class Session: ObservableObject {
         await perform { try await $0.alwaysAllow(botId: bot.id, key: key, threadId: bot.threadId) }
     }
 
-    /// Make a new bot. The harness chooses its name, colour and greeting, so
-    /// one made here is indistinguishable from one made on the desktop.
-    ///
-    /// Creating a bot does not broadcast — the desktop adds it optimistically
-    /// too — so the new bot is folded in here rather than waited for. Return
-    /// it so the caller can open it, which is the only reason anyone taps the
-    /// button.
-    @discardableResult
-    func createBot() async -> Bot? {
-        guard let client else { return nil }
-        do {
-            let bot = try await client.createBot()
-            state.apply(.bot(bot))
-            return bot
-        } catch {
-            actionError = error.localizedDescription
-            return nil
-        }
-    }
-
-    /// Make a room from the phone. Same shape as `createBot`: fold it in
-    /// rather than wait for a broadcast, and hand it back so it can be opened.
+    /// Make a room from the phone: fold it in rather than wait for a
+    /// broadcast, and hand it back so it can be opened.
     @discardableResult
     func createRoom(name: String?, memberIds: [String]) async -> Room? {
         guard let client else { return nil }
@@ -1881,22 +1856,6 @@ final class Session: ObservableObject {
             let room = try await client.createRoom(name: name, memberIds: memberIds)
             state.apply(.room(room))
             return room
-        } catch {
-            actionError = error.localizedDescription
-            return nil
-        }
-    }
-
-    /// Create a sidebar section by assigning its complete starting set in one
-    /// request. The server commits the batch before returning, then these
-    /// folds make the roster move immediately instead of waiting for SSE.
-    @discardableResult
-    func assignSection(name: String, botIds: [String]) async -> [Bot]? {
-        guard let client else { return nil }
-        do {
-            let bots = try await client.assignSection(name: name, botIds: botIds)
-            for bot in bots { state.apply(.bot(bot)) }
-            return bots
         } catch {
             actionError = error.localizedDescription
             return nil
@@ -2232,7 +2191,12 @@ final class Session: ObservableObject {
     }
 
     func avatarData(for bot: Bot) async -> Data? {
-        guard let path = bot.avatarUrl, let client else { return nil }
+        guard let path = bot.avatarUrl else { return nil }
+        return await avatarData(path: path)
+    }
+
+    func avatarData(path: String) async -> Data? {
+        guard let client else { return nil }
         let key = path as NSString
         if let cached = avatarCache.object(forKey: key) { return cached as Data }
         let generation = avatarCacheGeneration

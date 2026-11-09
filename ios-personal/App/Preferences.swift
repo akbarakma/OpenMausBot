@@ -14,9 +14,7 @@ enum PrefKey {
     static let activityDetail = "companion.prefs.activityDetail"
     static let quickReplies = "companion.prefs.quickReplies"
     static let language = "companion.prefs.language"
-    /// Per device, like the desktop's sidebar density: a phone and a laptop
-    /// have different room for a list.
-    static let rosterDensity = "companion.prefs.rosterDensity"
+    static let pinnedAtBottom = "companion.prefs.pinnedAtBottom"
     static let collapsedSections = "companion.prefs.collapsedSections"
 }
 
