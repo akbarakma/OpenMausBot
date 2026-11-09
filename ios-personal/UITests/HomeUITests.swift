@@ -3,14 +3,28 @@ import XCTest
 /// Runs against the bundled roster fixture: no paired computer, nothing leaves the phone.
 final class HomeUITests: XCTestCase {
     @MainActor
-    func testPinnedBlockSitsAboveTheBottomBarUnlessTurnedOff() {
+    func testPinnedBlockSitsAtTheTopUnlessMovedToTheBottom() {
         var app = launch()
-        XCTAssertGreaterThan(frame("home-chief", in: app).minY, frame("section-header.groups", in: app).minY)
-        record("Pinned at the bottom", app)
-
-        app = launch(["-companion.prefs.pinnedAtBottom", "NO"])
         XCTAssertLessThan(frame("home-chief", in: app).minY, frame("section-header.groups", in: app).minY)
         record("Pinned at the top", app)
+
+        app = launch(["-companion.prefs.pinnedAtBottom", "YES"])
+        XCTAssertGreaterThan(frame("home-chief", in: app).minY, frame("section-header.groups", in: app).minY)
+        record("Pinned at the bottom", app)
+    }
+
+    @MainActor
+    func testUnpinningInTheDemoLeavesOnlyTheChief() {
+        let app = launch()
+        let pixel = app.buttons["pinned.roster-pixel"]
+        XCTAssertTrue(pixel.waitForExistence(timeout: 5))
+        pixel.press(forDuration: 1)
+        let unpin = app.buttons["Unpin"]
+        XCTAssertTrue(unpin.waitForExistence(timeout: 5))
+        unpin.tap()
+        XCTAssertTrue(pixel.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["home-chief"].exists)
+        record("No pinned bots", app)
     }
 
     /// A launch argument would override the saved order, so this test starts

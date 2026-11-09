@@ -1995,6 +1995,13 @@ final class Session: ObservableObject {
     }
 
     func setBotPinned(_ bot: Bot, pinned: Bool) async {
+#if DEBUG
+        // The demo fleet has no computer to save to, so a pin changes only this run.
+        if client == nil, ProcessInfo.processInfo.arguments.contains("-store-preview") {
+            setBotPinnedLocally(bot.id, pinned ? true : nil)
+            return
+        }
+#endif
         guard let client else { return }
         setBotPinnedLocally(bot.id, pinned ? true : nil)
         do {

@@ -12,7 +12,7 @@ struct ChatListView: View {
     @State private var query = ""
     @AppStorage(PrefKey.activityDetail) private var activityDetail = ActivityDetail.phoneDefault.rawValue
     @AppStorage(PrefKey.collapsedSections) private var collapsedSections = ""
-    @AppStorage(PrefKey.pinnedAtBottom) private var pinnedAtBottom = true
+    @AppStorage(PrefKey.pinnedAtBottom) private var pinnedAtBottom = false
     @AppStorage(PrefKey.pinnedOrder) private var pinnedOrder = ""
     @AppStorage(PrefKey.sectionOrder) private var sectionOrder = ""
     @State private var reordering = false

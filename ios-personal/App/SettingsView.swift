@@ -10,7 +10,7 @@ struct SettingsView: View {
     @AppStorage(PrefKey.activityDetail) private var activityDetail = ActivityDetail.phoneDefault.rawValue
     @AppStorage(PrefKey.islandIntro) private var islandIntro = IslandIntro.oncePerBot.rawValue
     @AppStorage(PrefKey.language) private var language = AppLanguage.system.rawValue
-    @AppStorage(PrefKey.pinnedAtBottom) private var pinnedAtBottom = true
+    @AppStorage(PrefKey.pinnedAtBottom) private var pinnedAtBottom = false
     @State private var showingCalendar = false
     @State private var showingNewGroup = false
     private let onConnect: (() -> Void)?
