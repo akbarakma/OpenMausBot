@@ -16,6 +16,7 @@ struct ChatListView: View {
     @AppStorage(PrefKey.pinnedOrder) private var pinnedOrder = ""
     @AppStorage(PrefKey.sectionOrder) private var sectionOrder = ""
     @State private var reordering = false
+    @State private var today = RosterDay.today
     /// Driven so a notification or a deep link can open a chat without a tap.
     @State private var path = NavigationPath()
     @State private var searchHits: [SearchHit] = []
@@ -84,6 +85,9 @@ struct ChatListView: View {
                 }
             }
             .toolbar(.hidden, for: .navigationBar)
+            .onReceive(NotificationCenter.default.publisher(for: .NSCalendarDayChanged).receive(on: RunLoop.main)) { _ in
+                today = RosterDay.today
+            }
             .navigationDestination(for: Chat.self) { ChatView(chat: $0) }
             .onValueChange(of: session.notificationChat) { chat in
                 guard let chat else { return }
@@ -197,8 +201,8 @@ struct ChatListView: View {
     private var favorites: some View {
         if chief != nil || !pinned.isEmpty {
             FavoritesBlock(
-                chief: chief,
-                pinned: pinned,
+                chief: chief.map(atNewestThread),
+                pinned: pinned.map(atNewestThread),
                 face: { MausState.forChat(.bot($0), in: session.state) },
                 open: open,
                 menu: { AnyView(botMenu($0)) }
@@ -260,7 +264,7 @@ struct ChatListView: View {
         let state = session.state
         let byId = Dictionary(summaries.map { ($0.chat.id, $0) }, uniquingKeysWith: { first, _ in first })
         func newestFirst(_ ids: [String]) -> [ChatSummary] {
-            ids.compactMap { byId[$0] }.sorted { $0.lastActivity > $1.lastActivity }
+            CompanionState.newestFirst(ids.compactMap { byId[$0] })
         }
         var result: [HomeSection] = []
         func add(_ id: String, _ title: String, _ ids: [String]) {
@@ -318,7 +322,6 @@ struct ChatListView: View {
     }
 
     private func rows(_ rows: [ChatSummary], waiting: Set<String>) -> some View {
-        let today = RosterDay.today
         let state = session.state
         return ForEach(rows) { summary in
             let row = Button { open(summary) } label: {
@@ -329,7 +332,7 @@ struct ChatListView: View {
                     at: summary.lastActivity,
                     today: today,
                     face: MausState.forChat(summary.chat, in: state),
-                    waiting: waiting.contains(summary.chat.id)
+                    waiting: waiting.contains(summary.chat.threadId)
                 )
                 .equatable()
             }
@@ -524,8 +527,11 @@ struct ChatListView: View {
 
     /// A face opens the bot's newest thread, as its row would.
     private func open(_ bot: Bot) {
-        let newest = session.state.newestThread(of: bot).threadId
-        path.append(Chat.bot(bot.projected(forThread: newest) ?? bot))
+        path.append(Chat.bot(atNewestThread(bot)))
+    }
+
+    private func atNewestThread(_ bot: Bot) -> Bot {
+        bot.projected(forThread: session.state.newestThread(of: bot).threadId) ?? bot
     }
 
     private func createThread(for bot: Bot) {
@@ -538,8 +544,9 @@ struct ChatListView: View {
         }
     }
 
+    /// Thread ids, not chats: a row shows one thread and opens it.
     private func waitingChats(_ approvals: [(threadId: String, message: Message)]) -> Set<String> {
-        Set(approvals.compactMap { session.state.chat(forThread: $0.threadId)?.id })
+        Set(approvals.map(\.threadId))
     }
 
     private func members(of chat: Chat) -> [Bot] {

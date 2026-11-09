@@ -119,7 +119,7 @@ struct SettingsView: View {
             } header: {
                 Text("Home")
             } footer: {
-                Text("Your Chief of Staff and pinned bots sit just above the bottom bar, where your thumb reaches. Turn off to show them at the top.")
+                Text("On: your Chief of Staff and pinned bots sit just above the bottom bar, where your thumb reaches. Off: they sit at the top of the list.")
             }
 
             Section {

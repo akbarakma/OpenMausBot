@@ -43,6 +43,17 @@ final class HomeOrderTests: XCTestCase {
         XCTAssertEqual(state.newestThread(of: state.bots[0]).threadId, "main")
     }
 
+    func testAHiddenOpenThreadDoesNotMoveTheBot() {
+        var main = task("main", updatedAt: 10)
+        main.snoozedUntil = 0
+        var state = CompanionState()
+        state.bots = [bot(tasks: [main, task("side", updatedAt: 40)])]
+        state.apply(.message(threadId: "main", message: Message(id: "m", role: .bot, kind: .text, at: 100)))
+        let newest = state.newestThread(of: state.bots[0])
+        XCTAssertEqual(newest.threadId, "side")
+        XCTAssertEqual(newest.at, 40)
+    }
+
     private func bot(tasks: [BotTask]) -> Bot {
         Bot(
             id: "bot", threadId: "main", name: "Scout", title: "Researcher",

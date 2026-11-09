@@ -68,6 +68,7 @@ struct HomeRow: View, Equatable {
                             .font(.title3)
                             .foregroundStyle(Color.secondary)
                             .lineLimit(1)
+                            .accessibilityLabel(Text(verbatim: role))
                     }
                     Spacer(minLength: 8)
                     Text(verbatim: RelativeStamp.list(at))
@@ -234,6 +235,7 @@ struct FavoritesBlock: View {
                         .fill(Color.accentColor)
                         .frame(width: 12, height: 12)
                         .overlay(Circle().stroke(Color(uiColor: .systemBackground), lineWidth: 2))
+                        .accessibilityLabel("Unread")
                 }
             }
     }
@@ -260,6 +262,8 @@ struct AccountPhoto: View {
             }
         }
         .task(id: session.connection?.id) {
+            name = ""
+            image = nil
             guard let profile = await session.configStatus()?.profile else { return }
             name = profile.name
             guard let path = profile.avatarUrl, !path.isEmpty,

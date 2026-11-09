@@ -25,10 +25,24 @@ public enum SavedOrder {
 extension CompanionState {
     /// The bot's thread with the latest message, and when that was. Home
     /// sorts bots by it and opens the bot there. Archived and snoozed
-    /// threads, and routine runs the thread list hides, do not count.
+    /// threads, and routine runs the thread list hides, do not count, even
+    /// when one is the thread the bot has open.
     public func newestThread(of bot: Bot, now: Date = Date()) -> (threadId: String, at: Double) {
-        var best = (threadId: bot.threadId, at: lastVisibleMessage(forThread: bot.threadId)?.at ?? 0)
-        for task in bot.tasks ?? [] where !task.isArchived && !task.isSnoozed(now: now) && task.routineRunId == nil {
+        newestThread(current: bot.threadId, tasks: bot.tasks ?? [], now: now)
+    }
+
+    /// The same rule for a group: home sorts it by its newest thread.
+    public func newestThread(of room: Room, now: Date = Date()) -> (threadId: String, at: Double) {
+        newestThread(current: room.threadId, tasks: room.tasks ?? [], now: now)
+    }
+
+    private func newestThread(current: String, tasks: [BotTask], now: Date) -> (threadId: String, at: Double) {
+        let shown = { (task: BotTask) in !task.isArchived && !task.isSnoozed(now: now) && task.routineRunId == nil }
+        var best = (threadId: current, at: 0.0)
+        if tasks.first(where: { $0.threadId == current }).map(shown) ?? true {
+            best.at = lastVisibleMessage(forThread: current)?.at ?? 0
+        }
+        for task in tasks where shown(task) {
             let at = max(task.updatedAt ?? task.createdAt, lastVisibleMessage(forThread: task.threadId)?.at ?? 0)
             if at > best.at { best = (task.threadId, at) }
         }

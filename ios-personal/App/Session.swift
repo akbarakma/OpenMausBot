@@ -2676,9 +2676,16 @@ extension CompanionState {
             return ChatSummary(chat: .bot(bot.projected(forThread: newest.threadId) ?? bot), preview: "", lastActivity: newest.at)
         }
         let rooms = self.rooms.map { room in
-            ChatSummary(chat: .room(room), preview: "", lastActivity: lastVisibleMessage(forThread: room.threadId)?.at ?? 0)
+            ChatSummary(chat: .room(room), preview: "", lastActivity: newestThread(of: room).at)
         }
-        return (bots + rooms).sorted { $0.lastActivity > $1.lastActivity }
+        return Self.newestFirst(bots + rooms)
+    }
+
+    /// Ties keep the order they came in, so rows with the same time never swap.
+    static func newestFirst(_ summaries: [ChatSummary]) -> [ChatSummary] {
+        summaries.enumerated()
+            .sorted { $0.element.lastActivity != $1.element.lastActivity ? $0.element.lastActivity > $1.element.lastActivity : $0.offset < $1.offset }
+            .map(\.element)
     }
 
 }
