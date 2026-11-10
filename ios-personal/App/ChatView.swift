@@ -95,9 +95,16 @@ struct ChatView: View {
     /// Bumped by a send: the transcript goes to its end, wherever the
     /// reader had scrolled.
     @State private var sendJumps = 0
-    /// The floating composer's height, which the transcript keeps clear
-    /// above its end.
-    @State private var composerHeight: CGFloat = 76
+    @State private var composerTop: CGFloat = 0
+    @State private var keyboardUp = false
+    /// How far the floating composer reaches up into the transcript, which
+    /// keeps that much clear above its end. Measured edge to edge rather
+    /// than the composer's own height: with the keyboard down the composer
+    /// dips into the home indicator's safe area and the transcript does not.
+    private var composerHeight: CGFloat {
+        guard viewportBottom > 0, composerTop > 0 else { return 76 }
+        return max(0, viewportBottom - composerTop)
+    }
 
     @AppStorage(PrefKey.islandIntro) private var islandIntro = IslandIntro.oncePerBot.rawValue
     @AppStorage(PrefKey.islandSeen) private var islandSeen = ""
@@ -289,9 +296,15 @@ struct ChatView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             composer(snapshot)
-                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { composerHeight = $0 }
+                // With the keyboard down the composer dips into the home
+                // indicator's safe area, keeping its bar 24pt off the screen
+                // edge the way Messages does.
+                .padding(.bottom, keyboardUp ? 0 : -max(0, Self.homeIndicatorInset - 16))
+                .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).minY } action: { composerTop = $0 }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in keyboardUp = true }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in keyboardUp = false }
         .overlay(alignment: .bottom) { plusSheet }
         .overlay(alignment: .bottomTrailing) { busyFleetFixtureBadge }
         .toolbar(.hidden, for: .navigationBar)
@@ -435,12 +448,18 @@ struct ChatView: View {
         // Reading scrollback — one tap back to the end, streaming or
         // not, the same pill the desktop chat offers.
         .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).maxY } action: { bottom in
-            let shrank = bottom < viewportBottom
+            let moved = bottom != viewportBottom
             viewportBottom = bottom
-            // The keyboard shrinks the transcript from below. A reader at
-            // the end stays there instead of finding the newest message
-            // under the keyboard.
-            if shrank, !readerDetached { proxy.scrollTo(Self.transcriptEndId, anchor: .bottom) }
+            // The keyboard moves the transcript's bottom edge both ways. A
+            // reader at the end stays there: above the keyboard while it is
+            // up, and back down to the composer when it closes, instead of
+            // leaving a gap where the keyboard was.
+            if moved, !readerDetached { proxy.scrollTo(Self.transcriptEndId, anchor: .bottom) }
+        }
+        // The composer settles after the transcript does, and grows with a
+        // long draft; either way the space kept clear above the end changes.
+        .onChange(of: composerTop) {
+            if !readerDetached { proxy.scrollTo(Self.transcriptEndId, anchor: .bottom) }
         }
         .overlay(alignment: .bottom) { jumpToLatestPill(proxy).padding(.bottom, composerHeight) }
         .task { await playIslandIntro() }
@@ -725,7 +744,7 @@ struct ChatView: View {
             let islandSide: CGFloat = 220
             // centred in the part of the square the hardware island does not cover
             let islandFaceCentre = IslandGeometry.top + IslandGeometry.size.height + (islandSide - IslandGeometry.size.height) / 2
-            let headerFaceCentre = topInset + 26
+            let headerFaceCentre = topInset + Self.headerTopPadding + Self.headerControlSize / 2
             let faceSize = Self.headerFaceSize + (132 - Self.headerFaceSize) * facePhase
             let faceCentre = headerFaceCentre + (islandFaceCentre - headerFaceCentre) * facePhase
             ZStack(alignment: .top) {
@@ -970,7 +989,9 @@ struct ChatView: View {
 
     // MARK: - Header
 
-    static let headerFaceSize: CGFloat = 30
+    static let headerFaceSize: CGFloat = 36
+    static let headerControlSize: CGFloat = 50
+    static let headerTopPadding: CGFloat = 12
 
     /// Back on the left with the rest-of-app unread count, the chat's face
     /// and name in the middle, and the browser (a room: its threads) on the
@@ -983,10 +1004,10 @@ struct ChatView: View {
                 headerTrailingButton
             }
             identityPill
-                .padding(.horizontal, 64)
+                .padding(.horizontal, Self.headerControlSize + 12)
         }
         .padding(.horizontal, 16)
-        .padding(.top, 4)
+        .padding(.top, Self.headerTopPadding)
         .padding(.bottom, 8)
         .frame(maxWidth: CompanionLayout.headerWidth)
         .frame(maxWidth: .infinity)
@@ -1016,7 +1037,7 @@ struct ChatView: View {
         Button { dismiss() } label: {
             HStack(spacing: 4) {
                 Image(systemName: "chevron.left")
-                    .font(.system(size: 17, weight: .semibold))
+                    .font(.system(size: 19, weight: .semibold))
                 if unreadElsewhere > 0 {
                     Text("\(unreadElsewhere)")
                         .font(.system(size: 13, weight: .semibold))
@@ -1030,7 +1051,7 @@ struct ChatView: View {
             .padding(.trailing, unreadElsewhere > 0 ? 8 : 12)
             // At least as wide as it is tall: a circle alone, a pill
             // once the unread count joins it.
-            .frame(minWidth: 44, minHeight: 44)
+            .frame(minWidth: Self.headerControlSize, minHeight: Self.headerControlSize)
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)
@@ -1047,13 +1068,13 @@ struct ChatView: View {
                 .opacity(islandVisible ? 0 : 1)
                 .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).midX } action: { faceMidX = $0 }
             Text(current.name)
-                .font(.system(size: 16, weight: .semibold))
+                .font(.system(size: 18, weight: .semibold))
                 .foregroundStyle(Color.primary)
                 .lineLimit(1)
         }
         .padding(.leading, 7)
-        .padding(.trailing, 16)
-        .frame(height: 44)
+        .padding(.trailing, 18)
+        .frame(height: Self.headerControlSize)
         .contentShape(Capsule())
         if case .bot = current {
             Button { showingProfile = true } label: { label }
@@ -1074,20 +1095,20 @@ struct ChatView: View {
 
     @ViewBuilder private var headerTrailingButton: some View {
         if case .bot = current {
-            GlassButton(systemImage: "safari", size: 44, weight: .medium) {
+            GlassButton(systemImage: "safari", size: Self.headerControlSize, weight: .medium) {
                 showingBrowser = true
             }
             .accessibilityLabel("Open \(current.name)'s browser")
             .accessibilityIdentifier("header-browser")
         } else if current.supportsTasks {
-            GlassButton(systemImage: "square.stack", size: 44, weight: .medium) {
+            GlassButton(systemImage: "square.stack", size: Self.headerControlSize, weight: .medium) {
                 showingTasks = true
             }
             .accessibilityLabel("Threads")
             .accessibilityValue(Text(verbatim: current.threadTitle))
             .accessibilityIdentifier("header-threads")
         } else {
-            Color.clear.frame(width: 44, height: 44)
+            Color.clear.frame(width: Self.headerControlSize, height: Self.headerControlSize)
         }
     }
 
@@ -1830,6 +1851,9 @@ struct ChatView: View {
     }
 
     static let composerBarHeight: CGFloat = 52
+    @MainActor static var homeIndicatorInset: CGFloat {
+        UIApplication.shared.connectedScenes.lazy.compactMap { ($0 as? UIWindowScene)?.keyWindow }.first?.safeAreaInsets.bottom ?? 0
+    }
     static let composerButtonSize: CGFloat = 36
 
     private var plusButton: some View {
