@@ -82,6 +82,7 @@ struct ChatView: View {
     @State private var islandExpanded = false
     @State private var faceMidX: CGFloat = 0
     @State private var headerMidX: CGFloat = 0
+    @State private var headerFadeSolid: CGFloat = 0.5
     @State private var islandVisible = false
     @State private var facePhase: CGFloat = 0
     /// Reading scrollback: the end of the transcript is below the screen, so
@@ -990,18 +991,22 @@ struct ChatView: View {
         .frame(maxWidth: CompanionLayout.headerWidth)
         .frame(maxWidth: .infinity)
         .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).midX } action: { headerMidX = $0 }
-        // A fade, not a blur: text scrolling under the clock and the glass
-        // dims out instead of colliding with them.
+        // A fade, not a blur: solid behind the clock so text never collides
+        // with it, then clear by the pills' bottom edge so a bubble under the
+        // header only dims at the very top.
+        .onGeometryChange(for: CGFloat.self) { proxy in
+            let top = proxy.safeAreaInsets.top
+            return top / max(top + proxy.size.height, 1)
+        } action: { headerFadeSolid = $0 }
         .background(
             LinearGradient(
                 stops: [
                     .init(color: Color(uiColor: .systemBackground), location: 0),
-                    .init(color: Color(uiColor: .systemBackground), location: 0.6),
+                    .init(color: Color(uiColor: .systemBackground), location: headerFadeSolid),
                     .init(color: Color(uiColor: .systemBackground).opacity(0), location: 1),
                 ],
                 startPoint: .top, endPoint: .bottom
             )
-            .padding(.bottom, -28)
             .ignoresSafeArea(edges: .top)
             .allowsHitTesting(false)
         )
