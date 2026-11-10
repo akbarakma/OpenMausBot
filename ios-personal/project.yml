@@ -91,6 +91,9 @@ targets:
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         LSApplicationCategoryType: public.app-category.productivity
         ITSAppUsesNonExemptEncryption: false
+        # Lets SwiftUI animations (the keyboard spring, scroll-to-end) run
+        # at 120 Hz on ProMotion phones; without it they are held to 60.
+        CADisableMinimumFrameDurationOnPhone: true
         OpenMausKeychainAccessGroup: $(AppIdentifierPrefix)group.com.akbarakma.mausbot
         # The bot's Live Activity — its face and ask in the Dynamic Island
         # and on the lock screen.

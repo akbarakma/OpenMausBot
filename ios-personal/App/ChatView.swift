@@ -310,7 +310,7 @@ struct ChatView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
             keyboardMoving = true
-            withAnimation(Self.keyboardSpring) { keyboardUp = false }
+            keyboardUp = false
         }
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardDidShowNotification)) { _ in keyboardSettled() }
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardDidHideNotification)) { _ in keyboardSettled() }
@@ -461,19 +461,13 @@ struct ChatView: View {
             viewportBottom = bottom
             // The keyboard moves the transcript's bottom edge both ways. A
             // reader at the end stays there: above the keyboard while it is
-            // up, and back down to the composer when it closes. The scroll
-            // runs on the keyboard's own timing so the messages ride with it
-            // instead of jumping ahead of it.
-            if moved, !readerDetached {
-                withAnimation(Self.keyboardSpring) { proxy.scrollTo(Self.transcriptEndId, anchor: .bottom) }
-            }
+            // up, and back down to the composer when it closes.
+            if moved, !readerDetached { followKeyboard(proxy) }
         }
         // The composer settles after the transcript does, and grows with a
         // long draft; either way the space kept clear above the end changes.
         .onChange(of: composerTop) {
-            if !readerDetached {
-                withAnimation(Self.keyboardSpring) { proxy.scrollTo(Self.transcriptEndId, anchor: .bottom) }
-            }
+            if !readerDetached { followKeyboard(proxy) }
         }
         .overlay(alignment: .bottom) { jumpToLatestPill(proxy).padding(.bottom, composerHeight) }
         .task { await playIslandIntro() }
@@ -741,6 +735,15 @@ struct ChatView: View {
         let reading = scrollReading.endGap > Self.jumpToLatestThreshold && !(keyboardMoving && !readerDetached)
         if reading != showsJumpToLatest {
             withAnimation(reduceMotion ? nil : .easeOut(duration: 0.18)) { showsJumpToLatest = reading }
+        }
+    }
+
+    /// Opening rides the keyboard's spring, or the messages land before the
+    /// keyboard has risen. Closing stays unanimated, which tracks the
+    /// keyboard down more closely than the spring does.
+    private func followKeyboard(_ proxy: ScrollViewProxy) {
+        withAnimation(keyboardUp ? Self.keyboardSpring : nil) {
+            proxy.scrollTo(Self.transcriptEndId, anchor: .bottom)
         }
     }
 
@@ -1023,14 +1026,18 @@ struct ChatView: View {
     /// and name in the middle, and the browser (a room: its threads) on the
     /// right. The transcript scrolls beneath it.
     private var headerBar: some View {
-        ZStack {
-            HStack(alignment: .top) {
-                backButton
-                Spacer(minLength: 4)
-                headerTrailingButton
+        // One glass container: the three controls sample the transcript
+        // under them in a single pass instead of three.
+        GlassGroup(spacing: 0) {
+            ZStack {
+                HStack(alignment: .top) {
+                    backButton
+                    Spacer(minLength: 4)
+                    headerTrailingButton
+                }
+                identityPill
+                    .padding(.horizontal, Self.headerControlSize + 12)
             }
-            identityPill
-                .padding(.horizontal, Self.headerControlSize + 12)
         }
         .padding(.horizontal, 16)
         .padding(.top, Self.headerTopPadding)
