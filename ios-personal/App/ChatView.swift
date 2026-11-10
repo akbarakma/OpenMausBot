@@ -97,6 +97,7 @@ struct ChatView: View {
     @State private var sendJumps = 0
     @State private var composerTop: CGFloat = 0
     @State private var keyboardUp = false
+    @State private var keyboardMoving = false
     /// How far the floating composer reaches up into the transcript, which
     /// keeps that much clear above its end. Measured edge to edge rather
     /// than the composer's own height: with the keyboard down the composer
@@ -303,8 +304,16 @@ struct ChatView: View {
                 .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).minY } action: { composerTop = $0 }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in keyboardUp = true }
-        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in keyboardUp = false }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
+            keyboardMoving = true
+            withAnimation(Self.keyboardSpring) { keyboardUp = true }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
+            keyboardMoving = true
+            withAnimation(Self.keyboardSpring) { keyboardUp = false }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardDidShowNotification)) { _ in keyboardSettled() }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardDidHideNotification)) { _ in keyboardSettled() }
         .overlay(alignment: .bottom) { plusSheet }
         .overlay(alignment: .bottomTrailing) { busyFleetFixtureBadge }
         .toolbar(.hidden, for: .navigationBar)
@@ -448,18 +457,23 @@ struct ChatView: View {
         // Reading scrollback — one tap back to the end, streaming or
         // not, the same pill the desktop chat offers.
         .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).maxY } action: { bottom in
-            let moved = bottom != viewportBottom
+            let moved = viewportBottom > 0 && bottom != viewportBottom
             viewportBottom = bottom
             // The keyboard moves the transcript's bottom edge both ways. A
             // reader at the end stays there: above the keyboard while it is
-            // up, and back down to the composer when it closes, instead of
-            // leaving a gap where the keyboard was.
-            if moved, !readerDetached { proxy.scrollTo(Self.transcriptEndId, anchor: .bottom) }
+            // up, and back down to the composer when it closes. The scroll
+            // runs on the keyboard's own timing so the messages ride with it
+            // instead of jumping ahead of it.
+            if moved, !readerDetached {
+                withAnimation(Self.keyboardSpring) { proxy.scrollTo(Self.transcriptEndId, anchor: .bottom) }
+            }
         }
         // The composer settles after the transcript does, and grows with a
         // long draft; either way the space kept clear above the end changes.
         .onChange(of: composerTop) {
-            if !readerDetached { proxy.scrollTo(Self.transcriptEndId, anchor: .bottom) }
+            if !readerDetached {
+                withAnimation(Self.keyboardSpring) { proxy.scrollTo(Self.transcriptEndId, anchor: .bottom) }
+            }
         }
         .overlay(alignment: .bottom) { jumpToLatestPill(proxy).padding(.bottom, composerHeight) }
         .task { await playIslandIntro() }
@@ -717,10 +731,22 @@ struct ChatView: View {
 
     private func noteTranscriptEnd(_ end: CGFloat) {
         scrollReading.endGap = end - viewportBottom
-        let reading = end - viewportBottom > Self.jumpToLatestThreshold
+        updateJumpToLatest()
+    }
+
+    /// While the keyboard slides, the end of a transcript that is following
+    /// it dips out of view for a few frames. That is not the reader leaving,
+    /// so the pill waits for the keyboard to settle.
+    private func updateJumpToLatest() {
+        let reading = scrollReading.endGap > Self.jumpToLatestThreshold && !(keyboardMoving && !readerDetached)
         if reading != showsJumpToLatest {
             withAnimation(reduceMotion ? nil : .easeOut(duration: 0.18)) { showsJumpToLatest = reading }
         }
+    }
+
+    private func keyboardSettled() {
+        keyboardMoving = false
+        updateJumpToLatest()
     }
 
     /// The reader started scrolling (`true`), or the scroll came to rest.
@@ -1851,6 +1877,8 @@ struct ChatView: View {
     }
 
     static let composerBarHeight: CGFloat = 52
+    /// UIKit's keyboard curve, so what moves with the keyboard lands with it.
+    static let keyboardSpring = Animation.interpolatingSpring(mass: 3, stiffness: 1000, damping: 500, initialVelocity: 0)
     @MainActor static var homeIndicatorInset: CGFloat {
         UIApplication.shared.connectedScenes.lazy.compactMap { ($0 as? UIWindowScene)?.keyWindow }.first?.safeAreaInsets.bottom ?? 0
     }
