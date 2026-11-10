@@ -1,5 +1,5 @@
-import { lazy, Suspense, useEffect, useState, type ReactNode } from "react";
-import { ChevronRight, FolderOpen, Plus, Server } from "lucide-react";
+import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from "react";
+import { ChevronRight, FileText, FolderOpen, Plus, Server } from "lucide-react";
 
 import { appSwitchPatch } from "@/lib/bot-app-access";
 import { cn } from "@/lib/cn";
@@ -19,6 +19,9 @@ import { ServiceIcon } from "../ServiceIcon";
 import { useWorkingFolder } from "../bot-settings/AccessSection";
 import { BotApiCard } from "../bot-settings/BotApiCard";
 import { useBotEditor } from "../bot-settings/BotEditorContext";
+import { inputCls } from "../bot-settings/field";
+import { ConflictNotice } from "../bot-settings/MemorySection";
+import { OrgSkillsCard } from "../bot-settings/OrgSkillsCard";
 import { SkillReviewDialog, skillSwitchOn, useManagedSkills, type ManagedSkill } from "../bot-settings/SkillsSection";
 import { useBotApps, type BotApp } from "../bot-settings/useBotApps";
 import { useChoosesVisibility, VisibilitySection } from "../bot-settings/VisibilitySection";
@@ -31,7 +34,7 @@ import { MadeHere } from "./LibraryTab";
 import { SettingsPage } from "./SettingsPage";
 import { memoryNoteKey, memoryNoteParts, panelMemoryNotes, withMemoryNote, withoutMemoryNote, type PanelMemoryNote } from "./memory-notes";
 import type { SimplePageId } from "./page-registry";
-import { BotSwitch, buttonCls, Card, LinkRow, NavRow, NoteRow, openRowButtonCls, openRowCls, RadioRow, RowIcon, rowCls, RowText, switchRowCls, TextRow } from "./rows";
+import { BotSwitch, buttonCls, Card, ColRow, LinkRow, NavRow, NoteRow, openRowButtonCls, openRowCls, RadioRow, RowIcon, rowCls, RowText, switchRowCls, TextRow } from "./rows";
 import { MemoryUpkeepCards } from "./MemoryUpkeepCards";
 import { useMemoryDoc } from "./use-memory-doc";
 
@@ -153,6 +156,7 @@ export function AppsPage({ bot, derived }: PageContext) {
 export function MemoryPage({ bot, detail, onDetail }: PageContext & DetailContext) {
   const memory = useMemoryDoc(bot);
   const [draft, setDraft] = useState("");
+  const [asText, setAsText] = useState<{ botId: string; doc: MemoryDoc } | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState<{ note: PanelMemoryNote; doc: MemoryDoc } | null>(null);
@@ -168,6 +172,7 @@ export function MemoryPage({ bot, detail, onDetail }: PageContext & DetailContex
     setConfirming(null);
     onDetail(null);
   }, [gone]);
+  useEffect(() => setAsText(null), [bot.id, memoryOn]);
 
   const change = async (save: () => Promise<boolean>) => {
     if (saving) return false;
@@ -240,6 +245,21 @@ export function MemoryPage({ bot, detail, onDetail }: PageContext & DetailContex
     );
   }
 
+  if (memoryOn && asText?.botId === bot.id) {
+    return (
+      <MemoryTextEditor
+        bot={bot}
+        doc={asText.doc}
+        mine={memory.mine}
+        onDone={(saved) => {
+          if (saved) memory.setDoc(saved);
+          setAsText(null);
+          setError(null);
+        }}
+      />
+    );
+  }
+
   return (
     <>
       <Card>
@@ -275,11 +295,99 @@ export function MemoryPage({ bot, detail, onDetail }: PageContext & DetailContex
             onChange={setDraft}
             onSubmit={() => void add()}
           />
+          {index && (
+            <LinkRow data-panel-link="memory-text" icon={FileText} onClick={() => setAsText({ botId: bot.id, doc: index })}>
+              {t("botPanel.memory.editText")}
+            </LinkRow>
+          )}
         </Card>
       )}
       {memoryOn && !memory.mine && <MemoryUpkeepCards bot={bot} onChanged={memory.reload} />}
       {confirmDialog}
     </>
+  );
+}
+
+/** The whole MEMORY.md as text, saved against the hash it was opened at, so a note the bot writes meanwhile is a
+ * conflict to settle, never silently lost: Reload shows the bot's version and keeps what the person typed beside it. */
+function MemoryTextEditor({ bot, doc, mine, onDone }: {
+  bot: Bot;
+  doc: MemoryDoc;
+  mine: boolean;
+  onDone: (saved: MemoryDoc | null) => void;
+}) {
+  // A file not written yet has the empty file's hash, so the bot creating it meanwhile is a conflict too.
+  const [base, setBase] = useState({ text: doc.text, hash: doc.hash });
+  const [text, setText] = useState(doc.text);
+  const [conflict, setConflict] = useState<{ current: string; currentHash: string } | null>(null);
+  const [savedDraft, setSavedDraft] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  // The file is saved either way; a save that lands after the person moved to another bot must not show in that bot's list.
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
+
+  const save = async (expectedHash: string) => {
+    setSaving(true);
+    setError(null);
+    try {
+      const result = await saveMemoryDoc(bot.id, doc.path, text, expectedHash, mine);
+      if (!mounted.current) return;
+      if (result.ok) onDone(result.doc);
+      else setConflict({ current: result.current, currentHash: result.currentHash });
+    } catch (cause) {
+      setError(errorText(cause, t("botPanel.library.memoryError")));
+    } finally {
+      setSaving(false);
+    }
+  };
+  const reload = () => {
+    if (!conflict) return;
+    setSavedDraft(text);
+    setBase({ text: conflict.current, hash: conflict.currentHash });
+    setText(conflict.current);
+    setConflict(null);
+  };
+
+  return (
+    <Card>
+      <ColRow data-panel-row="memory-text">
+        {conflict && <ConflictNotice botName={bot.name} busy={saving} onReload={reload} onOverwrite={() => void save(conflict.currentHash)} />}
+        <textarea
+          data-memory-text=""
+          className={cn(inputCls, "min-h-[280px] resize-y font-mono text-[13px] leading-relaxed")}
+          value={text}
+          placeholder={t("memory.indexPlaceholder")}
+          aria-label={t("memory.botMemory")}
+          onChange={(event) => setText(event.target.value)}
+        />
+        {error && <div className="text-[13px] text-warning">{error}</div>}
+        {savedDraft !== null && (
+          <div data-memory-draft="">
+            <div className="mb-1 text-[12px] text-ink-secondary">{t("memory.unsavedDraft")}</div>
+            <pre className="max-h-[160px] overflow-auto whitespace-pre-wrap rounded-lg border border-hairline/40 bg-inset p-3 font-mono text-[12px] leading-relaxed text-ink">
+              {savedDraft}
+            </pre>
+            <button type="button" className={cn(buttonCls, "mt-1")} onClick={() => setSavedDraft(null)}>{t("memory.dismissDraft")}</button>
+          </div>
+        )}
+        <div className="flex justify-end gap-2">
+          <button type="button" className={buttonCls} disabled={saving} onClick={() => onDone(null)}>{t("common.cancel")}</button>
+          <button
+            type="button"
+            data-panel-done="memory-text"
+            className={buttonCls}
+            disabled={saving || text === base.text}
+            onClick={() => void save(base.hash)}
+          >
+            {saving ? t("memory.saving") : t("memory.save")}
+          </button>
+        </div>
+      </ColRow>
+    </Card>
   );
 }
 
@@ -471,6 +579,7 @@ export function SkillsPage({ bot, detail, onDetail }: PageContext & DetailContex
           {showGlobal && native.map((skill) => skillRow(skill, <span className="mr-[5px] shrink-0 text-[13px] text-ink-secondary">{t("botPanel.skills.alwaysOn")}</span>))}
         </Card>
       )}
+      <OrgSkillsCard bot={bot} onAdded={() => void skills.refresh()} />
       <Card>
         <TextRow
           data-panel-form="skill-import"

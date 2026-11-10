@@ -17,6 +17,7 @@ import { ApprovalChip } from "../ComposerPlusMenu";
 import { useDesktopCapabilities } from "../DesktopCapabilities";
 import { HideFromSidebarRow } from "../DefaultBotControls";
 import { SoulField } from "../SoulField";
+import { PackageProvenance } from "../bot-settings/PackageProvenance";
 import { REPLY_STYLE_LABELS } from "../bot-settings/ReplyStyleField";
 import { useBotApps } from "../bot-settings/useBotApps";
 import { useSlackManagementUrl } from "../bot-settings/useSlackManagement";
@@ -105,6 +106,7 @@ export function SettingsPage({ bot, derived, onOpen, editingInstructions = false
 
   return (
     <div data-panel-settings>
+      <PackageProvenance bot={bot} />
       <Card label={t("settings.profile.title")} anchor="instructions">
         <label data-panel-row="job" className={cn(rowCls, "cursor-text")}>
           <RowIcon icon={Tag} />

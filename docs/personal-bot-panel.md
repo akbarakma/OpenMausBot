@@ -55,7 +55,10 @@ where a chevron's drawn stroke ends, so their right edges line up.
     Compact now from 80%. It shows once the conversation reports usage.
   - **Conversations:** the list, shown once the bot has 2 or more.
   Usage is not in the chat's ⋯ menu. In Simple mode the composer has no
-  context ring and the chat shows no context warning; Advanced keeps both. The list has no New conversation button; New thread stays in the
+  context ring and the chat shows no context warning; Advanced keeps both.
+  Since upstream 0.1.151 Simple is the only mode (`SIMPLE_ONLY` in
+  `src/lib/simple-only.ts`), so nothing shows the ring. Its code stays for the
+  day that flag is false again. The list has no New conversation button; New thread stays in the
   chat header's ⋯ menu. Upstream's "Try asking" card is removed. The hero
   avatar shows the same face as the sidebar and chat header (see "One face per
   bot" below). The Signed-in sites row is hidden; its page stays for links, and
@@ -80,6 +83,8 @@ where a chevron's drawn stroke ends, so their right edges line up.
 - **Bot settings (gear):** Profile (Job title, Instructions), Rules (Before it
   acts, Apps it can use), Models (Backup AIs), Calls (Call mode), Replies
   (Reply style, Notifications), Advanced (Bot API, Slack, Hide from sidebar).
+  Upstream's `PackageProvenance` line sits above Profile; it shows only for a
+  bot installed from an organization library.
   Backup AIs and Bot API are rows that open their own pages. "In this
   conversation" shows only when the thread's approval differs from the bot's.
   Always allowed sits under Before it acts and shows only once the bot has an
@@ -90,7 +95,9 @@ where a chevron's drawn stroke ends, so their right edges line up.
 - **Memories:** one row per note showing only its text; a struck or expired
   note is left out, as the server no longer reads it. A tap opens the note
   with its source and date and a Delete button. Upstream's Memory upkeep
-  switch and its Changes list follow the notes.
+  switch and its Changes list follow the notes. The Add card ends with
+  upstream's "Edit as text" row, which swaps the page for a text editor of
+  MEMORY.md (`MemoryTextEditor`).
 - **Skills:** two cards, split by the `origin` each skill carries. The bot's
   own card lists every skill it can switch (learned, added by link, library,
   from this computer), or says it has learned none yet. A tap opens the full
@@ -106,6 +113,8 @@ where a chevron's drawn stroke ends, so their right edges line up.
   finds it by search. Its switch shows off, the Skills count leaves it out,
   and its page says "Not in this bot's list". A tap puts it in the list.
   `SkillsPage.dom.test.ts` covers the split and the unlisted skill.
+  Upstream's `OrgSkillsCard` follows the global card, in upstream's own style.
+  It shows only when an organization library offers skills.
 
 Delete on a note and Remove on a skill confirm in `ConfirmDialog` first.
 
@@ -263,10 +272,10 @@ the same state, motion beat and working ring.
 | `src/components/ComputerPanel.tsx` | A data request without a card opens Data and focuses no card |
 | `src/components/bot-panel/LibraryTab.tsx` | `KnowsCard`, `MadeHere` and `chatFolder`, shared with the first page; the Skills row counts only the bot's own switched-on skills, not native ones; Advanced's library still sends `openDataResult` with no card |
 | `src/components/bot-panel/ComputerTab.tsx` | `ComputerCard` (live card, Works in, browser switch); `WherePage` pinned-place note |
-| `src/components/bot-panel/SettingsPage.tsx` | Grouped cards, full-width pickers |
+| `src/components/bot-panel/SettingsPage.tsx` | Grouped cards, full-width pickers; upstream's `PackageProvenance` above the Profile card |
 | `src/components/bot-panel/BackupAis.tsx` | Only the list and Add; the page intro holds the explanation |
 | `src/components/bot-panel/PanelShell.tsx` | `detail` state: the note or skill open in place of its list; the body keeps its scrollbar gutter with `pl-4 pr-2` |
-| `src/components/bot-panel/pages.tsx` | Memory note and skill pages, confirm dialogs, Backup AIs and Bot API pages; `routines` renders `AutomationsPage`; Data, Files and Activity pages; the chat's folder on the Folder page |
+| `src/components/bot-panel/pages.tsx` | Memory note and skill pages, confirm dialogs, Backup AIs and Bot API pages; `routines` renders `AutomationsPage`; Data, Files and Activity pages; the chat's folder on the Folder page; upstream's "Edit as text" (`MemoryTextEditor`) after the note page, and `OrgSkillsCard` after the global skills card |
 | `src/components/ComposerContextMeter.tsx` | New: the composer's context ring, left of the call and Send slot, with a card on hover or click that always shows the token table, since only Advanced mounts it; Compact now from 80%. `ContextBar` and `CompactButton` are shared with the panel's Context card |
 | `src/lib/context-meter.ts` | New: the ring's reading (red above 90%) and the Advanced card's token rows |
 | `src/components/Composer.tsx` | Renders `ComposerContextMeter` in Advanced one-to-one chats, before Stop so Stop keeps the right-hand slot; stays at 1,000 lines for the size ratchet |
@@ -349,5 +358,5 @@ end.
    the fork's added, changed and deleted keys. In `source-hashes.json`, drop
    upstream's entries for keys the fork deleted, and keep the fork's hash for
    keys whose English the fork changed. `i18n:check` fails on any miss.
-6. Run `corepack pnpm exec vitest run BotSettingsDialog.simple MemoryPage.team memory-notes PanelShell.dom page-registry panel-link simple-side-panel Conversations.dom BackupAis.dom ModelPicker ComputerPanel.android ComposerContextMeter context-meter ChatMoreMenu ChatView.controls Sidebar.header Sidebar.simple-layout SidebarTiles electron/window-chrome BrowserPanel ChromeRow StreamSurface guided-tour SkillsPage.dom HeavyBotRow MemoryUpkeepCards`,
+6. Run `corepack pnpm exec vitest run BotSettingsDialog.simple MemoryPage.team memory-notes PanelShell.dom page-registry panel-link simple-side-panel Conversations.dom BackupAis.dom ModelPicker ComputerPanel.android ComposerContextMeter context-meter ChatMoreMenu ChatView.controls Sidebar.header Sidebar.simple-layout SidebarTiles electron/window-chrome BrowserPanel ChromeRow StreamSurface guided-tour SkillsPage.dom HeavyBotRow MemoryUpkeepCards MemoryPage.text`,
    `corepack pnpm i18n:check`, `typecheck` and `lint`.

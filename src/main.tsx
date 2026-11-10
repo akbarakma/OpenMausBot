@@ -9,7 +9,8 @@ import { loadPageLanguage } from "./lib/language-preference";
 import { applySkinChoice, readSkinChoice } from "./lib/skins";
 import { applyChatWidth, readChatWidth } from "./lib/chat-width";
 import { applyFont, readFont } from "./lib/fonts";
-import { settleAdvancedModeDefault } from "./lib/interface-mode";
+import { applySoftwareRendering } from "./lib/software-rendering";
+import { settleInterfaceMode } from "./lib/new-look";
 import { BrowserSignInPage } from "./pair/BrowserSignInPage";
 import { PairPage } from "./pair/PairPage";
 import { HomeScreen, SignedOutAtHome } from "./components/HomeScreen";
@@ -18,10 +19,11 @@ import { endedBeforeReload, forgetEndedSession } from "./lib/session-ended";
 import { pauseLoopsWhileUnfocused } from "./lib/window-focus";
 import "./styles.css";
 
-// Before first paint; settleAdvancedModeDefault must run before applySkin writes omb-skin.
-settleAdvancedModeDefault();
+// Before first paint; settleInterfaceMode must run before applySkin writes omb-skin.
+settleInterfaceMode();
 applySkinChoice(readSkinChoice());
 applyFont(readFont());
+applySoftwareRendering();
 applyChatWidth(readChatWidth());
 pauseLoopsWhileUnfocused();
 const pageLanguage = loadPageLanguage();
