@@ -140,7 +140,7 @@ final class LiveActivityCoordinator {
             Task { await existing.update(.init(state: content, staleDate: nil), alertConfiguration: newAsk ? alert : nil) }
             return
         }
-        let attributes = BotActivityAttributes(botId: bot.id, threadId: bot.threadId, name: bot.name, color: bot.color)
+        let attributes = BotActivityAttributes(botId: bot.id, threadId: bot.threadId, name: bot.name, color: bot.color, faceColor: bot.faceColor)
         let created = try? BotActivity.request(attributes: attributes, content: .init(state: content, staleDate: nil), pushType: nil)
         // a fresh activity cannot alert on request; one immediate alerting update does it
         if let alert, let created {

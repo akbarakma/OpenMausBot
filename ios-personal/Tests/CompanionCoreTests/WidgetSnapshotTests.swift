@@ -76,8 +76,11 @@ final class WidgetSnapshotTests: XCTestCase {
         state.bots[index].color = "red"
         XCTAssertTrue(snapshot().shouldReplace(renamed))
         let recolored = snapshot()
-        state.bots[index].tasks?[0].title = "New thread title"
+        state.bots[index].mascotFaceColor = "black"
         XCTAssertTrue(snapshot().shouldReplace(recolored))
+        let reinked = snapshot()
+        state.bots[index].tasks?[0].title = "New thread title"
+        XCTAssertTrue(snapshot().shouldReplace(reinked))
         let retitled = snapshot()
         let cardIndex = try XCTUnwrap(state.messages["t-ask-new"]?.firstIndex { $0.card?.requestId == "req-new" })
         state.messages["t-ask-new"]?[cardIndex].card?.options = ["Cancel"]

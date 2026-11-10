@@ -185,6 +185,21 @@ final class DecodingTests: XCTestCase {
         XCTAssertEqual(fleet.bots.first?.avatarCrop, .mascot)
     }
 
+    func testMascotFaceColorDecodesAndAnUnknownOneFallsBackToTheBodyDefault() throws {
+        func bot(_ faceColor: String?) throws -> Bot {
+            let field = faceColor.map { #""mascotFaceColor":"\#($0)","# } ?? ""
+            let fixture = String(decoding: try fixture("bot-avatar-profile"), as: UTF8.self)
+                .replacingOccurrences(of: #""avatarCrop":"rounded","#, with: #""avatarCrop":"rounded",\#(field)"#)
+            return try XCTUnwrap(JSONDecoder().decode(Fleet.self, from: Data(fixture.utf8)).bots.first)
+        }
+
+        XCTAssertEqual(try bot("black").faceColor, .black)
+        XCTAssertEqual(try bot("white").faceColor, .white)
+        XCTAssertNil(try bot("gold").faceColor)
+        XCTAssertNil(try bot(nil).faceColor)
+        XCTAssertEqual(Chat.bot(try bot("black")).faceColor, .black)
+    }
+
     func testFutureRoutineScheduleKindRemainsVisibleAsUnknown() throws {
         let schedule = try JSONDecoder().decode(
             RoutineSchedule.self,

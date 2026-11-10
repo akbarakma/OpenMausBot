@@ -162,7 +162,8 @@ struct UpdatesDigestView: View {
                 MausFaceStill(
                     color: row.chat.color,
                     state: MausState(rawValue: row.face) ?? .idle,
-                    size: faceSize
+                    size: faceSize,
+                    faceColor: row.chat.faceColor
                 )
                 VStack(alignment: .leading, spacing: 1) {
                     Text(row.chat.name)
@@ -240,7 +241,8 @@ struct UpdatesDigestView: View {
                 MausFaceStill(
                     color: faceRow?.chat.color ?? "",
                     state: faceRow.map { MausState(rawValue: $0.face) ?? .idle } ?? .idle,
-                    size: 44
+                    size: 44,
+                    faceColor: faceRow?.chat.faceColor
                 )
                 if let ask = asks.first {
                     // The count of asks, as a badge on the chin — the
@@ -270,7 +272,8 @@ struct UpdatesDigestView: View {
                     MausFaceStill(
                         color: row.chat.color,
                         state: MausState(rawValue: row.face) ?? .idle,
-                        size: 20
+                        size: 20,
+                        faceColor: row.chat.faceColor
                     )
                     VStack(alignment: .leading, spacing: 1) {
                         Text(row.chat.name)

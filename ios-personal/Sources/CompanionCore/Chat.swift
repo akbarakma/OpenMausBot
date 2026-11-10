@@ -132,4 +132,11 @@ public enum Chat: Identifiable, Hashable, Codable, Sendable {
         case .room: return "blue"
         }
     }
+
+    public var faceColor: MascotFaceColor? {
+        switch self {
+        case let .bot(bot): return bot.faceColor
+        case .room: return nil
+        }
+    }
 }

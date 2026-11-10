@@ -75,6 +75,8 @@ struct MausAvatar: View {
     /// Pass true only where motion carries meaning — a busy bot, an open
     /// profile, the needs-you island's opening beat.
     var animated: Bool = false
+    var faceColor: MascotFaceColor? = nil
+    var trails: Bool = false
     /// Comets orbiting the body — the island's "something is happening".
     var comets: Bool = false
 
@@ -103,7 +105,7 @@ struct MausAvatar: View {
             Canvas { context, canvasSize in
                 engine.setState(state, now: timeline.date)
                 if live { engine.step(now: timeline.date) }
-                engine.draw(in: &context, size: canvasSize, color: color, bodyId: bodyId, bodyMotion: live, comets: comets, at: timeline.date)
+                engine.draw(in: &context, size: canvasSize, color: color, faceColor: faceColor, bodyId: bodyId, bodyMotion: live, trails: trails, comets: comets, at: timeline.date)
             }
         }
         .frame(width: size, height: size)
@@ -194,6 +196,8 @@ struct MausFaceStill: View {
     var state: MausState = .idle
     var size: CGFloat = 52
     var bodyId: String? = MausSilhouette.defaultBody
+    var faceColor: MascotFaceColor? = nil
+    var trails: Bool = false
     var comets: Bool = false
     /// The clock for the comets' phase; a different date is a different frame.
     var at: Date = Date()
@@ -202,7 +206,7 @@ struct MausFaceStill: View {
         Canvas { context, canvasSize in
             let engine = MausFaceEngine()
             engine.setState(state, now: Date(timeIntervalSinceReferenceDate: 0))
-            engine.draw(in: &context, size: canvasSize, color: color, bodyId: bodyId, bodyMotion: false, comets: comets, at: at)
+            engine.draw(in: &context, size: canvasSize, color: color, faceColor: faceColor, bodyId: bodyId, bodyMotion: false, trails: trails, comets: comets, at: at)
         }
         .frame(width: size, height: size)
         .accessibilityHidden(true)
@@ -436,15 +440,17 @@ final class MausFaceEngine {
 
     // MARK: - Drawing
 
-    /// `comets`: orbit the body with the `orbit` state's rings whatever the
-    /// face is doing — the island's "something is happening" — in addition to
-    /// the states that carry their own. `at` is the clock; pass a fixed date
-    /// for a still frame.
-    func draw(in context: inout GraphicsContext, size: CGSize, color: String, bodyId: String? = MausSilhouette.defaultBody, bodyMotion: Bool, comets: Bool = false, at now: Date = Date()) {
+    /// `trails`: draw the rings a state carries (radar, orbit, progress…).
+    /// Off by default so list rows match the desktop sidebar, which never
+    /// draws them. `comets`: orbit the body with the
+    /// `orbit` state's rings whatever the face is doing — the island's
+    /// "something is happening". `at` is the clock; pass a fixed date for a
+    /// still frame.
+    func draw(in context: inout GraphicsContext, size: CGSize, color: String, faceColor: MascotFaceColor? = nil, bodyId: String? = MausSilhouette.defaultBody, bodyMotion: Bool, trails: Bool = false, comets: Bool = false, at now: Date = Date()) {
         let rect = CGRect(origin: .zero, size: size)
         context.concatenate(MausSilhouette.fit(rect))
         let elapsed = CGFloat(now.timeIntervalSince(stateStart) * 1000)
-        let spec = Self.cometTrails[state] ?? (comets ? Self.cometTrails[.orbit] : nil)
+        let spec = (trails || comets ? Self.cometTrails[state] : nil) ?? (comets ? Self.cometTrails[.orbit] : nil)
         let centre = CGPoint(x: MausFaceData.faceBox / 2, y: MausFaceData.faceBox / 2)
 
         let pieces = spec.map { self.comets($0, elapsed: elapsed, centre: centre, strength: 1) } ?? []
@@ -461,12 +467,12 @@ final class MausFaceEngine {
         if bodyMotion {
             bodyContext.concatenate(bodyTransform(MausFaceData.motion[state] ?? MausBodyMotion(), elapsed: elapsed))
         }
-        drawBody(in: &bodyContext, color: color, bodyId: bodyId, now: now)
+        drawBody(in: &bodyContext, color: color, faceColor: faceColor, bodyId: bodyId, now: now)
 
         for piece in pieces where piece.front { context.fill(piece.path, with: piece.shading) }
     }
 
-    private func drawBody(in context: inout GraphicsContext, color: String, bodyId: String?, now: Date) {
+    private func drawBody(in context: inout GraphicsContext, color: String, faceColor: MascotFaceColor?, bodyId: String?, now: Date) {
         // Wrapping the cached `CGPath` is a retain, not a re-parse: the body
         // is parsed and placed once per id, inside `CompanionCore`.
         let body = Path(MausSilhouette.inFaceBox(bodyId))
@@ -487,6 +493,7 @@ final class MausFaceEngine {
         context.scaleBy(x: a.scale, y: a.scale)
         context.translateBy(x: -MausFaceData.faceCentre.x, y: -MausFaceData.faceCentre.y)
 
+        let ink: Color = faceColor == .black ? .black : .white
         let gaze = displayedGaze()
         let ox = gaze.x * lookAround, oy = gaze.y * lookAround
         let rings = displayedRings().map { $0.map { CGPoint(x: $0.x + ox, y: $0.y + oy) } }
@@ -501,14 +508,14 @@ final class MausFaceEngine {
                 if i == 0 { path.move(to: q) } else { path.addLine(to: q) }
             }
             path.closeSubpath()
-            context.fill(path, with: .color(.white))
+            context.fill(path, with: .color(ink))
         }
 
         let spec = displayedMouth()
         let frame = Self.mouthFrame(rings, spec)
         context.stroke(
             Self.mouthPath(frame, spec),
-            with: .color(.white),
+            with: .color(ink),
             style: StrokeStyle(lineWidth: MausFaceData.mouthStroke, lineCap: .round)
         )
     }

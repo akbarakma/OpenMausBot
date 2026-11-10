@@ -11,6 +11,7 @@ struct BotAvatarView: View {
     var state: MausState = .idle
     /// Opt-in, mirroring MausAvatar: an animated face is a 30fps canvas.
     var animated = false
+    var trails = false
     var comets = false
 
     @Environment(\.avatarLoader) private var avatars
@@ -91,7 +92,7 @@ struct BotAvatarView: View {
     private var mascot: some View {
         MausAvatar(
             color: bot.color, size: size, bodyId: bot.mascotBody,
-            state: state, animated: animated, comets: comets)
+            state: state, animated: animated, faceColor: bot.faceColor, trails: trails, comets: comets)
     }
 
     private var mask: AnyShape {
@@ -206,14 +207,15 @@ struct ChatAvatarView: View {
     var state: MausState = .idle
     /// Opt-in, mirroring MausAvatar: an animated face is a 30fps canvas.
     var animated = false
+    var trails = false
     var comets = false
 
     var body: some View {
         switch chat {
         case let .bot(bot):
-            BotAvatarView(bot: bot, size: size, state: state, animated: animated, comets: comets)
+            BotAvatarView(bot: bot, size: size, state: state, animated: animated, trails: trails, comets: comets)
         case .room:
-            MausAvatar(color: "blue", size: size, state: state, animated: animated, comets: comets)
+            MausAvatar(color: "blue", size: size, state: state, animated: animated, trails: trails, comets: comets)
         }
     }
 }

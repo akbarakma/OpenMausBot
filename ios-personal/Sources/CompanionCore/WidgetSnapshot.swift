@@ -49,6 +49,7 @@ public struct WidgetSnapshot: Codable, Equatable, Sendable {
                 && chat.threadId == other.chat.threadId
                 && chat.name == other.chat.name
                 && chat.color == other.chat.color
+                && chat.faceColor == other.chat.faceColor
                 && chat.threadTitle == other.chat.threadTitle
         }
     }

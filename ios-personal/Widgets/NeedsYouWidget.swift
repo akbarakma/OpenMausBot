@@ -81,7 +81,8 @@ private struct NeedsYouView: View {
                 MausFaceStill(
                     color: row.chat.color,
                     state: MausState(rawValue: row.face) ?? .idle,
-                    size: 30
+                    size: 30,
+                    faceColor: row.chat.faceColor
                 )
                 Text(row.chat.name)
                     .font(.system(size: 14, weight: .semibold))
@@ -113,7 +114,8 @@ private struct NeedsYouView: View {
                     MausFaceStill(
                         color: row.chat.color,
                         state: MausState(rawValue: row.face) ?? .idle,
-                        size: 26
+                        size: 26,
+                        faceColor: row.chat.faceColor
                     )
                     VStack(alignment: .leading, spacing: 1) {
                         Text(row.chat.name)

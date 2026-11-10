@@ -62,6 +62,8 @@ struct ChatEntity: AppEntity, Codable, Equatable {
     let name: String
     let color: String
     let face: String
+    /// Optional so an entity the system saved before this field still decodes.
+    var faceColor: MascotFaceColor? = nil
 
     static let typeDisplayRepresentation = TypeDisplayRepresentation(name: "Chat")
     static let defaultQuery = ChatEntityQuery()
@@ -72,11 +74,12 @@ struct ChatEntity: AppEntity, Codable, Equatable {
         DisplayRepresentation(title: "\(name)")
     }
 
-    init(id: String, name: String, color: String, face: String) {
+    init(id: String, name: String, color: String, face: String, faceColor: MascotFaceColor? = nil) {
         self.id = id
         self.name = name
         self.color = color
         self.face = face
+        self.faceColor = faceColor
     }
 
     init(row: WidgetSnapshot.Row) {
@@ -84,7 +87,8 @@ struct ChatEntity: AppEntity, Codable, Equatable {
             id: row.chat.threadId,
             name: row.chat.name,
             color: row.chat.color,
-            face: row.face
+            face: row.face,
+            faceColor: row.chat.faceColor
         )
     }
 }
@@ -290,7 +294,8 @@ struct BotWidgetView: View {
                 MausFaceStill(
                     color: entry.row?.chat.color ?? entity.color,
                     state: MausState(rawValue: entry.row?.face ?? entity.face) ?? .idle,
-                    size: 28
+                    size: 28,
+                    faceColor: entry.row?.chat.faceColor ?? entity.faceColor
                 )
                 Text(entry.row?.chat.name ?? entity.name)
                     .font(.system(size: 14, weight: .semibold))

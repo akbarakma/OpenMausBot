@@ -553,12 +553,17 @@ public struct Bot: Codable, Hashable, Identifiable, Sendable {
     /// Which body from the mascot body catalog this bot wears. Absent (an
     /// older harness included) means the shipped `cursor` silhouette.
     public var mascotBody: String?
+    /// Raw on the wire so a value this build does not know decodes as the
+    /// body default instead of failing the whole bot. Read `faceColor`.
+    public var mascotFaceColor: String?
     public var tasks: [BotTask]?
     public var projects: [BotProject]?
     public var messages: [Message]?
     public var activeLeafId: String?
     /// Paged responses only: there is more transcript above what you got.
     public var hasMore: Bool?
+
+    public var faceColor: MascotFaceColor? { mascotFaceColor.flatMap(MascotFaceColor.init(rawValue:)) }
 
     /// Routine results are ordinary tasks; only their per-run executions are hidden.
     public var visibleTasks: [BotTask] {
@@ -597,6 +602,12 @@ public struct Bot: Codable, Hashable, Identifiable, Sendable {
         }
         return view
     }
+}
+
+/// The ink for the mascot's eyes and mouth (`shared/bot-avatar.ts`). Nil
+/// means the body default.
+public enum MascotFaceColor: String, Codable, CaseIterable, Hashable, Sendable {
+    case white, black
 }
 
 public enum AvatarCrop: String, Codable, CaseIterable, Hashable, Sendable {

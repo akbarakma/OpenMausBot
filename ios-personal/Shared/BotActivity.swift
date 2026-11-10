@@ -17,6 +17,7 @@ struct BotActivityAttributes: ActivityAttributes {
     var name: String
     /// MausPalette colour name.
     var color: String
+    var faceColor: MascotFaceColor? = nil
 }
 
 /// Answer from the island or the lock screen. A `LiveActivityIntent` runs in
