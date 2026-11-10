@@ -15,6 +15,7 @@ import { useStore, type Bot } from "@/state/store";
 import { ActivityList } from "../ActivityPanel";
 import { ConfirmDialog } from "../ConfirmDialog";
 import { useDesktopCapabilities } from "../DesktopCapabilities";
+import { connectAppFromBot } from "../AppGrantPrompt";
 import { ServiceIcon } from "../ServiceIcon";
 import { useWorkingFolder } from "../bot-settings/AccessSection";
 import { BotApiCard } from "../bot-settings/BotApiCard";
@@ -139,10 +140,7 @@ export function AppsPage({ bot, derived }: PageContext) {
         <LinkRow
           data-panel-link="add-app"
           icon={Plus}
-          onClick={() => {
-            dispatch({ type: "toggleSettings", open: false });
-            dispatch({ type: "togglePlugins", open: true, surface: "apps" });
-          }}
+          onClick={() => connectAppFromBot(dispatch, bot.id)}
         >
           {t("botPanel.apps.connectAnother")}
         </LinkRow>
