@@ -2666,14 +2666,13 @@ struct ChatSummary: Identifiable, Hashable {
 }
 
 extension CompanionState {
-    /// Every visible bot and room for home, newest first. A bot stands for
-    /// its thread with the latest message, so its row shows that thread's
-    /// line and a tap opens it. Previews are left empty for the list's
-    /// cache to fill.
+    /// Every visible bot and room for home, newest first. A bot sorts by its
+    /// thread with the latest message, and its row shows and opens its main
+    /// conversation. Previews are left empty for the list's cache to fill.
     func chatSummaries() -> [ChatSummary] {
         let bots = self.bots.filter { $0.hidden != true }.map { bot -> ChatSummary in
             let newest = newestThread(of: bot)
-            return ChatSummary(chat: .bot(bot.projected(forThread: newest.threadId) ?? bot), preview: "", lastActivity: newest.at)
+            return ChatSummary(chat: .bot(bot.projected(forThread: homeThread(of: bot)) ?? bot), preview: "", lastActivity: newest.at)
         }
         let rooms = self.rooms.map { room in
             ChatSummary(chat: .room(room), preview: "", lastActivity: newestThread(of: room).at)

@@ -54,6 +54,25 @@ final class HomeOrderTests: XCTestCase {
         XCTAssertEqual(newest.at, 40)
     }
 
+    func testABotOpensOnItsMainThreadEvenWhenASideThreadIsNewer() {
+        var state = CompanionState()
+        var withMain = bot(tasks: [task("main", updatedAt: 10), task("side", updatedAt: 30)])
+        withMain.mainThreadId = "main"
+        state.bots = [withMain]
+        XCTAssertEqual(state.homeThread(of: state.bots[0]), "main")
+        XCTAssertEqual(state.newestThread(of: state.bots[0]).threadId, "side")
+    }
+
+    func testABotWithoutAKnownMainThreadOpensOnItsNewestThread() {
+        var state = CompanionState()
+        var gone = bot(tasks: [task("main", updatedAt: 10), task("side", updatedAt: 30)])
+        state.bots = [gone]
+        XCTAssertEqual(state.homeThread(of: state.bots[0]), "side")
+        gone.mainThreadId = "deleted"
+        state.bots = [gone]
+        XCTAssertEqual(state.homeThread(of: state.bots[0]), "side")
+    }
+
     private func bot(tasks: [BotTask]) -> Bot {
         Bot(
             id: "bot", threadId: "main", name: "Scout", title: "Researcher",

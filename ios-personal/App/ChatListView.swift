@@ -201,8 +201,8 @@ struct ChatListView: View {
     private var favorites: some View {
         if chief != nil || !pinned.isEmpty {
             FavoritesBlock(
-                chief: chief.map(atNewestThread),
-                pinned: pinned.map(atNewestThread),
+                chief: chief.map(atHomeThread),
+                pinned: pinned.map(atHomeThread),
                 face: { MausState.forChat(.bot($0), in: session.state) },
                 open: open,
                 menu: { AnyView(botMenu($0)) }
@@ -525,13 +525,13 @@ struct ChatListView: View {
         path.append(summary.chat)
     }
 
-    /// A face opens the bot's newest thread, as its row would.
+    /// A face opens the bot's main conversation, as its row would.
     private func open(_ bot: Bot) {
-        path.append(Chat.bot(atNewestThread(bot)))
+        path.append(Chat.bot(atHomeThread(bot)))
     }
 
-    private func atNewestThread(_ bot: Bot) -> Bot {
-        bot.projected(forThread: session.state.newestThread(of: bot).threadId) ?? bot
+    private func atHomeThread(_ bot: Bot) -> Bot {
+        bot.projected(forThread: session.state.homeThread(of: bot)) ?? bot
     }
 
     private func createThread(for bot: Bot) {

@@ -556,6 +556,9 @@ public struct Bot: Codable, Hashable, Identifiable, Sendable {
     /// Raw on the wire so a value this build does not know decodes as the
     /// body default instead of failing the whole bot. Read `faceColor`.
     public var mascotFaceColor: String?
+    /// The thread the computer treats as this bot's own conversation,
+    /// where its routines report. Older computers omit it.
+    public var mainThreadId: String?
     public var tasks: [BotTask]?
     public var projects: [BotProject]?
     public var messages: [Message]?

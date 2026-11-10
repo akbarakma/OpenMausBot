@@ -31,6 +31,14 @@ extension CompanionState {
         newestThread(current: bot.threadId, tasks: bot.tasks ?? [], now: now)
     }
 
+    /// The thread a tap on the bot opens: its main conversation, so a
+    /// newer side thread never takes the chat over. Older computers, which
+    /// do not say which that is, open the newest thread.
+    public func homeThread(of bot: Bot, now: Date = Date()) -> String {
+        if let main = bot.mainThreadId, bot.projected(forThread: main) != nil { return main }
+        return newestThread(of: bot, now: now).threadId
+    }
+
     /// The same rule for a group: home sorts it by its newest thread.
     public func newestThread(of room: Room, now: Date = Date()) -> (threadId: String, at: Double) {
         newestThread(current: room.threadId, tasks: room.tasks ?? [], now: now)
