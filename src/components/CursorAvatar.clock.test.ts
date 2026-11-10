@@ -97,6 +97,19 @@ describe("CursorAvatar on the shared clock", () => {
     expect(mascotClock().pending()).toBe(0);
   });
 
+  it.each([
+    ["paused", { animated: false }],
+    ["still", { still: true }],
+  ])("rests on its state's first face once %s, whichever face it had drifted to", (_, rest) => {
+    const first = toPath(EXPRESSIONS[POOLS.curious[0]][0]);
+    render([{ state: "curious", size: 42 }]);
+    run(3500);
+    expect(eyePaths()[0]).not.toBe(first);
+    render([{ state: "curious", size: 42, ...rest }]);
+    run(2000);
+    expect(eyePaths()[0]).toBe(first);
+  });
+
   it("redraws a still mascot when its look changes", () => {
     render([{ state: "idle", animated: false, size: 24, turn: 0 }]);
     run(100);
