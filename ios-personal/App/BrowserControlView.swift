@@ -1,9 +1,6 @@
-// A bot's browser, watched and driven from the phone.
-//
-// ComputerView is the watching half and says so in its own header. This is
-// the other half: the same idea, but with a gesture layer behind it and a
-// take/release gate in front, so the person can actually work rather than
-// only supervise.
+// A bot's browser, watched and driven from the phone. A gesture layer sits
+// behind the stream and a take/release gate in front, so the person can work
+// in it rather than only supervise.
 import CompanionCore
 import SwiftUI
 import UIKit

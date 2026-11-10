@@ -121,10 +121,6 @@ final class Session: ObservableObject {
     private var reconnectDelay: UInt64 = 0
     /// Resumes that closed right after hello; enough of them start over (MOCA-179).
     private var streamResume = StreamResume()
-    /// How many computer panels are open. A count rather than a flag: the
-    /// panel can be pushed twice in a navigation stack, and the last one to
-    /// close is the one that should turn screens back off.
-    private var screenWatchers = 0
     /// Authenticated avatar bytes shared by roster, header, group and task
     /// surfaces. Both entry count and byte cost are bounded because one valid
     /// uploaded image may be 10 MB.
@@ -819,7 +815,6 @@ final class Session: ObservableObject {
         restorePending = false
         endLinger()
         pendingNotification = nil
-        screenWatchers = 0
         client = nil
         token = nil
         state = CompanionState()
@@ -881,26 +876,6 @@ final class Session: ObservableObject {
         let deadline = Date().addingTimeInterval(10)
         while status == .connecting, !Task.isCancelled, Date() < deadline {
             try? await Task.sleep(nanoseconds: 120_000_000)
-        }
-    }
-
-    /// Ask the harness to include this bot's computer in the stream, for as
-    /// long as something is showing it.
-    ///
-    /// This costs a reconnect, which is the right trade: the alternative is
-    /// a base64 desktop capture arriving every few seconds for the whole
-    /// session, including on cellular, whether or not anyone is looking.
-    /// The reconnect resumes from the cursor, so nothing is missed.
-    func watchScreen(of botId: String) {
-        screenWatchers += 1
-        if screenWatchers == 1 { restartStream() }
-    }
-
-    func stopWatchingScreen(of botId: String) {
-        screenWatchers = max(0, screenWatchers - 1)
-        if screenWatchers == 0 {
-            state.clearScreen(botId)
-            restartStream()
         }
     }
 
@@ -1002,10 +977,7 @@ final class Session: ObservableObject {
                 }
                 var receivedHello = false
                 var framesAfterHello = 0
-                let events = try client.events(
-                    since: streamResume.cursor(resuming: state.cursor),
-                    screens: screenWatchers > 0
-                )
+                let events = try client.events(since: streamResume.cursor(resuming: state.cursor))
                 for try await batch in eventBatches(events) {
                     if Task.isCancelled { return }
 
@@ -1893,12 +1865,12 @@ final class Session: ObservableObject {
     }
 
     /// A pinned background thread may not be in a fresh fleet snapshot.
-    func loadThreadIfNeeded(_ threadId: String) async {
+    /// Loads the thread's newest page unless it is here. Without a
+    /// connection it returns and the thread stays unloaded.
+    func loadThreadIfNeeded(_ threadId: String) async throws {
         guard let client, !state.hasLoadedPage(forThread: threadId) else { return }
-        do {
-            let page = try await client.messages(threadId: threadId)
-            state.merge(page, intoThread: threadId)
-        } catch { if !Task.isCancelled { actionError = error.localizedDescription } }
+        let page = try await client.messages(threadId: threadId)
+        state.merge(page, intoThread: threadId)
     }
 
     func image(threadId: String, messageId: String) async -> Data? {

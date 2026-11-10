@@ -29,12 +29,12 @@ public struct CommandSkillHUDView: View {
     
     public static let defaultCommands: [CommandSkillItem] = [
         CommandSkillItem(
-            id: "computer",
-            title: "/computer",
-            description: "Open live screen & desktop controls",
-            iconName: "desktopcomputer",
+            id: "browser",
+            title: "/browser",
+            description: "Open the bot's browser",
+            iconName: "safari",
             brandColor: Color(hex: "#38BDF8"),
-            command: "/computer"
+            command: "/browser"
         ),
         CommandSkillItem(
             id: "tasks",

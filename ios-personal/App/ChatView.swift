@@ -44,9 +44,12 @@ struct ChatView: View {
     /// frame updates it without redrawing the screen.
     @State private var scrollReading = ScrollReading()
     @State private var showingTasks = false
-    @State private var showingComputer = false
+    @State private var showingBrowser = false
     @State private var showingPlus = false
     @State private var showingProfile = false
+    /// Threads lives in the bot's settings; the thread list opens once that
+    /// sheet has gone, since one sheet cannot present while another closes.
+    @State private var openThreadsAfterProfile = false
     @State private var showCommandHUD = false
     @State private var shareFile: ShareFile?
     @State private var showingPhotoPicker = false
@@ -70,12 +73,15 @@ struct ChatView: View {
     @State private var fileDownloadTask: Task<Void, Never>?
     @State private var fileDownloadRequestID: UUID?
     @State private var threadOpenTask: Task<Void, Never>?
+    @State private var loadError: String?
     @FocusState private var composerFocused: Bool
     @StateObject private var dictation = SpeechDictation()
     /// The opening beat: the island grows with the bot's face in it, then
     /// shrinks away as the face settles into the header. `facePhase` is 1
     /// with the face in the island, 0 with it home in the header.
     @State private var islandExpanded = false
+    @State private var faceMidX: CGFloat = 0
+    @State private var headerMidX: CGFloat = 0
     @State private var islandVisible = false
     @State private var facePhase: CGFloat = 0
     /// Reading scrollback: the end of the transcript is below the screen, so
@@ -88,6 +94,9 @@ struct ChatView: View {
     /// Bumped by a send: the transcript goes to its end, wherever the
     /// reader had scrolled.
     @State private var sendJumps = 0
+    /// The floating composer's height, which the transcript keeps clear
+    /// above its end.
+    @State private var composerHeight: CGFloat = 76
 
     @AppStorage(PrefKey.islandIntro) private var islandIntro = IslandIntro.oncePerBot.rawValue
     @AppStorage(PrefKey.islandSeen) private var islandSeen = ""
@@ -266,12 +275,12 @@ struct ChatView: View {
         // array as a unit; repeatedly reaching through ObservableObject for
         // every row only recomputes the same value.
         let snapshot = transcriptSnapshot
-        // A VStack with the composer as a sibling, rather than a scroll view
-        // with `.safeAreaInset`. The inset version sized itself to its
-        // content, so a short transcript left the composer floating in the
-        // middle of the screen with black beneath it. Here the scroll area is
-        // explicitly told to take everything the composer does not.
-        VStack(spacing: 0) {
+        // The composer floats over the transcript so the messages scroll
+        // under its glass. Not `.safeAreaInset`: that sized itself to its
+        // content and left a short transcript's composer mid-screen. The
+        // transcript reserves the composer's measured height above its end
+        // instead, so the newest message rests just above the glass.
+        ZStack(alignment: .bottom) {
             ScrollViewReader { proxy in
                 transcriptScrollView(proxy: proxy, snapshot: snapshot)
             }
@@ -279,6 +288,7 @@ struct ChatView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             composer(snapshot)
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { composerHeight = $0 }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
         .overlay(alignment: .bottom) { plusSheet }
@@ -290,8 +300,16 @@ struct ChatView: View {
         // Re-arm it so a rightward swipe from the left edge pops back to
         // Home, the way the rest of iOS behaves.
         .background(SwipeBackBridge())
-        .navigationDestination(isPresented: $showingComputer) {
-            if case let .bot(bot) = current { ComputerView(bot: bot) }
+        .navigationDestination(isPresented: $showingBrowser) {
+            if case let .bot(bot) = current, let client = session.browserLiveClient() {
+                BrowserControlView(bot: bot, client: client)
+            } else {
+                VStack(spacing: 12) {
+                    Text("Browser unavailable").font(.headline)
+                    Text("The active connection is no longer available.")
+                }
+                .padding()
+            }
         }
         .task(id: threadId) { await enterThread() }
         .onValueChange(of: selectedThreadWasRemoved) { removed in
@@ -305,6 +323,10 @@ struct ChatView: View {
         .onValueChange(of: session.connection?.id) { _ in
             steering = false
             cancelThreadOpen()
+            if !session.state.hasLoadedPage(forThread: threadId) {
+                let requestedThread = threadId
+                Task { await load(requestedThread) }
+            }
         }
         .onValueChange(of: heldSends.first?.queueId) { _ in steering = false }
         .onValueChange(of: current.busy) { busy in
@@ -326,7 +348,7 @@ struct ChatView: View {
         .onValueChange(of: scenePhase) { phase in
             if phase != .active { dictation.stop() }
         }
-        .onValueChange(of: showingComputer) { shown in
+        .onValueChange(of: showingBrowser) { shown in
             if shown { dictation.stop() }
         }
         .onValueChange(of: showingTasks) { shown in
@@ -354,8 +376,15 @@ struct ChatView: View {
                 TaskManagerView(chat: current) { selectedThreadId = $0 }
             }
         }
-        .sheet(isPresented: $showingProfile) {
-            if case let .bot(bot) = current { AgentProfileView(bot: bot) }
+        .sheet(isPresented: $showingProfile, onDismiss: {
+            if openThreadsAfterProfile {
+                openThreadsAfterProfile = false
+                showingTasks = true
+            }
+        }) {
+            if case let .bot(bot) = current {
+                AgentProfileView(bot: bot, threadCount: bot.visibleTasks.count) { openThreadsAfterProfile = true }
+            }
         }
         .sheet(item: $shareFile) { file in
             ActivityShareSheet(items: [file.url])
@@ -395,22 +424,24 @@ struct ChatView: View {
             transcriptColumn(proxy: proxy, snapshot: snapshot, actions: actions)
         }
         // The header lives in the scroll view's top safe area: the
-        // transcript starts below it and scrolls under it — that is
-        // what the glass is for. An inset rather than a content
-        // margin, because `.defaultScrollAnchor(.bottom)` anchored
-        // unreliably against a margin and opened chats mid-way.
-        // The blur is only the top strip — back, computer — the way
-        // a system bar is; the transcript starts on that line and
-        // scrolls under the face and name, which float over it.
+        // transcript starts below it and scrolls under its glass. An
+        // inset rather than a content margin, because
+        // `.defaultScrollAnchor(.bottom)` anchored unreliably against a
+        // margin and opened chats mid-way.
         .safeAreaInset(edge: .top, spacing: 0) { headerBar }
-        .overlay(alignment: .top) { headerFace }
         .overlay(alignment: .top) { floatingFace }
+        .overlay { emptyTranscript(snapshot) }
         // Reading scrollback — one tap back to the end, streaming or
         // not, the same pill the desktop chat offers.
         .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).maxY } action: { bottom in
+            let shrank = bottom < viewportBottom
             viewportBottom = bottom
+            // The keyboard shrinks the transcript from below. A reader at
+            // the end stays there instead of finding the newest message
+            // under the keyboard.
+            if shrank, !readerDetached { proxy.scrollTo(Self.transcriptEndId, anchor: .bottom) }
         }
-        .overlay(alignment: .bottom) { jumpToLatestPill(proxy) }
+        .overlay(alignment: .bottom) { jumpToLatestPill(proxy).padding(.bottom, composerHeight) }
         .task { await playIslandIntro() }
         // A conversation grows from the bottom: a transcript shorter
         // than the screen rests at the bottom, and opening a chat
@@ -483,9 +514,6 @@ struct ChatView: View {
         // `.equatable()` on the values it draws: a publish or a
         // keystroke that changes none of them does not redraw it.
         return VStack(alignment: .leading, spacing: 6) {
-            // room for the floating face when scrolled to the top
-            Color.clear.frame(height: 72)
-
             if session.state.hasMore[threadId] == true {
                 loadEarlierButton(proxy: proxy, transcript: transcript)
             }
@@ -497,6 +525,7 @@ struct ChatView: View {
             }
 
             liveTail(snapshot)
+            Color.clear.frame(height: composerHeight)
             transcriptEnd
         }
         .padding(.horizontal, 16)
@@ -687,30 +716,68 @@ struct ChatView: View {
         }
     }
 
-    /// One face, in one layer, measured from the screen's top
-    /// edge: it sits in the island while that is open and
-    /// glides into its header slot when the island lets go.
-    private var floatingFace: some View {
-        let topInset = IslandGeometry.topInset
-        let islandSide: CGFloat = 220
-        // centred in the part of the square the hardware island does not cover
-        let islandFaceCentre = IslandGeometry.top + IslandGeometry.size.height + (islandSide - IslandGeometry.size.height) / 2
-        let headerFaceCentre = topInset + 26
-        let faceSize = 60 + 72 * facePhase
-        let faceCentre = headerFaceCentre + (islandFaceCentre - headerFaceCentre) * facePhase
-        return ZStack(alignment: .top) {
-            if islandVisible {
+    /// The opening beat's face: it grows in the island, then glides into
+    /// the header pill's face seat and hands over to the face drawn there.
+    @ViewBuilder private var floatingFace: some View {
+        if islandVisible {
+            let topInset = IslandGeometry.topInset
+            let islandSide: CGFloat = 220
+            // centred in the part of the square the hardware island does not cover
+            let islandFaceCentre = IslandGeometry.top + IslandGeometry.size.height + (islandSide - IslandGeometry.size.height) / 2
+            let headerFaceCentre = topInset + 26
+            let faceSize = Self.headerFaceSize + (132 - Self.headerFaceSize) * facePhase
+            let faceCentre = headerFaceCentre + (islandFaceCentre - headerFaceCentre) * facePhase
+            ZStack(alignment: .top) {
                 IslandShell(expanded: islandExpanded, expandedSize: CGSize(width: islandSide, height: islandSide)) {
                     Color.clear
                 }
+                ChatAvatarView(chat: current, size: faceSize, state: MausState.forChat(current, in: session.state), animated: true, trails: islandExpanded, comets: islandExpanded)
+                    .offset(x: headerFaceOffset * (1 - facePhase), y: faceCentre - faceSize / 2)
             }
-            ChatAvatarView(chat: current, size: faceSize, state: MausState.forChat(current, in: session.state), animated: MausState.forChat(current, in: session.state).showsActivity || islandExpanded, trails: true, comets: islandExpanded)
-                .offset(y: faceCentre - faceSize / 2)
-                .allowsHitTesting(false)
+            .frame(maxWidth: .infinity, alignment: .top)
+            .ignoresSafeArea(edges: .top)
+            .allowsHitTesting(false)
         }
-        .frame(maxWidth: .infinity, alignment: .top)
-        .ignoresSafeArea(edges: .top)
-        .allowsHitTesting(false)
+    }
+
+    /// Loading, a failed load and an empty thread each say so, instead of
+    /// one blank screen for all three.
+    @ViewBuilder private func emptyTranscript(_ snapshot: TranscriptSnapshot) -> some View {
+        if snapshot.rows.isEmpty, session.state.streaming[threadId] == nil, !showsTyping(snapshot) {
+            VStack(spacing: 10) {
+                if let loadError {
+                    Text("Couldn't load messages")
+                        .font(.system(size: 17, weight: .semibold))
+                    Text(loadError)
+                        .font(.system(size: 15))
+                        .foregroundStyle(Color.secondary)
+                    Button("Retry") {
+                        let requestedThread = threadId
+                        Task { await load(requestedThread) }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .buttonBorderShape(.capsule)
+                    .padding(.top, 4)
+                } else if !session.state.hasLoadedPage(forThread: threadId) {
+                    ProgressView()
+                    Text("Loading messages…")
+                        .font(.system(size: 15))
+                        .foregroundStyle(Color.secondary)
+                } else {
+                    ChatAvatarView(chat: current, size: 56, state: MausState.forChat(current, in: session.state), animated: false)
+                    Text("No messages yet")
+                        .font(.system(size: 17, weight: .semibold))
+                    Text(current.busy ? "\(current.name) is working on it." : "Say hi to \(current.name).")
+                        .font(.system(size: 15))
+                        .foregroundStyle(Color.secondary)
+                }
+            }
+            .multilineTextAlignment(.center)
+            .padding(.horizontal, 32)
+            .padding(.bottom, composerHeight)
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier("transcript-empty-state")
+        }
     }
 
     @ViewBuilder private func jumpToLatestPill(_ proxy: ScrollViewProxy) -> some View {
@@ -800,7 +867,8 @@ struct ChatView: View {
     private func enterThread() async {
         if selectedThreadWasRemoved { dismiss(); return }
         let openedChat = current
-        await session.loadThreadIfNeeded(openedChat.threadId)
+        loadError = nil
+        await load(openedChat.threadId)
         // opening a chat is what marks it read, exactly as on the desktop
         if openedChat.unread { await session.markRead(openedChat) }
 #if DEBUG
@@ -820,7 +888,18 @@ struct ChatView: View {
 
     private func reloadIfPageDropped(_ loaded: Bool) {
         let requestedThread = threadId
-        if !loaded { Task { await session.loadThreadIfNeeded(requestedThread) } }
+        if !loaded { Task { await load(requestedThread) } }
+    }
+
+    /// A failure shows in the chat, where Retry is, and clears once a load
+    /// of the thread on screen succeeds.
+    private func load(_ requestedThread: String) async {
+        do {
+            try await session.loadThreadIfNeeded(requestedThread)
+            if requestedThread == threadId { loadError = nil }
+        } catch {
+            if !Task.isCancelled, requestedThread == threadId { loadError = error.localizedDescription }
+        }
     }
 
     /// A message can arrive while this chat is already on screen. The
@@ -890,120 +969,126 @@ struct ChatView: View {
 
     // MARK: - Header
 
-    /// Back on the left with the rest-of-app unread count; threads and the
-    /// bot's computer on the right, over a blurred
-    /// strip to the top edge.
+    static let headerFaceSize: CGFloat = 30
+
+    /// Back on the left with the rest-of-app unread count, the chat's face
+    /// and name in the middle, and the browser (a room: its threads) on the
+    /// right. The transcript scrolls beneath it.
     private var headerBar: some View {
-        HStack(alignment: .top) {
-            Button { dismiss() } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 17, weight: .semibold))
-                    if unreadElsewhere > 0 {
-                        Text("\(unreadElsewhere)")
-                            .font(.system(size: 13, weight: .semibold))
-                            .padding(.horizontal, 7)
-                            .frame(minWidth: 22, minHeight: 22)
-                            .background(Capsule().fill(Color.secondary.opacity(0.22)))
-                    }
-                }
-                .foregroundStyle(Color.primary)
-                .padding(.leading, 12)
-                .padding(.trailing, unreadElsewhere > 0 ? 8 : 12)
-                // At least as wide as it is tall: a circle alone, a pill
-                // once the unread count joins it.
-                .frame(minWidth: 44, minHeight: 44)
-                .contentShape(Capsule())
+        ZStack {
+            HStack(alignment: .top) {
+                backButton
+                Spacer(minLength: 4)
+                headerTrailingButton
             }
-            .buttonStyle(.plain)
-            .glassCapsule()
-            .accessibilityLabel("Back")
-
-            Spacer(minLength: 4)
-
-            HStack(spacing: 8) {
-                if current.supportsTasks {
-                    Button {
-                        showingTasks = true
-                    } label: {
-                        Label("Threads", systemImage: "square.stack")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundStyle(Color.primary)
-                            .padding(.horizontal, 12)
-                            .frame(height: 44)
-                            .contentShape(Capsule())
-                    }
-                    .buttonStyle(.plain)
-                    .glassCapsule()
-                    // The thread you are on, now that the pill under the
-                    // face that named it is gone.
-                    .accessibilityValue(Text(verbatim: current.threadTitle))
-                    .accessibilityIdentifier("header-threads")
-                }
-                if case .bot = current {
-                    GlassButton(systemImage: "display", size: 44, weight: .medium) {
-                        showingComputer = true
-                    }
-                    .accessibilityLabel("Watch \(current.name)'s computer")
-                } else {
-                    Color.clear.frame(width: 44, height: 44)
-                }
-            }
+            identityPill
+                .padding(.horizontal, 64)
         }
         .padding(.horizontal, 16)
         .padding(.top, 4)
         .padding(.bottom, 8)
         .frame(maxWidth: CompanionLayout.headerWidth)
         .frame(maxWidth: .infinity)
+        .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).midX } action: { headerMidX = $0 }
+        // A fade, not a blur: text scrolling under the clock and the glass
+        // dims out instead of colliding with them.
         .background(
-            Rectangle()
-                .fill(.ultraThinMaterial)
-                .mask(
-                    VStack(spacing: 0) {
-                        Color.black
-                        LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom)
-                            .frame(height: 20)
-                    }
-                )
-                .padding(.bottom, -20)
-                .ignoresSafeArea(edges: .top)
-                .allowsHitTesting(false)
+            LinearGradient(
+                stops: [
+                    .init(color: Color(uiColor: .systemBackground), location: 0),
+                    .init(color: Color(uiColor: .systemBackground), location: 0.6),
+                    .init(color: Color(uiColor: .systemBackground).opacity(0), location: 1),
+                ],
+                startPoint: .top, endPoint: .bottom
+            )
+            .padding(.bottom, -28)
+            .ignoresSafeArea(edges: .top)
+            .allowsHitTesting(false)
         )
     }
 
-    /// The seat for the bot's face, floating over the transcript between the
-    /// two buttons. The thread it is on is the Threads button's to say.
-    private var headerFace: some View {
-        // Always here, following the island's face while that one is
-        // the source: when the island lets go, this one flies home.
-        // The face itself is drawn by the island layer above so there is
-        // still only one animated avatar. This transparent seat becomes
-        // its independent profile button once the opening transition has
-        // settled.
-        Group {
-            if case .bot = current {
-                Button { showingProfile = true } label: {
-                    Color.clear
-                        .frame(width: 60, height: 60)
-                        .contentShape(Circle())
+    private var backButton: some View {
+        Button { dismiss() } label: {
+            HStack(spacing: 4) {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 17, weight: .semibold))
+                if unreadElsewhere > 0 {
+                    Text("\(unreadElsewhere)")
+                        .font(.system(size: 13, weight: .semibold))
+                        .padding(.horizontal, 7)
+                        .frame(minWidth: 22, minHeight: 22)
+                        .background(Capsule().fill(Color.secondary.opacity(0.22)))
                 }
-                .buttonStyle(.plain)
-                .allowsHitTesting(!islandVisible)
-                .accessibilityHidden(islandVisible)
-                .accessibilityLabel("Open \(current.name) settings")
-                .accessibilityHint("Changes this bot's model, profile, notifications, and voice")
-            } else if case let .room(room) = current {
-                // A room's face says whose room this is: the header has no
-                // other place for its name and members.
-                Color.clear
-                    .frame(width: 60, height: 60)
-                    .accessibilityElement()
-                    .accessibilityLabel("\(room.name), \(room.memberIds.count) bots")
-                    .accessibilityIdentifier("header-room")
             }
+            .foregroundStyle(Color.primary)
+            .padding(.leading, 12)
+            .padding(.trailing, unreadElsewhere > 0 ? 8 : 12)
+            // At least as wide as it is tall: a circle alone, a pill
+            // once the unread count joins it.
+            .frame(minWidth: 44, minHeight: 44)
+            .contentShape(Capsule())
         }
-        .padding(.top, -4)
+        .buttonStyle(.plain)
+        .glassCapsule()
+        .accessibilityLabel("Back")
     }
+
+    /// The chat's face and name. A bot's opens its settings, where its
+    /// threads are too.
+    @ViewBuilder private var identityPill: some View {
+        let face = MausState.forChat(current, in: session.state)
+        let label = HStack(spacing: 8) {
+            ChatAvatarView(chat: current, size: Self.headerFaceSize, state: face, animated: face.showsActivity)
+                .opacity(islandVisible ? 0 : 1)
+                .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).midX } action: { faceMidX = $0 }
+            Text(current.name)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(Color.primary)
+                .lineLimit(1)
+        }
+        .padding(.leading, 7)
+        .padding(.trailing, 16)
+        .frame(height: 44)
+        .contentShape(Capsule())
+        if case .bot = current {
+            Button { showingProfile = true } label: { label }
+                .buttonStyle(.plain)
+                .glassCapsule()
+                .accessibilityLabel("Open \(current.name) settings")
+                .accessibilityValue(Text(verbatim: current.threadTitle))
+                .accessibilityHint("Threads, model, profile, notifications and voice")
+                .accessibilityIdentifier("header-profile")
+        } else if case let .room(room) = current {
+            label
+                .glassCapsule(interactive: false)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("\(room.name), \(room.memberIds.count) bots")
+                .accessibilityIdentifier("header-room")
+        }
+    }
+
+    @ViewBuilder private var headerTrailingButton: some View {
+        if case .bot = current {
+            GlassButton(systemImage: "safari", size: 44, weight: .medium) {
+                showingBrowser = true
+            }
+            .accessibilityLabel("Open \(current.name)'s browser")
+            .accessibilityIdentifier("header-browser")
+        } else if current.supportsTasks {
+            GlassButton(systemImage: "square.stack", size: 44, weight: .medium) {
+                showingTasks = true
+            }
+            .accessibilityLabel("Threads")
+            .accessibilityValue(Text(verbatim: current.threadTitle))
+            .accessibilityIdentifier("header-threads")
+        } else {
+            Color.clear.frame(width: 44, height: 44)
+        }
+    }
+
+    /// How far the header pill's face sits from the screen's centre line,
+    /// where the island's face starts its glide.
+    private var headerFaceOffset: CGFloat { faceMidX - headerMidX }
 
     // MARK: - The + sheet
 
@@ -1053,7 +1138,7 @@ struct ChatView: View {
                 .frame(maxWidth: CompanionLayout.chatWidth, alignment: .leading)
                 .glassSheet(cornerRadius: 30)
                 .padding(.horizontal, 12)
-                .padding(.bottom, 70)
+                .padding(.bottom, composerHeight + 6)
                 .frame(maxWidth: .infinity)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
             }
@@ -1102,9 +1187,9 @@ struct ChatView: View {
                 subtitle: "Model, profile, voice and notifications"
             ) { showingProfile = true })
             out.append(PlusAction(
-                id: "computer", systemImage: "display", title: "Watch computer",
-                subtitle: "Live view of what \(bot.name) is doing"
-            ) { showingComputer = true })
+                id: "browser", systemImage: "safari", title: "Open browser",
+                subtitle: "Drive \(bot.name)'s browser"
+            ) { showingBrowser = true })
         }
         if case let .room(room) = current, room.dm != true {
             out.append(PlusAction(
@@ -1673,14 +1758,14 @@ struct ChatView: View {
                 commands: current.isBot
                     ? CommandSkillHUDView.defaultCommands
                     : CommandSkillHUDView.defaultCommands.filter {
-                        $0.id != "computer" && (current.supportsTasks || $0.id != "tasks")
+                        $0.id != "browser" && (current.supportsTasks || $0.id != "tasks")
                     },
                 accentColor: MausPalette.color(current.color)
             ) { command in
                 switch command.id {
-                case "computer":
+                case "browser":
                     draft = ""
-                    showingComputer = true
+                    showingBrowser = true
                 case "tasks":
                     draft = ""
                     showingTasks = true
@@ -1714,34 +1799,33 @@ struct ChatView: View {
         .transition(.move(edge: .bottom).combined(with: .opacity))
     }
 
+    /// One glass capsule: +, the field, then stop, dictation and send.
     private func composerBar(_ text: Binding<String>) -> some View {
-        GlassGroup(spacing: 10) {
-            HStack(alignment: .bottom, spacing: 10) {
-                plusButton
+        HStack(alignment: .bottom, spacing: 6) {
+            plusButton
+            composerField(text)
 
-                HStack(alignment: .bottom, spacing: 6) {
-                    commandButton
-                    composerField(text)
-
-                    // Stop sits in the bar while the turn runs, as it does
-                    // on the desktop. The Interrupt action under + was the
-                    // only way before, and rooms had none at all.
-                    if current.canStop {
-                        stopButton
-                    }
-
-                    dictationButton
-                    sendButton(canSend: canSend(text.wrappedValue))
-                }
-                .frame(minHeight: 44)
-                // A capsule at one line (44pt tall, 22pt corners) that
-                // keeps those 22pt corners as the draft grows, the way
-                // Messages does. A true Capsule would round to half the
-                // height, and a five-line draft became a giant pill.
-                .glassSheet(cornerRadius: 22)
+            // Stop sits in the bar while the turn runs, as it does
+            // on the desktop. The Interrupt action under + was the
+            // only way before, and rooms had none at all.
+            if current.canStop {
+                stopButton
             }
+
+            dictationButton
+            sendButton(canSend: canSend(text.wrappedValue))
         }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 8)
+        .frame(minHeight: Self.composerBarHeight)
+        // Keeps its 26pt corners as the draft grows, the way Messages
+        // does. A true Capsule would round to half the height, and a
+        // five-line draft became a giant pill.
+        .glassSheet(cornerRadius: Self.composerBarHeight / 2)
     }
+
+    static let composerBarHeight: CGFloat = 52
+    static let composerButtonSize: CGFloat = 36
 
     private var plusButton: some View {
         Button {
@@ -1750,37 +1834,16 @@ struct ChatView: View {
             withAnimation(.snappy(duration: 0.28)) { showingPlus.toggle() }
         } label: {
             Image(systemName: "plus")
-                .font(.system(size: 20, weight: .medium))
+                .font(.system(size: 18, weight: .medium))
                 .foregroundStyle(showingPlus ? Color(uiColor: .systemBackground) : Color.primary)
                 .rotationEffect(.degrees(showingPlus ? 45 : 0))
-                .frame(width: 44, height: 44)
-                .background(Circle().fill(showingPlus ? Color.primary : Color.clear))
+                .frame(width: Self.composerButtonSize, height: Self.composerButtonSize)
+                .background(Circle().fill(showingPlus ? Color.primary : Color.secondary.opacity(0.16)))
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
-        .glassCapsule()
         .disabled(preparingAttachments || sendingMessage)
         .accessibilityLabel(showingPlus ? "Close" : "More")
-    }
-
-    private var commandButton: some View {
-        Button {
-            dictation.stop()
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
-                showCommandHUD.toggle()
-            }
-            Haptics.selection()
-        } label: {
-            Image(systemName: "command")
-                .font(.system(size: 13, weight: .bold))
-                .foregroundStyle(showCommandHUD ? Color.primary : Color.secondary)
-                .frame(width: 30, height: 32)
-        }
-        .buttonStyle(.plain)
-        .disabled(preparingAttachments || sendingMessage)
-        .accessibilityLabel("Slash commands")
-        .padding(.leading, 6)
-        .padding(.bottom, 6)
     }
 
     private func composerField(_ text: Binding<String>) -> some View {
@@ -1790,8 +1853,9 @@ struct ChatView: View {
             axis: .vertical
         )
             .lineLimit(1...5)
-            .font(.system(size: 17))
-            .padding(.vertical, 11)
+            .font(.system(size: ChatText.size))
+            .padding(.vertical, 7)
+            .padding(.leading, 4)
             .focused($composerFocused)
             .accessibilityIdentifier("message-input")
             // Partial transcripts rebuild from a frozen base;
@@ -1821,11 +1885,10 @@ struct ChatView: View {
             Image(systemName: "stop.fill")
                 .font(.system(size: 12, weight: .bold))
                 .foregroundStyle(Color.primary)
-                .frame(width: 32, height: 32)
-                .background(Circle().fill(Color.secondary.opacity(0.12)))
+                .frame(width: Self.composerButtonSize, height: Self.composerButtonSize)
+                .background(Circle().fill(Color.secondary.opacity(0.16)))
         }
         .buttonStyle(.plain)
-        .padding(.bottom, 6)
         .accessibilityLabel("Stop the current turn")
         .accessibilityIdentifier("composer-stop")
         .transition(.scale.combined(with: .opacity))
@@ -1833,7 +1896,7 @@ struct ChatView: View {
 
     private var dictationButton: some View {
         let listening = dictation.isListening
-        let fill: Color = listening ? Color.red.opacity(0.2) : Color.secondary.opacity(0.12)
+        let fill: Color = listening ? Color.red.opacity(0.2) : Color.secondary.opacity(0.16)
         return Button {
             composerFocused = false
             dictation.toggle(capturing: draft)
@@ -1841,13 +1904,12 @@ struct ChatView: View {
             Image(systemName: listening ? "mic.fill" : "mic")
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(listening ? Color.red : Color.primary)
-                .frame(width: 32, height: 32)
+                .frame(width: Self.composerButtonSize, height: Self.composerButtonSize)
                 .background(Circle().fill(fill))
                 .pulseCompat(isActive: listening)
         }
         .buttonStyle(.plain)
         .disabled(preparingAttachments || sendingMessage)
-        .padding(.bottom, 6)
         .accessibilityLabel(listening ? "Stop dictation" : "Start dictation")
     }
 
@@ -1857,13 +1919,11 @@ struct ChatView: View {
             Image(systemName: "arrow.up")
                 .font(.system(size: 15, weight: .bold))
                 .foregroundStyle(canSend ? Color.white : Color.secondary)
-                .frame(width: 32, height: 32)
+                .frame(width: Self.composerButtonSize, height: Self.composerButtonSize)
                 .background(Circle().fill(fill))
         }
         .buttonStyle(.plain)
         .disabled(!canSend)
-        .padding(.trailing, 6)
-        .padding(.bottom, 6)
         .animation(.easeOut(duration: 0.15), value: canSend)
         .accessibilityLabel(composerQuestion != nil
             ? "Submit answer"
@@ -2344,8 +2404,8 @@ struct TextBubble: View {
                         .foregroundStyle(BubbleColor.mineText.opacity(0.72))
                 }
             }
-            .padding(.horizontal, customCard ? 0 : 15)
-            .padding(.vertical, customCard ? 0 : 11)
+            .padding(.horizontal, customCard ? 0 : 16)
+            .padding(.vertical, customCard ? 0 : 12)
             .background(
                 Group {
                     if !customCard {
@@ -2377,7 +2437,8 @@ struct TextBubble: View {
             }
             if !shared.text.isEmpty {
                 Text(shared.text)
-                    .font(.system(size: 17))
+                    .font(.system(size: ChatText.size))
+                    .lineSpacing(ChatText.lineSpacing)
                     .foregroundStyle(BubbleColor.mineText)
                     .textSelection(.enabled)
                     .fixedSize(horizontal: false, vertical: true)
@@ -2389,6 +2450,7 @@ struct TextBubble: View {
             ) { url in
                 actions.openLink(url, messageId: message.id)
             }
+                .lineSpacing(ChatText.lineSpacing)
                 .foregroundStyle(Color.primary)
                 .textSelection(.enabled)
                 .fixedSize(horizontal: false, vertical: true)

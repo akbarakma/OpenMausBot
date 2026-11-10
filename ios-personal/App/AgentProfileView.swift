@@ -7,6 +7,9 @@ import SwiftUI
 /// status, and renderer-neutral profile operations.
 struct AgentProfileView: View {
     let bot: Bot
+    let threadCount: Int
+    /// The chat opens its thread list once this sheet has closed.
+    let openThreads: () -> Void
 
     @EnvironmentObject private var session: Session
     @Environment(\.dismiss) private var dismiss
@@ -39,8 +42,10 @@ struct AgentProfileView: View {
     @State private var previewTask: Task<Void, Never>?
     @State private var baseline: ProfileFormSnapshot
 
-    init(bot: Bot) {
+    init(bot: Bot, threadCount: Int, openThreads: @escaping () -> Void) {
         self.bot = bot
+        self.threadCount = threadCount
+        self.openThreads = openThreads
         _name = State(initialValue: bot.name)
         _title = State(initialValue: bot.title)
         _description = State(initialValue: bot.description)
@@ -120,6 +125,21 @@ struct AgentProfileView: View {
     var body: some View {
         NavigationStack {
             Form {
+                Section {
+                    Button {
+                        openThreads()
+                        dismiss()
+                    } label: {
+                        LabeledContent {
+                            Text("\(threadCount)")
+                        } label: {
+                            Label("Threads", systemImage: "square.stack")
+                                .foregroundStyle(Color.primary)
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .accessibilityIdentifier("profile-threads")
+                }
                 // Changing the model and generating avatars need the admin scope
                 // on a server; a chat-only phone is not shown either.
                 if session.canAdminister {

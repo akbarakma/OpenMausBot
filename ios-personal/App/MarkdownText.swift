@@ -132,14 +132,14 @@ struct MarkdownText: View {
         switch block {
         case let .paragraph(text):
             inline(text, tail: tail)
-                .font(.system(size: 17))
+                .font(.system(size: ChatText.size))
                 .fixedSize(horizontal: false, vertical: true)
 
         case let .heading(level, text):
             // Three sizes, not six. A chat bubble is not a document, and an
             // h4 that looks exactly like body text is a heading that failed.
             inline(text, tail: tail)
-                .font(.system(size: level <= 1 ? 21 : level == 2 ? 19 : 17, weight: .semibold))
+                .font(.system(size: level <= 1 ? 22 : level == 2 ? 20 : ChatText.size, weight: .semibold))
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, 2)
 
@@ -161,7 +161,7 @@ struct MarkdownText: View {
                     .fill(Color.secondary.opacity(0.4))
                     .frame(width: 3)
                 inline(text, tail: tail)
-                    .font(.system(size: 17))
+                    .font(.system(size: ChatText.size))
                     .foregroundStyle(Color.secondary)
             }
             .fixedSize(horizontal: false, vertical: true)
@@ -202,15 +202,15 @@ struct MarkdownText: View {
         return HStack(alignment: .firstTextBaseline, spacing: 6) {
             if let number {
                 Text("\(number).")
-                    .font(.system(size: 17))
+                    .font(.system(size: ChatText.size))
                     .foregroundStyle(Color.secondary)
                     .frame(minWidth: 16, alignment: .trailing)
             }
             HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Image(systemName: checked ? "checkmark.square.fill" : "square")
-                    .font(.system(size: 17))
+                    .font(.system(size: ChatText.size))
                     .foregroundStyle(Color.secondary)
-                inline(attributed, tail: tail).font(.system(size: 17))
+                inline(attributed, tail: tail).font(.system(size: ChatText.size))
             }
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(label)
@@ -342,10 +342,10 @@ struct MarkdownText: View {
     private func marker(_ symbol: String, indent: Int, text: String, tail: Bool) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 6) {
             Text(symbol)
-                .font(.system(size: 17))
+                .font(.system(size: ChatText.size))
                 .foregroundStyle(Color.secondary)
                 .frame(minWidth: 16, alignment: .trailing)
-            inline(text, tail: tail).font(.system(size: 17))
+            inline(text, tail: tail).font(.system(size: ChatText.size))
         }
         .padding(.leading, CGFloat(indent) * 14)
         .fixedSize(horizontal: false, vertical: true)

@@ -75,7 +75,7 @@ final class SwipeBackUITests: XCTestCase {
     /// the caller's assertion still goes red.
     @MainActor
     private func edgeSwipeUntilPopped(in app: XCUIApplication) {
-        let header = app.buttons["header-threads"]
+        let header = app.buttons["header-profile"]
         for _ in 0..<2 {
             edgeSwipe(in: app)
             if !header.waitForExistence(timeout: 3) { return }
@@ -122,7 +122,7 @@ final class SwipeBackUITests: XCTestCase {
 
     @MainActor
     private func assertOnThread(_ title: String, in app: XCUIApplication) {
-        let header = app.buttons["header-threads"]
+        let header = app.buttons["header-profile"]
         let expected = NSPredicate(format: "value == %@", title)
         let appeared = XCTNSPredicateExpectation(predicate: expected, object: header)
         // Thread headers settle late on a loaded CI runner, matching the

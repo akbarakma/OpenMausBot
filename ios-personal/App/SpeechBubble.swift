@@ -85,6 +85,12 @@ struct SpeechBubble: Shape {
     }
 }
 
+/// Message text in the transcript and the composer.
+enum ChatText {
+    static let size: CGFloat = 18
+    static let lineSpacing: CGFloat = 5
+}
+
 /// The two bubble fills. Solid rather than translucent on purpose: the tail
 /// is part of the same fill, and a see-through bubble shows the seam.
 enum BubbleColor {
