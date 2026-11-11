@@ -540,14 +540,16 @@ struct ChatView: View {
         // A thread holds 50 messages until you ask for more, so
         // there is nothing here worth being lazy about. Each row is
         // `.equatable()` on the values it draws: a publish or a
-        // keystroke that changes none of them does not redraw it.
+        // keystroke that changes none of them does not redraw it. And
+        // each is a view graph of its own (`IsolatedRow`), so fifty of
+        // them do not slow every scrolled frame.
         return VStack(alignment: .leading, spacing: 6) {
             if session.state.hasMore[threadId] == true {
                 loadEarlierButton(proxy: proxy, transcript: transcript)
             }
 
             ForEach(Array(transcript.enumerated()), id: \.element.id) { index, row in
-                rowView(row, at: index, in: transcript, shared: shared)
+                IsolatedRow(content: rowView(row, at: index, in: transcript, shared: shared))
                     .equatable()
                     .id(row.id)
             }
