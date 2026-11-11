@@ -34,15 +34,9 @@ struct ChatView: View {
     /// The last render's reading of the thread, reused while it is unchanged.
     @State private var snapshotMemo = TranscriptMemo()
     @State private var revealedMessageId: String?
-    /// The reader has dragged this thread's transcript since it opened.
-    @State private var readerScrolled = false
-    /// The reader scrolled the transcript themselves and has not come back to
-    /// its end: nothing scrolls it for them meanwhile. Known from the scroll
-    /// phase (iOS 18); below that, only from the end being out of view.
-    @State private var readerDetached = false
-    /// Where the transcript's end last sat, kept by reference so a scrolled
-    /// frame updates it without redrawing the screen.
-    @State private var scrollReading = ScrollReading()
+    /// What scrolling and the keyboard report, kept by reference so none of
+    /// it redraws this screen (see `TranscriptReading`).
+    @State private var reading = TranscriptReading()
     @State private var showingTasks = false
     @State private var showingBrowser = false
     @State private var showingPlus = false
@@ -85,26 +79,25 @@ struct ChatView: View {
     @State private var headerFadeSolid: CGFloat = 0.5
     @State private var islandVisible = false
     @State private var facePhase: CGFloat = 0
-    /// Reading scrollback: the end of the transcript is below the screen, so
-    /// the Jump to latest pill is offered. Tracked from two edges rather than
-    /// a scroll offset, because iOS 16 has no scroll-position API.
-    @State private var viewportBottom: CGFloat = 0
-    @State private var showsJumpToLatest = false
     /// VoiceOver has heard "… is typing" for this turn.
     @State private var typingAnnounced = false
     /// Bumped by a send: the transcript goes to its end, wherever the
     /// reader had scrolled.
     @State private var sendJumps = 0
-    @State private var composerTop: CGFloat = 0
+    /// The composer's own height: its bar and whatever sits above it.
+    @State private var composerSize: CGFloat?
     @State private var keyboardUp = false
-    @State private var keyboardMoving = false
+    /// With the keyboard down the composer dips into the home indicator's
+    /// safe area, keeping its bar 24pt off the screen edge the way Messages
+    /// does.
+    private var composerDip: CGFloat { keyboardUp ? 0 : max(0, Self.homeIndicatorInset - 16) }
     /// How far the floating composer reaches up into the transcript, which
-    /// keeps that much clear above its end. Measured edge to edge rather
-    /// than the composer's own height: with the keyboard down the composer
-    /// dips into the home indicator's safe area and the transcript does not.
+    /// keeps that much clear above its end. Worked out from the composer's
+    /// height, not measured edge to edge: both edges move with the keyboard,
+    /// one after the other, and between the two readings the gap collapsed
+    /// and cut the transcript's slide short.
     private var composerHeight: CGFloat {
-        guard viewportBottom > 0, composerTop > 0 else { return 76 }
-        return max(0, viewportBottom - composerTop)
+        composerSize.map { max(0, $0 - composerDip) } ?? 76
     }
 
     @AppStorage(PrefKey.islandIntro) private var islandIntro = IslandIntro.oncePerBot.rawValue
@@ -297,19 +290,16 @@ struct ChatView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             composer(snapshot)
-                // With the keyboard down the composer dips into the home
-                // indicator's safe area, keeping its bar 24pt off the screen
-                // edge the way Messages does.
-                .padding(.bottom, keyboardUp ? 0 : -max(0, Self.homeIndicatorInset - 16))
-                .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).minY } action: { composerTop = $0 }
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { composerSize = $0 }
+                .padding(.bottom, -composerDip)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
-            keyboardMoving = true
+            keyboardMoves()
             withAnimation(Self.keyboardSpring) { keyboardUp = true }
         }
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
-            keyboardMoving = true
+            keyboardMoves()
             keyboardUp = false
         }
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardDidShowNotification)) { _ in keyboardSettled() }
@@ -457,19 +447,19 @@ struct ChatView: View {
         // Reading scrollback — one tap back to the end, streaming or
         // not, the same pill the desktop chat offers.
         .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).maxY } action: { bottom in
-            let moved = viewportBottom > 0 && bottom != viewportBottom
-            viewportBottom = bottom
-            // The keyboard moves the transcript's bottom edge both ways. A
-            // reader at the end stays there: above the keyboard while it is
-            // up, and back down to the composer when it closes.
-            if moved, !readerDetached { followKeyboard(proxy) }
+            reading.viewportBottom = bottom
         }
-        // The composer settles after the transcript does, and grows with a
-        // long draft; either way the space kept clear above the end changes.
-        .onChange(of: composerTop) {
-            if !readerDetached { followKeyboard(proxy) }
+        .onChange(of: composerHeight) { followComposer(proxy) }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardDidShowNotification)) { _ in
+            settleAboveKeyboard(proxy)
         }
-        .overlay(alignment: .bottom) { jumpToLatestPill(proxy).padding(.bottom, composerHeight) }
+        .overlay(alignment: .bottom) {
+            JumpToLatestPill(reading: reading) {
+                reading.readerDetached = false
+                withAnimation { proxy.scrollTo(Self.transcriptEndId, anchor: .bottom) }
+            }
+            .padding(.bottom, composerHeight)
+        }
         .task { await playIslandIntro() }
         // A conversation grows from the bottom: a transcript shorter
         // than the screen rests at the bottom, and opening a chat
@@ -495,7 +485,7 @@ struct ChatView: View {
             // Read from the last layout, before this update's rows are
             // laid out: a tall new row that pushes the end off screen is
             // the transcript growing, not the reader leaving.
-            follows: !readerDetached && !showsJumpToLatest,
+            follows: !reading.readerDetached && !reading.showsJumpToLatest,
             typing: showsTyping(snapshot),
             sendJumps: sendJumps,
             reduceMotion: reduceMotion
@@ -556,10 +546,15 @@ struct ChatView: View {
 
             liveTail(snapshot)
             Color.clear.frame(height: composerHeight)
+            // The last thing in the scroll view, with no padding under it. A
+            // scroll view at its very bottom stays there as the keyboard
+            // opens and closes, in step with it. Resting 12pt short it did
+            // not, and each way of scrolling it by hand ran ahead of the
+            // keyboard or trailed it by up to 50pt (iOS 26.5 and 27.2).
             transcriptEnd
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .padding(.top, 12)
         .frame(maxWidth: CompanionLayout.chatWidth, alignment: .leading)
         .frame(maxWidth: .infinity)
     }
@@ -726,7 +721,7 @@ struct ChatView: View {
     }
 
     private func noteTranscriptEnd(_ end: CGFloat) {
-        scrollReading.endGap = end - viewportBottom
+        reading.endGap = end - reading.viewportBottom
         updateJumpToLatest()
     }
 
@@ -734,23 +729,38 @@ struct ChatView: View {
     /// it dips out of view for a few frames. That is not the reader leaving,
     /// so the pill waits for the keyboard to settle.
     private func updateJumpToLatest() {
-        let reading = scrollReading.endGap > Self.jumpToLatestThreshold && !(keyboardMoving && !readerDetached)
-        if reading != showsJumpToLatest {
-            withAnimation(reduceMotion ? nil : .easeOut(duration: 0.18)) { showsJumpToLatest = reading }
+        let offered = reading.endGap > Self.jumpToLatestThreshold && !(reading.keyboardMoving && !reading.readerDetached)
+        if offered != reading.showsJumpToLatest {
+            withAnimation(reduceMotion ? nil : .easeOut(duration: 0.18)) { reading.showsJumpToLatest = offered }
         }
     }
 
-    /// Opening rides the keyboard's spring, or the messages land before the
-    /// keyboard has risen. Closing stays unanimated, which tracks the
-    /// keyboard down more closely than the spring does.
-    private func followKeyboard(_ proxy: ScrollViewProxy) {
+    /// The composer grew or shrank under a reader at the end: a draft
+    /// gained a line, a reply quote or an attachment came or went. Not for
+    /// the keyboard, which the scroll view follows on its own.
+    private func followComposer(_ proxy: ScrollViewProxy) {
+        guard !reading.readerDetached, !reading.keyboardMoving else { return }
         withAnimation(keyboardUp ? Self.keyboardSpring : nil) {
             proxy.scrollTo(Self.transcriptEndId, anchor: .bottom)
         }
     }
 
+    /// The keyboard has come to rest. A reader a few points short of the end
+    /// is not pinned to it by the scroll view, and would be left with the
+    /// newest message under the keyboard.
+    private func settleAboveKeyboard(_ proxy: ScrollViewProxy) {
+        guard !reading.readerDetached, reading.endGap > 1 else { return }
+        withAnimation(reduceMotion ? nil : .easeOut(duration: 0.2)) {
+            proxy.scrollTo(Self.transcriptEndId, anchor: .bottom)
+        }
+    }
+
+    private func keyboardMoves() {
+        reading.keyboardMoving = true
+    }
+
     private func keyboardSettled() {
-        keyboardMoving = false
+        reading.keyboardMoving = false
         updateJumpToLatest()
     }
 
@@ -760,10 +770,10 @@ struct ChatView: View {
     /// at the end attaches it again.
     private func readerScroll(_ scrolling: Bool) {
         if scrolling {
-            readerScrolled = true
-            if !readerDetached { readerDetached = true }
-        } else if readerDetached, scrollReading.endGap <= Self.followSlack {
-            readerDetached = false
+            reading.readerScrolled = true
+            reading.readerDetached = true
+        } else {
+            if reading.endGap <= Self.followSlack { reading.readerDetached = false }
         }
     }
 
@@ -831,27 +841,6 @@ struct ChatView: View {
         }
     }
 
-    @ViewBuilder private func jumpToLatestPill(_ proxy: ScrollViewProxy) -> some View {
-        if showsJumpToLatest {
-            Button {
-                readerDetached = false
-                withAnimation { proxy.scrollTo(Self.transcriptEndId, anchor: .bottom) }
-            } label: {
-                Label("Jump to latest", systemImage: "arrow.down")
-                    .font(.footnote.weight(.medium))
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 8)
-                    .background(.regularMaterial, in: Capsule())
-                    .overlay(Capsule().strokeBorder(Color.primary.opacity(0.08)))
-                    .shadow(color: .black.opacity(0.12), radius: 8, y: 2)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Jump to latest messages")
-            .padding(.bottom, 10)
-            .transition(.opacity.combined(with: .scale(scale: 0.9)))
-        }
-    }
-
     /// grow, hold a beat, shrink — the face rides along
     private func playIslandIntro() async {
         guard CompanionLayout.supportsIslandPresentation, !reduceMotion else { return }
@@ -880,7 +869,7 @@ struct ChatView: View {
     /// the reader has already scrolled away.
     private func settleOnEnd(_ proxy: ScrollViewProxy) async {
         try? await Task.sleep(for: .milliseconds(50))
-        guard !Task.isCancelled, !readerScrolled, !rows.isEmpty else { return }
+        guard !Task.isCancelled, !reading.readerScrolled, !rows.isEmpty else { return }
         proxy.scrollTo(Self.transcriptEndId, anchor: .bottom)
     }
 
@@ -973,11 +962,11 @@ struct ChatView: View {
         selectedPhotos = []
         showCommandHUD = false
         showingPlus = false
-        readerScrolled = false
+        reading.readerScrolled = false
         // The next thread opens on its newest message; the pill comes back
         // once its own end is measured below the screen.
-        readerDetached = false
-        showsJumpToLatest = false
+        reading.readerDetached = false
+        reading.showsJumpToLatest = false
         // A download started in the previous task must not open a sheet (or
         // surface its error) in the new one when the network reply arrives late.
         resetFilePreview()
@@ -1386,7 +1375,7 @@ struct ChatView: View {
         showingPlus = false
         // Sending is the one time the transcript goes to its end even when
         // the reader had scrolled back: the message lands there.
-        readerDetached = false
+        reading.readerDetached = false
         sendJumps &+= 1
         Task {
             let sent: Bool
@@ -2039,11 +2028,51 @@ private enum StoredChips {
     }
 }
 
-/// Where the transcript's end sits against the bottom of the screen, as of
-/// the last scrolled frame. A reference held in `@State`: it changes on
-/// every frame of a scroll, and nothing needs to redraw when it does.
-private final class ScrollReading {
+/// What the transcript's scrolling and the keyboard report as they happen.
+///
+/// A reference held in `@State`, which ChatView does not observe: these
+/// change on every scrolled frame, at each drag and several times per
+/// keyboard move, and one redraw of ChatView outlasts a frame (14 ms against
+/// 8.3 on an iPhone 16 Pro Max, Nov 2026). Only the pill draws from it.
+private final class TranscriptReading: ObservableObject {
+    /// How far the transcript's end sits below the bottom of the screen, as
+    /// of the last scrolled frame. Tracked from two edges rather than a
+    /// scroll offset, because iOS 16 has no scroll-position API.
     var endGap: CGFloat = 0
+    var viewportBottom: CGFloat = 0
+    var keyboardMoving = false
+    /// The reader has dragged this thread's transcript since it opened.
+    var readerScrolled = false
+    /// The reader scrolled the transcript themselves and has not come back to
+    /// its end: nothing scrolls it for them meanwhile. Known from the scroll
+    /// phase (iOS 18); below that, only from the end being out of view.
+    var readerDetached = false
+    /// Reading scrollback: the end of the transcript is below the screen, so
+    /// the Jump to latest pill is offered.
+    @Published var showsJumpToLatest = false
+}
+
+private struct JumpToLatestPill: View {
+    @ObservedObject var reading: TranscriptReading
+    let jump: () -> Void
+
+    var body: some View {
+        if reading.showsJumpToLatest {
+            Button(action: jump) {
+                Label("Jump to latest", systemImage: "arrow.down")
+                    .font(.footnote.weight(.medium))
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(.regularMaterial, in: Capsule())
+                    .overlay(Capsule().strokeBorder(Color.primary.opacity(0.08)))
+                    .shadow(color: .black.opacity(0.12), radius: 8, y: 2)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Jump to latest messages")
+            .padding(.bottom, 10)
+            .transition(.opacity.combined(with: .scale(scale: 0.9)))
+        }
+    }
 }
 
 /// Keeps the newest message in view while the reader is at the end, and
@@ -2095,9 +2124,11 @@ private struct FollowsLatest: ViewModifier {
             // the string so this fires once per delta batch, and without
             // animation — animating every token turns a smooth stream
             // into a stutter, because each scroll interrupts the last.
+            // To the end, not the bubble: the composer floats over the last
+            // of the transcript, and the bubble's own bottom is under it.
             .onValueChange(of: streamLength) { length in
                 guard length > 0, follows else { return }
-                proxy.scrollTo(ChatView.liveBubbleId, anchor: .bottom)
+                proxy.scrollTo(ChatView.transcriptEndId, anchor: .bottom)
             }
             .onValueChange(of: sendJumps) { _ in
                 proxy.scrollTo(ChatView.transcriptEndId, anchor: .bottom)
