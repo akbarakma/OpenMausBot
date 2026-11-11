@@ -9,7 +9,7 @@ if [ -z "$TEAM" ]; then
   echo "Put your Apple team ID in ios-personal/.dev-team or OMB_DEV_TEAM." >&2
   exit 1
 fi
-APP=DerivedData/Build/Products/Debug-iphoneos/OpenMausCompanion.app
+APP=DerivedData.noindex/Build/Products/Debug-iphoneos/OpenMausCompanion.app
 
 devices=$(mktemp)
 spec=project.phone.yml
@@ -32,7 +32,7 @@ awk '/^      - target: (OpenMausCompanionWidgets|OpenMausShareExtension)$/ { nex
      { group = 0; print }' project.yml > "$spec"
 xcodegen generate --quiet --spec "$spec"
 xcodebuild -project OpenMausCompanion.xcodeproj -scheme OpenMausCompanion \
-  -destination "id=$udid" -derivedDataPath DerivedData -allowProvisioningUpdates \
+  -destination "id=$udid" -derivedDataPath DerivedData.noindex -allowProvisioningUpdates \
   DEVELOPMENT_TEAM="$TEAM" CODE_SIGN_STYLE=Automatic -quiet build
 
 xcrun devicectl device install app --device "$udid" "$APP"

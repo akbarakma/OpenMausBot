@@ -9,7 +9,7 @@ DEVICE_TYPE=com.apple.CoreSimulator.SimDeviceType.iPhone-17
 # The simulator keychain refuses the pairing token without an application-identifier
 # entitlement; any team id makes Xcode emit it, no provisioning profile is involved.
 TEAM=${OMB_DEV_TEAM:-AAAAAAAAAA}
-APP=DerivedData/Build/Products/Debug-iphonesimulator/OpenMausCompanion.app
+APP=DerivedData.noindex/Build/Products/Debug-iphonesimulator/OpenMausCompanion.app
 
 runtime_id() {
   xcrun simctl list runtimes -j |
@@ -36,7 +36,7 @@ fi
 
 xcodegen generate --quiet
 xcodebuild -project OpenMausCompanion.xcodeproj -scheme OpenMausCompanion \
-  -sdk iphonesimulator -destination "id=$udid" -derivedDataPath DerivedData \
+  -sdk iphonesimulator -destination "id=$udid" -derivedDataPath DerivedData.noindex \
   DEVELOPMENT_TEAM="$TEAM" CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual \
   -quiet build
 
