@@ -357,6 +357,8 @@ struct ChatView: View {
             dictation.stop()
             resetFilePreview()
             cancelThreadOpen()
+            session.redraws.end(.scroll)
+            session.redraws.end(.keyboard)
         }
         .onValueChange(of: scenePhase) { phase in
             if phase != .active { dictation.stop() }
@@ -757,10 +759,12 @@ struct ChatView: View {
 
     private func keyboardMoves() {
         reading.keyboardMoving = true
+        session.redraws.begin(.keyboard)
     }
 
     private func keyboardSettled() {
         reading.keyboardMoving = false
+        session.redraws.end(.keyboard)
         updateJumpToLatest()
     }
 
@@ -772,8 +776,10 @@ struct ChatView: View {
         if scrolling {
             reading.readerScrolled = true
             reading.readerDetached = true
+            session.redraws.begin(.scroll)
         } else {
             if reading.endGap <= Self.followSlack { reading.readerDetached = false }
+            session.redraws.end(.scroll)
         }
     }
 
@@ -967,6 +973,8 @@ struct ChatView: View {
         // once its own end is measured below the screen.
         reading.readerDetached = false
         reading.showsJumpToLatest = false
+        // The scroll view that began it goes away with the old thread.
+        session.redraws.end(.scroll)
         // A download started in the previous task must not open a sheet (or
         // surface its error) in the new one when the network reply arrives late.
         resetFilePreview()

@@ -51,7 +51,17 @@ final class Session: ObservableObject {
         case offline(String)
     }
 
-    @Published private(set) var state = CompanionState()
+    /// Not `@Published`: the screens hear of a change through `redraws`,
+    /// which waits out a scroll or a keyboard slide. `stateUpdates` carries
+    /// every value as it lands, for the widgets and the Live Activity.
+    private(set) var state = CompanionState() {
+        willSet {
+            redraws.changed()
+            stateUpdates.send(newValue)
+        }
+    }
+    let stateUpdates = CurrentValueSubject<CompanionState, Never>(CompanionState())
+    private(set) lazy var redraws = RedrawHold { [weak self] in self?.objectWillChange.send() }
     @Published private(set) var connection: Connection?
     @Published private(set) var connections: [Connection] = []
     /// Whether the live pairing may administer the workspace — see
