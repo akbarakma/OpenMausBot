@@ -74,6 +74,7 @@ struct ConnectedAppsView: View {
                 connectorSection(card)
             }
         }
+        .screenCanvas()
         .navigationTitle("Connected Apps")
         .searchable(text: $query, prompt: "Search apps")
         .toolbar {

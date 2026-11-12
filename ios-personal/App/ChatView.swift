@@ -26,6 +26,11 @@ struct ChatView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.colorScheme) private var colorScheme
+    @AppStorage(PrefKey.chatBackdrop) private var chatBackdropRaw = ChatBackdrop.fallback.rawValue
+    @State private var scrollBox = TranscriptScrollBox()
+    @State private var loadingEarlier = false
+    @State private var draftSave: Task<Void, Never>?
     /// The composer's text. Held, not observed: a keystroke redraws the
     /// composer (`DraftReader`) and leaves this body and the transcript be.
     @State private var composerDraft = ComposerDraft()
@@ -54,13 +59,19 @@ struct ChatView: View {
         var text = ""
         var attachments: [PendingMessageAttachment] = []
         var error: String?
+        var reply: ComposerReply?
+    }
+
+    private struct ActiveReply: Equatable {
+        var threadId: String
+        var reply: ComposerReply
     }
     @State private var threadDrafts: [String: ComposerSnapshot] = [:]
     @State private var preparingAttachments = false
     @State private var sendingMessage = false
     @State private var steering = false
     @State private var attachmentError: String?
-    @State private var replyingTo: (threadId: String, message: Message, author: String)?
+    @State private var replyingTo: ActiveReply?
     @State private var openingFileName: String?
     @State private var fileOpenError: String?
     @State private var filePreview: FilePreviewItem?
@@ -168,6 +179,10 @@ struct ChatView: View {
     private var draft: String {
         get { composerDraft.text }
         nonmutating set { composerDraft.text = newValue }
+    }
+
+    private var chatFill: Color {
+        ChatBackdrop.screenFill(stored: chatBackdropRaw, scheme: colorScheme)
     }
 
     /// The transcript as the reader has asked to see it: every chip, folded
@@ -294,6 +309,7 @@ struct ChatView: View {
                 .padding(.bottom, -composerDip)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+        .background { chatFill.ignoresSafeArea() }
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
             keyboardMoves()
             withAnimation(Self.keyboardSpring) { keyboardUp = true }
@@ -353,7 +369,10 @@ struct ChatView: View {
             typingAnnounced = false
         }
         .task(id: steering) { await expireSteering() }
+        .onAppear { restoreDraft(threadId) }
         .onDisappear {
+            draftSave?.cancel()
+            persistDraft(threadId)
             dictation.stop()
             resetFilePreview()
             cancelThreadOpen()
@@ -361,8 +380,15 @@ struct ChatView: View {
             session.redraws.end(.keyboard)
         }
         .onValueChange(of: scenePhase) { phase in
-            if phase != .active { dictation.stop() }
+            if phase != .active {
+                dictation.stop()
+                draftSave?.cancel()
+                persistDraft(threadId)
+            }
         }
+        .onValueChange(of: attachments.map(\.id)) { _ in persistDraft(threadId) }
+        .onValueChange(of: replyingTo) { _ in persistDraft(threadId) }
+        .onValueChange(of: session.state.hasMore[threadId]) { _ in resolveStoredReply() }
         .onValueChange(of: showingBrowser) { shown in
             if shown { dictation.stop() }
         }
@@ -438,6 +464,7 @@ struct ChatView: View {
         return ScrollView {
             transcriptColumn(proxy: proxy, snapshot: snapshot, actions: actions)
         }
+        .scrollContentBackground(.hidden)
         // The header lives in the scroll view's top safe area: the
         // transcript starts below it and scrolls under its glass. An
         // inset rather than a content margin, because
@@ -537,13 +564,19 @@ struct ChatView: View {
         // them do not slow every scrolled frame.
         return VStack(alignment: .leading, spacing: 6) {
             if session.state.hasMore[threadId] == true {
-                loadEarlierButton(proxy: proxy, transcript: transcript)
+                loadEarlierButton()
             }
 
             ForEach(Array(transcript.enumerated()), id: \.element.id) { index, row in
-                IsolatedRow(content: rowView(row, at: index, in: transcript, shared: shared))
-                    .equatable()
-                    .id(row.id)
+                PeekSlide(
+                    model: scrollBox.model,
+                    date: row.head.date,
+                    messageIds: rowMessageIds(row)
+                ) {
+                    IsolatedRow(content: rowView(row, at: index, in: transcript, shared: shared))
+                        .equatable()
+                }
+                .id(row.id)
             }
 
             liveTail(snapshot)
@@ -559,22 +592,35 @@ struct ChatView: View {
         .padding(.top, 12)
         .frame(maxWidth: CompanionLayout.chatWidth, alignment: .leading)
         .frame(maxWidth: .infinity)
+        .background {
+            TranscriptScrollBridge(model: scrollBox.model) { commitSwipeReply($0) }
+        }
     }
 
-    private func loadEarlierButton(proxy: ScrollViewProxy, transcript: [TranscriptRow]) -> some View {
-        Button("Load earlier messages") {
-            // keep the reader where they were: after older
-            // messages are prepended, sit back on the one
-            // that used to be at the top
-            let anchor = transcript.first?.id
+    private func loadEarlierButton() -> some View {
+        Button {
+            guard !loadingEarlier else { return }
+            scrollBox.model.captureHold()
+            loadingEarlier = true
+            let requested = threadId
             Task {
-                await session.loadOlder(threadId: threadId)
-                if let anchor { proxy.scrollTo(anchor, anchor: .top) }
+                await session.loadOlder(threadId: requested)
+                scrollBox.model.finishHold()
+                loadingEarlier = false
+                resolveStoredReply()
+            }
+        } label: {
+            if loadingEarlier {
+                ProgressView()
+            } else {
+                Text("Load earlier messages")
             }
         }
         .font(.footnote)
         .frame(maxWidth: .infinity)
         .padding(.vertical, 8)
+        .disabled(loadingEarlier)
+        .accessibilityIdentifier("load-earlier")
     }
 
     /// What every row of one render shares.
@@ -669,7 +715,14 @@ struct ChatView: View {
         case let .reveal(messageId):
             proxy.scrollTo(messageId, anchor: .center)
         case let .reply(message, author):
-            replyingTo = (threadId, message, author)
+            replyingTo = ActiveReply(
+                threadId: threadId,
+                reply: ComposerReply(
+                    messageId: message.id,
+                    author: author,
+                    preview: MessagePresentations.of(message).visibleText
+                )
+            )
             composerFocused = true
         case let .quote(messageId):
             reveal(messageId, proxy, in: transcriptSnapshot.rows)
@@ -915,6 +968,7 @@ struct ChatView: View {
         let openedChat = current
         loadError = nil
         await load(openedChat.threadId)
+        resolveStoredReply()
         // opening a chat is what marks it read, exactly as on the desktop
         if openedChat.unread { await session.markRead(openedChat) }
 #if DEBUG
@@ -956,15 +1010,100 @@ struct ChatView: View {
         if unread { Task { await session.markRead(readChat) } }
     }
 
+    private func rowMessageIds(_ row: TranscriptRow) -> Set<String> {
+        switch row {
+        case let .message(message): [message.id]
+        case let .activityRun(items): Set(items.map(\.id))
+        case let .assistantTurn(turn): Set(turn.messages.map(\.id))
+        }
+    }
+
+    private func commitSwipeReply(_ id: String) {
+        guard let message = messages.first(where: { $0.id == id }) else { return }
+        let preview = MessagePresentations.of(message).visibleText
+        guard message.kind == .text, !preview.isEmpty else { return }
+        let author = message.role == .user ? String(localized: "You") : (message.from?.name ?? current.name)
+        replyingTo = ActiveReply(
+            threadId: threadId,
+            reply: ComposerReply(messageId: message.id, author: author, preview: preview)
+        )
+        composerFocused = true
+    }
+
+    private func scheduleDraftSave() {
+        let thread = threadId
+        draftSave?.cancel()
+        draftSave = Task {
+            try? await Task.sleep(for: .milliseconds(400))
+            guard !Task.isCancelled else { return }
+            persistDraft(thread)
+        }
+    }
+
+    private func persistDraft(_ thread: String) {
+        let record: ComposerDraftRecord
+        if thread == threadId {
+            record = ComposerDraftRecord(
+                text: draft,
+                reply: replyingTo?.threadId == thread ? replyingTo?.reply : nil,
+                attachments: attachments
+            )
+        } else if let snapshot = threadDrafts[thread] {
+            record = ComposerDraftRecord(text: snapshot.text, reply: snapshot.reply, attachments: snapshot.attachments)
+        } else {
+            return
+        }
+        try? PhoneDrafts.store.save(threadId: thread, record: record)
+    }
+
+    private func restoreDraft(_ thread: String) {
+        guard let stored = PhoneDrafts.store.load(threadId: thread) else { return }
+        showDraft(text: stored.text, attachments: stored.attachments, reply: stored.reply, error: nil, threadId: thread)
+    }
+
+    private func showDraft(
+        text: String, attachments: [PendingMessageAttachment], reply: ComposerReply?, error: String?, threadId: String
+    ) {
+        draft = text
+        self.attachments = attachments
+        attachmentError = error
+        if let reply {
+            replyingTo = ActiveReply(threadId: threadId, reply: reply)
+        } else {
+            replyingTo = nil
+        }
+    }
+
+    private func resolveStoredReply() {
+        guard session.state.hasLoadedPage(forThread: threadId),
+              let current = replyingTo, current.threadId == threadId else { return }
+        let ids = Set(messages.map(\.id))
+        let hasMore = session.state.hasMore[threadId] == true
+        guard ComposerDraftReply.kept(current.reply, messageIds: ids, hasMore: hasMore) == nil else { return }
+        replyingTo = nil
+        persistDraft(threadId)
+    }
+
     /// The local task picker changed threads: park this one's draft, bring
     /// back the next one's, and drop what belonged to the old thread.
     private func switchThread(from previous: String, to next: String) {
         dictation.stop()
-        threadDrafts[previous] = ComposerSnapshot(text: draft, attachments: attachments, error: attachmentError)
-        let restored = threadDrafts.removeValue(forKey: next) ?? ComposerSnapshot()
-        draft = restored.text
-        attachments = restored.attachments
-        attachmentError = restored.error
+        draftSave?.cancel()
+        let previousReply = replyingTo?.threadId == previous ? replyingTo?.reply : nil
+        threadDrafts[previous] = ComposerSnapshot(
+            text: draft, attachments: attachments, error: attachmentError, reply: previousReply
+        )
+        persistDraft(previous)
+        if let restored = threadDrafts.removeValue(forKey: next) {
+            showDraft(
+                text: restored.text, attachments: restored.attachments,
+                reply: restored.reply, error: restored.error, threadId: next
+            )
+        } else if let stored = PhoneDrafts.store.load(threadId: next) {
+            showDraft(text: stored.text, attachments: stored.attachments, reply: stored.reply, error: nil, threadId: next)
+        } else {
+            showDraft(text: "", attachments: [], reply: nil, error: nil, threadId: next)
+        }
         selectedPhotos = []
         showCommandHUD = false
         showingPlus = false
@@ -1054,9 +1193,9 @@ struct ChatView: View {
         .background(
             LinearGradient(
                 stops: [
-                    .init(color: Color(uiColor: .systemBackground), location: 0),
-                    .init(color: Color(uiColor: .systemBackground), location: headerFadeSolid),
-                    .init(color: Color(uiColor: .systemBackground).opacity(0), location: 1),
+                    .init(color: chatFill, location: 0),
+                    .init(color: chatFill, location: headerFadeSolid),
+                    .init(color: chatFill.opacity(0), location: 1),
                 ],
                 startPoint: .top, endPoint: .bottom
             )
@@ -1372,7 +1511,7 @@ struct ChatView: View {
         let chatAtSend = current
         // Only the typed line answers; a chip or a command is its own ask.
         let question = explicitText == nil ? composerQuestion : nil
-        let replyAtSend = replyingTo.flatMap { $0.threadId == chatAtSend.threadId ? $0.message.id : nil }
+        let replyAtSend = replyingTo.flatMap { $0.threadId == chatAtSend.threadId ? $0.reply.messageId : nil }
         guard !text.isEmpty || !outgoingAttachments.isEmpty,
               !preparingAttachments,
               !sendingMessage
@@ -1421,6 +1560,10 @@ struct ChatView: View {
                 if threadDrafts[chatAtSend.threadId]?.attachments.map(\.id) == outgoingAttachments.map(\.id) {
                     threadDrafts[chatAtSend.threadId]?.attachments = []
                 }
+                if threadDrafts[chatAtSend.threadId]?.reply?.messageId == replyAtSend {
+                    threadDrafts[chatAtSend.threadId]?.reply = nil
+                }
+                persistDraft(chatAtSend.threadId)
                 return
             }
             // HUD commands expand `/diff` into a longer prompt. Compare with
@@ -1429,12 +1572,14 @@ struct ChatView: View {
             if draft == draftAtSend {
                 draft = ""
             }
-            if let replyAtSend, replyingTo?.message.id == replyAtSend {
+            if let replyAtSend, replyingTo?.reply.messageId == replyAtSend {
                 replyingTo = nil
             }
             if attachments.map(\.id) == outgoingAttachments.map(\.id) {
                 attachments = []
             }
+            draftSave?.cancel()
+            persistDraft(chatAtSend.threadId)
             SoundEffects.playSent()
             Haptics.impact(.medium)
         }
@@ -1498,6 +1643,7 @@ struct ChatView: View {
             }
             if threadId == importingThread { attachments.append(contentsOf: imported) }
             else { threadDrafts[importingThread, default: ComposerSnapshot()].attachments.append(contentsOf: imported) }
+            persistDraft(importingThread)
             Haptics.selection()
         } catch {
             if threadId == importingThread { attachmentError = error.localizedDescription }
@@ -1541,6 +1687,7 @@ struct ChatView: View {
             }
             if threadId == importingThread { attachments.append(contentsOf: imported) }
             else { threadDrafts[importingThread, default: ComposerSnapshot()].attachments.append(contentsOf: imported) }
+            persistDraft(importingThread)
             Haptics.selection()
         } catch {
             if threadId == importingThread { attachmentError = error.localizedDescription }
@@ -1678,11 +1825,13 @@ struct ChatView: View {
             if threadId == targetThread {
                 draft = send.editDraft(keeping: draft)
                 composerFocused = true
+                persistDraft(targetThread)
             } else {
                 // The person switched tasks while the cancel was in flight.
                 var snapshot = threadDrafts[targetThread] ?? ComposerSnapshot()
                 snapshot.text = send.editDraft(keeping: snapshot.text)
                 threadDrafts[targetThread] = snapshot
+                persistDraft(targetThread)
             }
         }
     }
@@ -1728,7 +1877,8 @@ struct ChatView: View {
             composerSuggestions(text, pendingApproval: snapshot.hasPendingApproval)
 
             if let reply = replyingTo, reply.threadId == threadId {
-                ReplyQuote(author: reply.author, text: MessagePresentations.of(reply.message).visibleText) { replyingTo = nil }
+                ReplyQuote(author: reply.reply.author, text: reply.reply.preview) { replyingTo = nil }
+                    .accessibilityIdentifier("composer-reply")
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
 
@@ -1931,6 +2081,7 @@ struct ChatView: View {
                 withAnimation(.easeInOut(duration: 0.15)) {
                     showCommandHUD = value.hasPrefix("/")
                 }
+                scheduleDraftSave()
             }
             // The software keyboard's Return inserts a newline,
             // like Messages; only the arrow button sends. A
@@ -2223,6 +2374,11 @@ struct MessageRow: View, Equatable {
 
             if versions.count > 1, let index = versions.firstIndex(where: { $0.id == message.id }), context.isBot {
                 versionSwitcher(at: index)
+            }
+        }
+        .background {
+            if !isPendingEdit, message.kind == .text, !presentation.visibleText.isEmpty {
+                PeekAnchor(messageId: message.id)
             }
         }
         .contextMenu { menu(presentation) }

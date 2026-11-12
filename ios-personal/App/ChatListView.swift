@@ -9,6 +9,8 @@ import CompanionCore
 
 struct ChatListView: View {
     @EnvironmentObject private var session: Session
+    @Environment(\.colorScheme) private var colorScheme
+    @AppStorage(PrefKey.chatBackdrop) private var chatBackdropRaw = ChatBackdrop.fallback.rawValue
     @State private var query = ""
     @AppStorage(PrefKey.activityDetail) private var activityDetail = ActivityDetail.phoneDefault.rawValue
     @AppStorage(PrefKey.collapsedSections) private var collapsedSections = ""
@@ -31,6 +33,10 @@ struct ChatListView: View {
     /// Working bots' faces: six move at once.
     @State private var motionBudget = MascotMotionBudget(limit: 6)
     @FocusState private var searchFocused: Bool
+
+    private var homeFill: Color {
+        ChatBackdrop.screenFill(stored: chatBackdropRaw, scheme: colorScheme)
+    }
 
     var body: some View {
         // Read once per render: the island, the pill and every row's hand
@@ -60,6 +66,7 @@ struct ChatListView: View {
             }
             .environment(\.mascotMotionBudget, motionBudget)
             .refreshable { await session.refresh() }
+            .scrollContentBackground(.hidden)
             .accessibilityIdentifier("roster-list")
             .overlay {
                 if rosterIsEmpty(matches: matches) {
@@ -78,6 +85,7 @@ struct ChatListView: View {
             }
             .frame(maxWidth: CompanionLayout.rosterWidth, maxHeight: .infinity, alignment: .top)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .background { homeFill.ignoresSafeArea() }
             // a bot that stopped for you grows out of the island
             .overlay(alignment: .top) {
                 if CompanionLayout.supportsIslandPresentation {
@@ -160,10 +168,11 @@ struct ChatListView: View {
     /// which opens Settings.
     private var header: some View {
         HStack(spacing: 8) {
-            Text("Bots")
+            Text(verbatim: "MausBot")
                 .font(.largeTitle.bold())
                 .foregroundStyle(Color.primary)
                 .accessibilityAddTraits(.isHeader)
+                .accessibilityIdentifier("home-title")
             Spacer(minLength: 8)
             ConnectionChip(status: session.status)
             Spacer(minLength: 8)
@@ -410,8 +419,8 @@ struct ChatListView: View {
             if showsFavorites {
                 LinearGradient(
                     stops: [
-                        .init(color: Color(uiColor: .systemBackground).opacity(0), location: 0),
-                        .init(color: Color(uiColor: .systemBackground), location: 0.12),
+                        .init(color: homeFill.opacity(0), location: 0),
+                        .init(color: homeFill, location: 0.12),
                     ],
                     startPoint: .top, endPoint: .bottom
                 )
@@ -638,13 +647,15 @@ struct MascotStack: View {
     let colors: [String]
     var size: CGFloat = 28
     var overlap: CGFloat = 12
+    @Environment(\.colorScheme) private var colorScheme
+    @AppStorage(PrefKey.chatBackdrop) private var chatBackdropRaw = ChatBackdrop.fallback.rawValue
 
     var body: some View {
         HStack(spacing: -overlap) {
             ForEach(Array(colors.enumerated()), id: \.offset) { _, color in
                 MausAvatar(color: color, size: size, state: .idle, animated: false)
                     .padding(2)
-                    .background(Circle().fill(Color(uiColor: .systemBackground)))
+                    .background(Circle().fill(ChatBackdrop.screenFill(stored: chatBackdropRaw, scheme: colorScheme)))
             }
         }
     }

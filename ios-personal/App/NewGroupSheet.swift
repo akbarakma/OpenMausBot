@@ -46,6 +46,7 @@ struct NewGroupSheet: View {
                     }
                 }
             }
+            .screenCanvas()
             .navigationTitle("New group")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

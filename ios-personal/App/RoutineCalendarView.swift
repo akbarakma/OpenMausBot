@@ -46,10 +46,12 @@ struct RoutineCalendarView: View {
                     }
                 }
                 .listStyle(.plain)
+                .scrollContentBackground(.hidden)
                 .overlay {
                     if loading && routines.isEmpty && runs.isEmpty { ProgressView() }
                 }
             }
+            .screenCanvas()
             .navigationTitle(Text(selected, format: .dateTime.month(.wide).year()))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

@@ -8,6 +8,7 @@ struct SettingsView: View {
     @EnvironmentObject private var session: Session
     @State private var enablingNotifications = false
     @AppStorage(PrefKey.activityDetail) private var activityDetail = ActivityDetail.phoneDefault.rawValue
+    @AppStorage(PrefKey.chatBackdrop) private var chatBackdrop = ChatBackdrop.fallback.rawValue
     @AppStorage(PrefKey.islandIntro) private var islandIntro = IslandIntro.oncePerBot.rawValue
     @AppStorage(PrefKey.language) private var language = AppLanguage.system.rawValue
     @AppStorage(PrefKey.pinnedAtBottom) private var pinnedAtBottom = false
@@ -68,6 +69,20 @@ struct SettingsView: View {
             }
 
             Section {
+                Picker(selection: $chatBackdrop) {
+                    ForEach(ChatBackdrop.allCases, id: \.rawValue) { backdrop in
+                        Text(verbatim: backdrop.title).tag(backdrop.rawValue)
+                    }
+                } label: {
+                    Label {
+                        Text("Background")
+                    } icon: {
+                        SettingsIcon(symbol: "circle.lefthalf.filled", color: .gray)
+                    }
+                }
+                .pickerStyle(.navigationLink)
+                .accessibilityIdentifier("chat-background")
+
                 Picker(selection: $activityDetail) {
                     ForEach(ActivityDetail.allCases, id: \.rawValue) { level in
                         Text(LocalizedStringKey(level.label)).tag(level.rawValue)
@@ -184,6 +199,7 @@ struct SettingsView: View {
                 }
             }
         }
+        .screenCanvas()
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
         .task { await session.refreshNotificationAuthorization() }
@@ -364,6 +380,7 @@ struct ConnectedComputersView: View {
                 Text("Each computer is paired separately. Only the selected computer is active at a time.")
             }
         }
+        .screenCanvas()
         .navigationTitle("Computers")
         .navigationBarTitleDisplayMode(.inline)
         .confirmationDialog(
@@ -490,6 +507,7 @@ struct ConnectionSecurityView: View {
                 EmptyStateView("No computer connected", systemImage: "laptopcomputer.slash")
             }
         }
+        .screenCanvas()
         .navigationTitle("Connection & Security")
         .navigationBarTitleDisplayMode(.inline)
         .alert("Edit address", isPresented: $editingAddress) {

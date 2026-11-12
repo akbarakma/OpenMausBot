@@ -74,6 +74,7 @@ struct TasksRoutinesView: View {
                 Text("Creating or rotating a webhook changes an internet-reachable trigger and signing secret, so webhook management remains on the paired computer. Webhook run receipts still appear above.")
             }
         }
+        .screenCanvas()
         .navigationTitle("Threads & Routines")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
@@ -388,6 +389,7 @@ struct RoutineEditorView: View {
                     }
                 }
             }
+            .screenCanvas()
             .navigationTitle(routine == nil ? "New routine" : "Edit routine")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

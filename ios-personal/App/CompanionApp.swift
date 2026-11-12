@@ -74,6 +74,8 @@ struct CompanionApp: App {
 
 struct RootView: View {
     @EnvironmentObject private var session: Session
+    @Environment(\.colorScheme) private var colorScheme
+    @AppStorage(PrefKey.chatBackdrop) private var chatBackdropRaw = ChatBackdrop.fallback.rawValue
     @AppStorage("companion.onboarding.welcomeSeen") private var hasSeenWelcome = false
     @AppStorage("companion.onboarding.notificationsSeen") private var hasSeenNotificationPrompt = false
     @AppStorage(CompanionOnboardingPreferences.pendingNotificationOnboardingKey)
@@ -141,7 +143,7 @@ struct RootView: View {
                 )
             }
         }
-        .background(Color(uiColor: .systemBackground).ignoresSafeArea())
+        .background(ChatBackdrop.screenFill(stored: chatBackdropRaw, scheme: colorScheme).ignoresSafeArea())
         .onValueChange(of: session.pairingInvite) { invite in
             guard invite != nil else { return }
             hasSeenWelcome = true

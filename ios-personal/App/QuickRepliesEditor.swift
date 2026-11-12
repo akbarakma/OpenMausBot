@@ -76,6 +76,7 @@ struct QuickRepliesEditor: View {
                 }
             }
         }
+        .screenCanvas()
         .navigationTitle("Quick Replies")
         .toolbar { EditButton() }
         .sheet(item: $editing) { reply in
@@ -151,6 +152,7 @@ private struct QuickReplyForm: View {
                     .padding(.vertical, 4)
                 }
             }
+            .screenCanvas()
             .navigationTitle(titled.isEmpty ? Text("New Quick Reply") : Text(verbatim: titled))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

@@ -19,6 +19,47 @@ enum PrefKey {
     static let pinnedOrder = "companion.prefs.pinnedOrder"
     static let sectionOrder = "companion.prefs.sectionOrder"
     static let collapsedSections = "companion.prefs.collapsedSections"
+    static let chatBackdrop = "companion.prefs.chatBackdrop"
+}
+
+enum PhoneDrafts {
+    static let store = ComposerDraftStore(
+        root: FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("composer-drafts", isDirectory: true)
+    )
+}
+
+extension ChatBackdrop {
+    var color: Color {
+        Color(.sRGB, red: red, green: green, blue: blue, opacity: 1)
+    }
+
+    static func screenFill(stored raw: String, scheme: ColorScheme) -> Color {
+        guard scheme == .dark else { return Color(uiColor: .systemBackground) }
+        return (ChatBackdrop(rawValue: raw) ?? .fallback).color
+    }
+}
+
+extension View {
+    /// The chosen dark background behind a screen, including its navigation bar.
+    /// A list or form also drops the system black so the color shows through the gaps.
+    func screenCanvas() -> some View {
+        modifier(ScreenCanvas())
+    }
+}
+
+private struct ScreenCanvas: ViewModifier {
+    @Environment(\.colorScheme) private var colorScheme
+    @AppStorage(PrefKey.chatBackdrop) private var raw = ChatBackdrop.fallback.rawValue
+
+    func body(content: Content) -> some View {
+        let fill = ChatBackdrop.screenFill(stored: raw, scheme: colorScheme)
+        content
+            .scrollContentBackground(.hidden)
+            .background(fill.ignoresSafeArea())
+            .toolbarBackground(fill, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+    }
 }
 
 extension ActivityDetail {

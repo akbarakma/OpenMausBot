@@ -254,6 +254,11 @@ final class Session: ObservableObject {
                 }
             }
             state.hydrate(fleet)
+            if arguments.contains("-load-earlier-preview") {
+                for threadId in state.messages.keys {
+                    state.hasMore[threadId] = true
+                }
+            }
             if arguments.contains("-chat-focus-preview") {
                 // Put the requested reply several screens inside the fold.
                 var messages = state.messages["preview-gmail"] ?? []
@@ -1865,6 +1870,29 @@ final class Session: ObservableObject {
     }
 
     func loadOlder(threadId: String) async {
+#if DEBUG
+        if client == nil, ProcessInfo.processInfo.arguments.contains("-load-earlier-preview"),
+           state.hasMore[threadId] == true,
+           let oldest = state.transcript(forThread: threadId).first {
+            try? await Task.sleep(for: .milliseconds(400))
+            let older: [Message] = (1...6).compactMap { number in
+                let role = number.isMultiple(of: 2) ? "user" : "bot"
+                let at = oldest.at - Double(7 - number) * 60_000
+                let json = """
+                {"id":"older-\(number)","role":"\(role)","kind":"text","at":\(at),"parentId":"older-parent-\(number)","text":"Earlier note \(number)."}
+                """
+                return try? JSONDecoder().decode(Message.self, from: Data(json.utf8))
+            }
+            guard let page = try? JSONDecoder().decode(
+                ThreadPage.self,
+                from: Data(#"{"messages":[],"hasMore":false}"#.utf8)
+            ) else { return }
+            var filled = page
+            filled.messages = older
+            state.prepend(filled, toThread: threadId)
+            return
+        }
+#endif
         guard let client, let oldest = state.transcript(forThread: threadId).first else { return }
         do {
             let page = try await client.messages(threadId: threadId, before: oldest.id, limit: 50)

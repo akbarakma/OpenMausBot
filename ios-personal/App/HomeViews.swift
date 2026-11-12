@@ -98,8 +98,8 @@ struct HomeRow: View, Equatable {
             }
         }
         .padding(.horizontal, HomeLayout.margin)
-        .padding(.vertical, 12)
-        .frame(minHeight: 72)
+        .padding(.vertical, 16)
+        .frame(minHeight: 80)
         .contentShape(Rectangle())
     }
 }
@@ -110,6 +110,8 @@ struct RoomFaces: View {
     let members: [Bot]
     let size: CGFloat
     var fallbackColor = "blue"
+    @Environment(\.colorScheme) private var colorScheme
+    @AppStorage(PrefKey.chatBackdrop) private var chatBackdropRaw = ChatBackdrop.fallback.rawValue
 
     var body: some View {
         ZStack {
@@ -122,7 +124,7 @@ struct RoomFaces: View {
             if members.count > 1 {
                 BotAvatarView(bot: members[1], size: size * 0.62, state: .happy, animated: false)
                     .padding(1.5)
-                    .background(Circle().fill(Color(uiColor: .systemBackground)))
+                    .background(Circle().fill(ChatBackdrop.screenFill(stored: chatBackdropRaw, scheme: colorScheme)))
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
                     .offset(x: 3, y: 3)
             }
@@ -158,6 +160,8 @@ enum RosterDay {
 /// faces beneath. The same block sits at the top of the list or above the
 /// bottom bar.
 struct FavoritesBlock: View {
+    @Environment(\.colorScheme) private var colorScheme
+    @AppStorage(PrefKey.chatBackdrop) private var chatBackdropRaw = ChatBackdrop.fallback.rawValue
     let chief: Bot?
     let pinned: [Bot]
     let face: (Bot) -> MausState
@@ -234,7 +238,7 @@ struct FavoritesBlock: View {
                     Circle()
                         .fill(Color.accentColor)
                         .frame(width: 12, height: 12)
-                        .overlay(Circle().stroke(Color(uiColor: .systemBackground), lineWidth: 2))
+                        .overlay(Circle().stroke(ChatBackdrop.screenFill(stored: chatBackdropRaw, scheme: colorScheme), lineWidth: 2))
                         .accessibilityLabel("Unread")
                 }
             }
