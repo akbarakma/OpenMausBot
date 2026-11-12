@@ -62,6 +62,7 @@ struct QuickRepliesEditor: View {
                     Text("Tap a chip to edit it. Drag to reorder, swipe to delete.")
                 }
             }
+            .cardRows()
 
             Section {
                 Button {
@@ -75,6 +76,7 @@ struct QuickRepliesEditor: View {
                     Label("Reset to Defaults", systemImage: "arrow.counterclockwise")
                 }
             }
+            .cardRows()
         }
         .screenCanvas()
         .navigationTitle("Quick Replies")
@@ -120,6 +122,7 @@ private struct QuickReplyForm: View {
                 Section("Label") {
                     TextField("Run tests", text: $reply.title)
                 }
+                .cardRows()
                 Section {
                     TextField("Run all automated tests", text: $reply.prompt, axis: .vertical)
                         .lineLimit(2...6)
@@ -128,6 +131,7 @@ private struct QuickReplyForm: View {
                 } footer: {
                     Text("What gets sent to the bot when you tap the chip.")
                 }
+                .cardRows()
                 Section("Icon") {
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 6), spacing: 14) {
                         ForEach(QuickReply.iconChoices, id: \.self) { icon in
@@ -151,6 +155,7 @@ private struct QuickReplyForm: View {
                     }
                     .padding(.vertical, 4)
                 }
+                .cardRows()
             }
             .screenCanvas()
             .navigationTitle(titled.isEmpty ? Text("New Quick Reply") : Text(verbatim: titled))

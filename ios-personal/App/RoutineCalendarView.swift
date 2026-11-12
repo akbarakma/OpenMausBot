@@ -38,12 +38,14 @@ struct RoutineCalendarView: View {
                         }
                         .padding(.vertical, 8)
                         .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
                     }
                     ForEach(dayItems) { item in
                         CalendarRunRow(item: item, bot: session.state.bot(item.run?.botId ?? item.routine?.botId ?? ""))
                             .contentShape(Rectangle())
                             .onTapGesture { open(item) }
                     }
+                    .listRowBackground(Color.clear)
                 }
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)

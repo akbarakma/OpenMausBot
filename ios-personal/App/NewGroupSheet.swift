@@ -22,6 +22,7 @@ struct NewGroupSheet: View {
                     TextField("Group name (optional)", text: $name)
                         .autocorrectionDisabled()
                 }
+                .cardRows()
                 Section("Bots") {
                     ForEach(bots) { bot in
                         Button {
@@ -45,6 +46,7 @@ struct NewGroupSheet: View {
                         .buttonStyle(.plain)
                     }
                 }
+                .cardRows()
             }
             .screenCanvas()
             .navigationTitle("New group")

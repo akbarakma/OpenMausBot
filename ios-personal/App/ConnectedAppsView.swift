@@ -52,6 +52,7 @@ struct ConnectedAppsView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
+                .cardRows()
             }
 
             // Two notices about one fact is one too many, and only the banner
@@ -68,6 +69,7 @@ struct ConnectedAppsView: View {
                         description: Text("Configure Composio on your computer first. Provider credentials are never returned to this device.")
                     )
                 }
+                .cardRows()
             }
 
             ForEach(cards) { card in
@@ -172,6 +174,7 @@ struct ConnectedAppsView: View {
         } footer: {
             Text(card.blurb)
         }
+        .cardRows()
     }
 
     private func load() async {

@@ -20,6 +20,7 @@ struct TasksRoutinesView: View {
             } footer: {
                 Text("No cron syntax. Every run uses the agent's existing model, tools, permissions, computer, and connected apps. Times follow the paired computer's local timezone.")
             }
+            .cardRows()
 
             Section("Routines") {
                 if routines.isEmpty && !loading {
@@ -54,6 +55,7 @@ struct TasksRoutinesView: View {
                         }
                 }
             }
+            .cardRows()
 
             Section("Run receipts") {
                 if runs.isEmpty && !loading {
@@ -64,6 +66,7 @@ struct TasksRoutinesView: View {
                     RoutineRunRow(run: run, bot: session.state.bot(run.botId))
                 }
             }
+            .cardRows()
 
             Section {
                 Label("Computer only", systemImage: "lock.desktopcomputer")
@@ -73,6 +76,7 @@ struct TasksRoutinesView: View {
             } footer: {
                 Text("Creating or rotating a webhook changes an internet-reachable trigger and signing secret, so webhook management remains on the paired computer. Webhook run receipts still appear above.")
             }
+            .cardRows()
         }
         .screenCanvas()
         .navigationTitle("Threads & Routines")
@@ -255,6 +259,7 @@ struct RoutineEditorView: View {
                     }
                     TextField("What should the agent do?", text: $prompt, axis: .vertical).lineLimit(4...10)
                 }
+                .cardRows()
 
                 Section {
                     Picker("Run location", selection: $runOn) {
@@ -283,6 +288,7 @@ struct RoutineEditorView: View {
                         Text("This Cloud VM choice is kept, but it can't run until the paired computer has cloud computers and this bot's model can use a computer.")
                     }
                 }
+                .cardRows()
 
                 Section {
                     Picker("Repeats", selection: $kind) {
@@ -371,6 +377,7 @@ struct RoutineEditorView: View {
                         Text("Each occurrence starts with fresh context. Results collect in one thread, and full run logs remain available. No cron syntax is used.")
                     }
                 }
+                .cardRows()
 
                 Section {
                     DisclosureGroup(isExpanded: $advancedExpanded) {
@@ -388,6 +395,7 @@ struct RoutineEditorView: View {
                         Text("Optional. The clock starts when work actually begins and does not control how often the routine starts.")
                     }
                 }
+                .cardRows()
             }
             .screenCanvas()
             .navigationTitle(routine == nil ? "New routine" : "Edit routine")

@@ -53,7 +53,7 @@ struct PairingView: View {
                 .frame(maxWidth: 560)
                 .frame(maxWidth: .infinity)
             }
-            .background(Color(uiColor: .systemGroupedBackground).ignoresSafeArea())
+            .screenCanvas()
             .navigationTitle("Connect computer")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -161,7 +161,7 @@ struct PairingView: View {
             }
         }
         .padding(18)
-        .background(Color(uiColor: .secondarySystemGroupedBackground))
+        .background(BackdropCard())
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 
@@ -381,7 +381,7 @@ struct PairingView: View {
             .disabled(!submission.allowsNavigation)
         }
         .padding(22)
-        .background(Color(uiColor: .secondarySystemGroupedBackground))
+        .background(BackdropCard())
         .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
     }
 

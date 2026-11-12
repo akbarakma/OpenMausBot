@@ -46,6 +46,7 @@ struct SettingsView: View {
                     .disabled(onConnect == nil)
                 }
             }
+            .cardRows()
 
             Section {
                 if notificationsAreEnabled {
@@ -67,20 +68,22 @@ struct SettingsView: View {
             } footer: {
                 Text("Alerts arrive while OpenMausBot is open or was recently in the background. Closed-app delivery is not available yet.")
             }
+            .cardRows()
 
             Section {
-                Picker(selection: $chatBackdrop) {
-                    ForEach(ChatBackdrop.allCases, id: \.rawValue) { backdrop in
-                        Text(verbatim: backdrop.title).tag(backdrop.rawValue)
-                    }
+                NavigationLink {
+                    BackgroundPickerView(selection: $chatBackdrop)
                 } label: {
-                    Label {
-                        Text("Background")
-                    } icon: {
-                        SettingsIcon(symbol: "circle.lefthalf.filled", color: .gray)
+                    LabeledContent {
+                        Text(verbatim: (ChatBackdrop(rawValue: chatBackdrop) ?? .fallback).title)
+                    } label: {
+                        Label {
+                            Text("Background")
+                        } icon: {
+                            SettingsIcon(symbol: "circle.lefthalf.filled", color: .gray)
+                        }
                     }
                 }
-                .pickerStyle(.navigationLink)
                 .accessibilityIdentifier("chat-background")
 
                 Picker(selection: $activityDetail) {
@@ -121,6 +124,7 @@ struct SettingsView: View {
             } footer: {
                 Text(LocalizedStringKey(ActivityDetail(rawValue: activityDetail)?.caption ?? ""))
             }
+            .cardRows()
 
             Section {
                 Toggle(isOn: $pinnedAtBottom) {
@@ -136,6 +140,7 @@ struct SettingsView: View {
             } footer: {
                 Text("On: your Chief of Staff and pinned bots sit just above the bottom bar, where your thumb reaches. Off: they sit at the top of the list.")
             }
+            .cardRows()
 
             Section {
                 Picker(selection: $language) {
@@ -152,6 +157,7 @@ struct SettingsView: View {
             } footer: {
                 Text("Changes the language inside OpenMausMobile. Buttons drawn by iOS itself follow the phone's language, which you can set for this app in iOS Settings.")
             }
+            .cardRows()
 
             if session.connection != nil {
                 Section("Workspace") {
@@ -197,6 +203,7 @@ struct SettingsView: View {
                         }
                     }
                 }
+                .cardRows()
             }
         }
         .screenCanvas()
@@ -302,6 +309,41 @@ private struct SettingsIcon: View {
     }
 }
 
+/// The system navigation-link picker pushes a page that ignores our background.
+private struct BackgroundPickerView: View {
+    @Binding var selection: String
+
+    var body: some View {
+        List {
+            Section {
+                ForEach(ChatBackdrop.allCases, id: \.rawValue) { backdrop in
+                    Button {
+                        Haptics.selection()
+                        selection = backdrop.rawValue
+                    } label: {
+                        HStack {
+                            Text(verbatim: backdrop.title)
+                                .foregroundStyle(Color.primary)
+                            Spacer()
+                            if (ChatBackdrop(rawValue: selection) ?? .fallback) == backdrop {
+                                Image(systemName: "checkmark")
+                                    .font(.body.weight(.semibold))
+                                    .foregroundStyle(Color.accentColor)
+                            }
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .accessibilityAddTraits((ChatBackdrop(rawValue: selection) ?? .fallback) == backdrop ? .isSelected : [])
+                }
+            }
+            .cardRows()
+        }
+        .screenCanvas()
+        .navigationTitle("Background")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
 struct ConnectedComputersView: View {
     @EnvironmentObject private var session: Session
     @State private var pendingRemoval: Connection?
@@ -332,6 +374,7 @@ struct ConnectedComputersView: View {
                         )
                     }
                 }
+                .cardRows()
             }
 
             if !otherComputers.isEmpty {
@@ -367,6 +410,7 @@ struct ConnectedComputersView: View {
                         .accessibilityHint("Switches OpenMausMobile to this computer")
                     }
                 }
+                .cardRows()
             }
 
             Section {
@@ -379,6 +423,7 @@ struct ConnectedComputersView: View {
             } footer: {
                 Text("Each computer is paired separately. Only the selected computer is active at a time.")
             }
+            .cardRows()
         }
         .screenCanvas()
         .navigationTitle("Computers")
@@ -434,6 +479,7 @@ struct ConnectionSecurityView: View {
                     .padding(.vertical, 4)
                     .accessibilityElement(children: .combine)
                 }
+                .cardRows()
 
                 Section {
                     DisclosureGroup("Connection details") {
@@ -474,6 +520,7 @@ struct ConnectionSecurityView: View {
                         editingAddress = true
                     }
                 }
+                .cardRows()
 
                 Section("Troubleshooting") {
                     troubleshootingText
@@ -497,12 +544,14 @@ struct ConnectionSecurityView: View {
                     }
                     .disabled(refreshing)
                 }
+                .cardRows()
 
                 Section {
                     Button("Remove connection from this device", role: .destructive) {
                         confirmingSignOut = true
                     }
                 }
+                .cardRows()
             } else {
                 EmptyStateView("No computer connected", systemImage: "laptopcomputer.slash")
             }

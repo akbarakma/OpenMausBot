@@ -34,9 +34,31 @@ extension ChatBackdrop {
         Color(.sRGB, red: red, green: green, blue: blue, opacity: 1)
     }
 
+    var cardColor: Color {
+        switch self {
+        case .black: Color(uiColor: .secondarySystemGroupedBackground)
+        case .ink: Color(.sRGB, red: 30 / 255, green: 33 / 255, blue: 45 / 255, opacity: 1)
+        }
+    }
+
     static func screenFill(stored raw: String, scheme: ColorScheme) -> Color {
         guard scheme == .dark else { return Color(uiColor: .systemBackground) }
         return (ChatBackdrop(rawValue: raw) ?? .fallback).color
+    }
+
+    static func cardFill(stored raw: String, scheme: ColorScheme) -> Color {
+        guard scheme == .dark else { return Color(uiColor: .secondarySystemGroupedBackground) }
+        return (ChatBackdrop(rawValue: raw) ?? .fallback).cardColor
+    }
+}
+
+/// The card that sits one step above the chosen background, for grouped rows and panels.
+struct BackdropCard: View {
+    @Environment(\.colorScheme) private var colorScheme
+    @AppStorage(PrefKey.chatBackdrop) private var raw = ChatBackdrop.fallback.rawValue
+
+    var body: some View {
+        ChatBackdrop.cardFill(stored: raw, scheme: colorScheme)
     }
 }
 
@@ -46,6 +68,11 @@ extension View {
     func screenCanvas() -> some View {
         modifier(ScreenCanvas())
     }
+
+    /// Grouped rows take the card that matches the chosen background.
+    func cardRows() -> some View {
+        listRowBackground(BackdropCard())
+    }
 }
 
 private struct ScreenCanvas: ViewModifier {
@@ -53,12 +80,15 @@ private struct ScreenCanvas: ViewModifier {
     @AppStorage(PrefKey.chatBackdrop) private var raw = ChatBackdrop.fallback.rawValue
 
     func body(content: Content) -> some View {
-        let fill = ChatBackdrop.screenFill(stored: raw, scheme: colorScheme)
+        let dark = colorScheme == .dark
+        let fill = dark
+            ? ChatBackdrop.screenFill(stored: raw, scheme: colorScheme)
+            : Color(uiColor: .systemGroupedBackground)
         content
-            .scrollContentBackground(.hidden)
+            .scrollContentBackground(dark ? .hidden : .automatic)
             .background(fill.ignoresSafeArea())
             .toolbarBackground(fill, for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarBackground(dark ? .visible : .automatic, for: .navigationBar)
     }
 }
 
