@@ -28,9 +28,13 @@ beforeEach(() => {
     skill("ask-matt", "native", "/home/ada/.claude/skills"),
     skill("tdd", "native", "/home/ada/.claude/skills"),
   ];
-  vi.stubGlobal("fetch", vi.fn(async (input: string) => input.includes("/skills")
-    ? new Response(JSON.stringify({ skills: listed }), { status: 200, headers: { "content-type": "application/json" } })
-    : new Response(JSON.stringify({ error: "not here" }), { status: 404, headers: { "content-type": "application/json" } })));
+  vi.stubGlobal("fetch", vi.fn(async (input: string) => {
+    const url = String(input);
+    if (/\/skills\/[^/?]+$/.test(url)) return new Response(JSON.stringify({ text: "Read the skill." }), { status: 200, headers: { "content-type": "application/json" } });
+    return url.includes("/skills")
+      ? new Response(JSON.stringify({ skills: listed }), { status: 200, headers: { "content-type": "application/json" } })
+      : new Response(JSON.stringify({ error: "not here" }), { status: 404, headers: { "content-type": "application/json" } });
+  }));
   host = document.createElement("div");
   document.body.append(host);
   root = createRoot(host);
@@ -92,6 +96,25 @@ it("keeps the switch but not Remove on a skill from this computer, and both on a
   await act(async () => host.querySelector<HTMLButtonElement>('[data-panel-open="skill:browser-web-search"]')!.click());
   expect(host.querySelector('[role="switch"], input[type="checkbox"]')).not.toBeNull();
   expect(host.querySelector('[data-panel-action="remove-skill:browser-web-search"]')).not.toBeNull();
+});
+
+it("opens the skill text from the words, and the switch is the only thing that changes it", async () => {
+  await act(async () => root.render(createElement(Skills)));
+  await settle();
+  await act(async () => host.querySelector<HTMLButtonElement>('[data-panel-open="skill:browser-web-search"]')!.click());
+  expect(host.querySelector("[data-panel-row=\"skill:browser-web-search\"]")?.textContent).not.toContain("learn:automatic review");
+  const calls = vi.mocked(fetch).mock.calls.length;
+  await act(async () => host.querySelector<HTMLButtonElement>('[data-panel-open="skill-text:browser-web-search"]')!.click());
+  await settle();
+  const dialog = host.querySelector("[role=\"dialog\"]")!;
+  expect(dialog.textContent).toContain("Read the skill.");
+  expect(dialog.textContent).toContain("Source: learn:automatic review of this conversation");
+  expect(dialog.textContent).toContain("Done");
+  expect(dialog.textContent).not.toContain("Enable reviewed skill");
+  expect(vi.mocked(fetch).mock.calls.length).toBe(calls + 1);
+  const opened = vi.mocked(fetch).mock.calls.at(-1)!;
+  expect(String(opened[0])).toContain("/skills/browser-web-search");
+  expect((opened[1] as RequestInit | undefined)?.method ?? "GET").toBe("GET");
 });
 
 it("says the bot has learned nothing yet, and hides the global section when there is none", async () => {

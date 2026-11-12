@@ -1,5 +1,5 @@
 import { ChevronDown, ChevronRight, GripVertical, MoreHorizontal, Trash2 } from "lucide-react";
-import { useEffect, useRef, useState, type DragEvent, type KeyboardEvent, type MouseEvent } from "react";
+import { useEffect, useRef, useState, type DragEvent, type KeyboardEvent, type MouseEvent, type PointerEvent } from "react";
 
 import { cn } from "@/lib/cn";
 import { t } from "@/lib/i18n";
@@ -8,6 +8,10 @@ import {
   type SidebarSectionAttention,
 } from "@/lib/sidebar-attention";
 import type { SectionNaming } from "./SidebarBotDrag";
+
+const pressOf = new WeakMap<HTMLButtonElement, { x: number; y: number; moved: boolean }>();
+const draggedOf = new WeakMap<HTMLButtonElement, boolean>();
+const pendingOf = new WeakMap<HTMLButtonElement, ReturnType<typeof setTimeout>>();
 
 export function SidebarSectionHeader({
   name,
@@ -47,7 +51,7 @@ export function SidebarSectionHeader({
   /** Keep the ⋯ button's space when this line has none, so counts line up with lines that do (Simple). */
   reserveMenu?: boolean;
   menuOpen?: boolean;
-  /** How many rows the section holds, shown at rest where the chevron shows on hover (Simple). */
+  /** How many rows the section holds. A closed Simple section shows it in the ⋯ column. */
   count?: number;
   /** A name field in place of the name, for a department being made or renamed. */
   naming?: SectionNaming;
@@ -56,6 +60,56 @@ export function SidebarSectionHeader({
 }) {
   const reorderable = canReorder && !naming;
   const Chevron = collapsed ? ChevronRight : ChevronDown;
+  const rememberPress = (event: PointerEvent<HTMLButtonElement>) => {
+    if (event.button !== 0) return;
+    draggedOf.delete(event.currentTarget);
+    pressOf.set(event.currentTarget, { x: event.clientX, y: event.clientY, moved: false });
+  };
+  const trackPress = (event: PointerEvent<HTMLButtonElement>) => {
+    const from = pressOf.get(event.currentTarget);
+    if (!from) return;
+    if (Math.hypot(event.clientX - from.x, event.clientY - from.y) > 4) from.moved = true;
+  };
+  const toggleIfStill = (event: PointerEvent<HTMLButtonElement>) => {
+    const from = pressOf.get(event.currentTarget);
+    pressOf.delete(event.currentTarget);
+    if (!from || !onToggle) return;
+    if (from.moved) {
+      draggedOf.set(event.currentTarget, true);
+      pressOf.set(event.currentTarget, from);
+      return;
+    }
+    const waiting = pendingOf.get(event.currentTarget);
+    if (waiting) clearTimeout(waiting);
+    const button = event.currentTarget;
+    pendingOf.set(button, setTimeout(() => {
+      pendingOf.delete(button);
+      onToggle();
+    }, 0));
+  };
+  const toggleFromClick = (event?: MouseEvent<HTMLButtonElement>) => {
+    const button = event?.currentTarget;
+    if (button && draggedOf.get(button)) {
+      draggedOf.delete(button);
+      return;
+    }
+    const waiting = button ? pendingOf.get(button) : undefined;
+    if (button && waiting) {
+      clearTimeout(waiting);
+      pendingOf.delete(button);
+      onToggle?.();
+      return;
+    }
+    if (!button || !pressOf.has(button)) onToggle?.();
+  };
+  const startSectionDrag = (event: DragEvent<HTMLButtonElement>) => {
+    const from = event.currentTarget ? pressOf.get(event.currentTarget) : undefined;
+    if (!from?.moved) {
+      event.preventDefault();
+      return;
+    }
+    onDragStart?.(event);
+  };
   const attentionLabel = attention ? sidebarAttentionLabel(attention) : "";
   const onHeaderKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
     if (!reorderable || !event.altKey) return;
@@ -78,10 +132,11 @@ export function SidebarSectionHeader({
   const dropMark = dropInto ? "bg-accent/10 outline outline-2 -outline-offset-2 outline-accent/70" : undefined;
 
   if (line) {
-    const tail = (
-      <span aria-hidden="true" className="relative flex size-4 shrink-0 items-center justify-center">
-        {count !== undefined && <span className={cn("text-[12px] tabular-nums leading-4 text-ink-secondary transition-opacity", onToggle && "group-hover/section:opacity-0 group-focus-within/section:opacity-0 touch:opacity-0")}>{count}</span>}
-        {onToggle && <Chevron size={14} className="absolute text-ink-secondary opacity-0 transition-opacity group-hover/section:opacity-100 group-focus-within/section:opacity-100 touch:opacity-100" />}
+    const countSlot = (
+      <span aria-hidden="true" className="flex w-7 shrink-0 items-center justify-center">
+        {collapsed && count !== undefined && (
+          <span className={cn("text-[12px] tabular-nums leading-4 text-ink-secondary", onMenu && "transition-opacity group-hover/section:opacity-0 group-focus-within/section:opacity-0 touch:opacity-0")}>{count}</span>
+        )}
       </span>
     );
     return (
@@ -91,30 +146,34 @@ export function SidebarSectionHeader({
         data-section-drop={dropInto ? "" : undefined}
         tabIndex={onContextMenu ? -1 : undefined}
         onContextMenu={naming ? undefined : onContextMenu}
-        draggable={reorderable || undefined}
-        onDragStart={reorderable ? onDragStart : undefined}
-        onDragEnd={reorderable ? onDragEnd : undefined}
-        className={cn("group/section flex h-[30px] items-center gap-1.5 rounded-[6px] px-2 pb-1.5 pt-2 hover:bg-raised/50", reorderable && "cursor-grab", dragging && "opacity-40", naming && "py-0.5", dropMark)}
+        className={cn("group/section relative flex h-[30px] items-stretch rounded-[6px] hover:bg-raised/50", dragging && "opacity-40", naming && "px-2 py-0.5", dropMark)}
       >
         {naming ? <SectionNameField {...naming} /> : onToggle ? (
           <button
             type="button"
-            onClick={onToggle}
+            draggable={reorderable || undefined}
+            onDragStart={reorderable ? startSectionDrag : undefined}
+            onDragEnd={reorderable ? onDragEnd : undefined}
+            onPointerDown={rememberPress}
+            onPointerMove={trackPress}
+            onPointerUp={toggleIfStill}
+            onClick={toggleFromClick}
             onKeyDown={onHeaderKeyDown}
             aria-expanded={!collapsed}
             aria-keyshortcuts={reorderable ? "Alt+ArrowUp Alt+ArrowDown" : undefined}
             title={toggleTitle}
-            className="flex min-w-0 flex-1 items-center gap-1.5 rounded text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
+            className="flex h-full min-w-0 flex-1 cursor-pointer items-center gap-1.5 px-2 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
           >
+            <Chevron size={14} className="shrink-0 text-ink-secondary" aria-hidden="true" />
             <span className="min-w-0 flex-1 truncate text-[12px] leading-4 text-ink-secondary">{name}</span>
             {collapsed && <SectionAttention attention={attention} label={attentionLabel} alert={alert} />}
-            {tail}
+            {(Boolean(onMenu) || reserveMenu || count !== undefined) && countSlot}
           </button>
         ) : (
-          <div className="flex min-w-0 flex-1 items-center gap-1.5">
+          <div className="flex min-w-0 flex-1 items-center gap-1.5 px-2">
             <span className="min-w-0 flex-1 truncate text-[12px] leading-4 text-ink-secondary">{name}</span>
             {attentionLabel && <span className="sr-only">{attentionLabel}</span>}
-            {tail}
+            {(Boolean(onMenu) || reserveMenu || count !== undefined) && countSlot}
           </div>
         )}
         {onMenu && !naming && (
@@ -125,12 +184,11 @@ export function SidebarSectionHeader({
             aria-haspopup="menu"
             aria-expanded={menuOpen}
             onClick={(event) => onMenu(event.currentTarget)}
-            className="flex h-[18px] w-[22px] shrink-0 items-center justify-center rounded-[6px] text-ink-tertiary opacity-0 transition-opacity hover:bg-raised hover:text-ink focus-visible:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus group-hover/section:opacity-100 group-focus-within/section:opacity-100 aria-expanded:bg-raised aria-expanded:text-ink aria-expanded:opacity-100 touch:opacity-100"
+            className="pointer-events-none absolute right-2 top-1/2 z-10 flex size-7 -translate-y-1/2 items-center justify-center rounded-[6px] text-ink-tertiary opacity-0 transition-opacity hover:bg-raised hover:text-ink focus-visible:pointer-events-auto focus-visible:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus group-hover/section:pointer-events-auto group-hover/section:opacity-100 group-focus-within/section:pointer-events-auto group-focus-within/section:opacity-100 aria-expanded:pointer-events-auto aria-expanded:bg-raised aria-expanded:text-ink aria-expanded:opacity-100 touch:pointer-events-auto touch:opacity-100"
           >
             <MoreHorizontal size={15} aria-hidden="true" />
           </button>
         )}
-        {!onMenu && reserveMenu && !naming && <span aria-hidden="true" className="w-[22px] shrink-0" />}
       </div>
     );
   }

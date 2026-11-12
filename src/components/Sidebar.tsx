@@ -202,7 +202,7 @@ export function GroupListItem({
           {!simpleRow && expanded && group.unread && <span className="size-1.5 shrink-0 rounded-full bg-accent" aria-label={t("task.unreadMany")} />}
           {simpleRow && !expanded && group.unread && <RowDot />}
         </div>
-        {!expanded && <div className="flex items-center justify-between gap-2">
+        {!expanded && <div className={cn("flex items-center justify-between gap-2", simpleRow && "pr-7")}>
           <span className={cn("truncate text-ink-secondary", simpleRow ? "text-[13px] leading-[18px]" : "text-[11px]")}>{group.description || groupPreview(group, state.bots, state.instances, advanced)}</span>
           {!simpleRow && group.unread && <span className="size-2 shrink-0 rounded-full bg-accent" />}
         </div>}
@@ -816,7 +816,7 @@ export const BotListItem = memo(function BotListItem(props: BotRowProps) {
           {expanded && unread && <span className="size-1.5 shrink-0 rounded-full bg-accent" aria-label={t("task.unreadMany")} />}
           {simpleRow && (unread || waiting) && <RowDot waiting={waiting} />}
         </div>
-        {(!expanded || deleting) && <div className="flex items-center justify-between gap-2">
+        {(!expanded || deleting) && <div className={cn("flex items-center justify-between gap-2", simpleRow && "pr-7")}>
           {deleting ? (
             <span role="status" className="flex min-w-0 items-center gap-1.5 truncate text-[13px] leading-[18px] text-ink-secondary">
               <Loader2 size={12} className="shrink-0 animate-spin" />
@@ -831,7 +831,6 @@ export const BotListItem = memo(function BotListItem(props: BotRowProps) {
               )}
             </span>
           )}
-          {simpleRow && <BotEngineMark bot={bot} instances={instances} className="ms-auto" />}
           {!simpleRow && unread && <span className="size-2 shrink-0 rounded-full bg-accent" aria-label={t("task.unreadMany")} />}
         </div>}
         {simpleRow && <RowStatusText working={working} unread={unread} />}
@@ -896,6 +895,7 @@ export const BotListItem = memo(function BotListItem(props: BotRowProps) {
           className="pointer-events-none absolute right-[3.75rem] top-1/2 flex size-7 -translate-y-1/2 items-center justify-center rounded text-ink-secondary opacity-0 hover:bg-raised hover:text-ink group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 max-md:hidden touch:pointer-events-auto touch:opacity-70"><Plus size={14} /></button>}
         {showThreads && <button type="button" aria-label={t("folder.newNamed", { name: bot.name })} title={t("folder.new")} onClick={() => { setThreadsOpen(true); setCreatingProject(true); }}
           className="pointer-events-none absolute right-8 top-1/2 flex size-7 -translate-y-1/2 items-center justify-center rounded text-ink-secondary opacity-0 hover:bg-raised hover:text-ink group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 max-md:hidden touch:pointer-events-auto touch:opacity-70"><FolderPlus size={14} /></button>}
+        {simpleRow && <BotEngineMark bot={bot} instances={instances} className="pointer-events-none absolute bottom-1 right-2 size-7 items-center justify-center" />}
         <button type="button" data-bot-actions={bot.id} aria-label={t("sidebar.bot.actions", { name: bot.name })} title={t("sidebar.bot.actions", { name: bot.name })} aria-haspopup="menu" onClick={(event) => { const rect = event.currentTarget.getBoundingClientRect(); onMenu({ botId: bot.id, x: rect.left, y: rect.bottom }); }}
           className={cn("absolute right-1 top-1/2 flex size-7 -translate-y-1/2 items-center justify-center rounded text-ink-secondary hover:bg-raised hover:text-ink", simpleRow && "right-2 top-1 translate-y-0 rounded-lg",
             selected && !simpleRow ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 max-md:pointer-events-auto max-md:opacity-70 touch:pointer-events-auto touch:opacity-70")}><MoreHorizontal size={15} /></button>

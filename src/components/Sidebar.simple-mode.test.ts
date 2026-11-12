@@ -154,9 +154,10 @@ describe("bot-first sidebar", () => {
     let tree: ReactNode;
     function Capture() { tree = botRow(rowProps("comfortable", candidate)); return tree; }
     const markup = renderToStaticMarkup(createElement(Capture));
-    const line = markup.slice(markup.indexOf(">Done.<"));
-    expect(line).toMatch(/^>Done\.<\/span><\/span><span data-testid="model-badge" role="img" aria-label="Model: [^"]+ \(Claude\)" class="[^"]*\bms-auto\b[^"]*"><span data-provider-mark="brand" class="[^"]*\bopacity-60\b/);
-    expect(line).toMatch(/^>Done\.<\/span><\/span><span data-testid="model-badge"[^>]*><span data-provider-mark="brand"[^>]*><svg[\s\S]*?<\/svg><\/span><\/span><\/div><span class="sr-only">Unread<\/span>/);
+    const line = markup.slice(markup.indexOf(">Done.<"), markup.indexOf("sr-only"));
+    expect(line).not.toContain("data-testid=\"model-badge\"");
+    expect(markup).toMatch(/class="flex items-center justify-between gap-2 pr-7"[\s\S]*>Done\./);
+    expect(markup).toMatch(/data-testid="model-badge" role="img" aria-label="Model: [^"]+ \(Claude\)" class="[^"]*\babsolute\b[^"]*\bbottom-1\b[^"]*\bright-2\b[^"]*\bsize-7\b[^"]*"><span data-provider-mark="brand" class="[^"]*\bopacity-60\b/);
     const name = markup.slice(markup.indexOf('class="flex items-baseline justify-between gap-2 pr-7"'), markup.indexOf(">Done.<"));
     expect(name).toMatch(/<span aria-hidden="true" data-row-dot="" class="pointer-events-none absolute right-2 top-1 flex size-7 items-center justify-center transition-opacity group-hover:opacity-0 group-focus-within:opacity-0 touch:opacity-0 max-md:hidden"><span data-testid="unread-dot" title="Unread" class="size-2 shrink-0 rounded-full bg-accent"><\/span><\/span>/);
     expect(name).toContain('<span aria-hidden="true" title="Unread" class="size-2 shrink-0 rounded-full bg-accent hidden self-center max-md:block touch:block"></span>');
@@ -279,7 +280,7 @@ describe("bot-first sidebar", () => {
     let tree: ReactNode;
     function Capture() { tree = botRow(rowProps("comfortable", candidate)); return tree; }
     const markup = renderToStaticMarkup(createElement(Capture));
-    expect(markup).toMatch(/>Atlas<\/span><span data-testid="bot-role" title="Research" class="min-w-0 truncate rounded-\[5px\] bg-ink\/\[0.07\] px-1.5 py-px text-\[11px\] font-medium leading-4 text-ink-secondary">Research<\/span>/);
+    expect(markup).toMatch(/>Atlas<\/span><span data-testid="bot-role" title="Research" class="min-w-0 truncate rounded-\[6px\] bg-ink\/\[0.07\] px-1.5 py-px text-\[11px\] font-medium leading-4 text-ink-secondary">Research<\/span>/);
     expect(markup.match(/data-testid="model-badge"/g)).toHaveLength(1);
     expect(markup.match(/data-provider-mark=/g)).toHaveLength(1);
     expect(markup).toMatch(/<span class="absolute -left-1 -top-1 flex rounded-full bg-raised p-\[3px\]"><svg[^>]*role="img"[^>]*aria-label="Chief of Staff"[^>]*data-testid="chief-crown"/);

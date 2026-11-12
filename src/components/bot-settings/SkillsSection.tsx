@@ -182,6 +182,7 @@ export function SkillReviewDialog({
   working,
   onCancel,
   onEnable,
+  read = false,
 }: {
   skill: ManagedSkill;
   text: string;
@@ -189,6 +190,7 @@ export function SkillReviewDialog({
   working: boolean;
   onCancel: () => void;
   onEnable: () => void;
+  read?: boolean;
 }) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const cancel = useRef(onCancel);
@@ -236,9 +238,9 @@ export function SkillReviewDialog({
     >
       <div className="flex max-h-[min(760px,90vh)] w-full max-w-2xl flex-col rounded-2xl bg-card p-5 shadow-2xl">
         <div id="skill-review-title" className="text-[16px] font-semibold text-ink">
-          {t("skills.reviewTitle", { name: skill.name })}
+          {read ? skill.name : t("skills.reviewTitle", { name: skill.name })}
         </div>
-        <div className="mt-1 break-all text-[12px] text-ink-secondary">
+        <div className="mt-1 truncate text-[12px] text-ink-secondary" title={skill.source}>
           {t("skills.source", { source: skill.source })}
         </div>
         {skill.warnings.length > 0 && (
@@ -255,22 +257,34 @@ export function SkillReviewDialog({
         </pre>
         {error && <div role="alert" className="mt-2 text-[12px] text-danger">{error}</div>}
         <div className="mt-4 flex justify-end gap-2">
-          <button
-            type="button"
-            disabled={working}
-            onClick={onCancel}
-            className="rounded-lg px-4 py-2 text-[13px] font-medium text-ink-secondary hover:bg-raised disabled:opacity-40"
-          >
-            {t("common.cancel")}
-          </button>
-          <button
-            type="button"
-            disabled={working}
-            onClick={onEnable}
-            className="rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white disabled:opacity-40"
-          >
-            {t("skills.enableReviewed")}
-          </button>
+          {read ? (
+            <button
+              type="button"
+              onClick={onCancel}
+              className="rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white"
+            >
+              {t("common.done")}
+            </button>
+          ) : (
+            <>
+              <button
+                type="button"
+                disabled={working}
+                onClick={onCancel}
+                className="rounded-lg px-4 py-2 text-[13px] font-medium text-ink-secondary hover:bg-raised disabled:opacity-40"
+              >
+                {t("common.cancel")}
+              </button>
+              <button
+                type="button"
+                disabled={working}
+                onClick={onEnable}
+                className="rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white disabled:opacity-40"
+              >
+                {t("skills.enableReviewed")}
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>

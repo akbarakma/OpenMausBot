@@ -101,7 +101,9 @@ where a chevron's drawn stroke ends, so their right edges line up.
 - **Skills:** two cards, split by the `origin` each skill carries. The bot's
   own card lists every skill it can switch (learned, added by link, library,
   from this computer), or says it has learned none yet. A tap opens the full
-  description with the switch and Remove. A skill from this computer has no
+  description with the switch and Remove. The words on that switch row open
+  the skill text, and only the switch changes it. The source path is one line
+  in that text. A skill from this computer has no
   Remove, because the server keeps it for every bot. The global card lists
   `native` skills, the ones the engine loads from a skills folder such as
   bb-1's `~/.claude/skills`. It starts folded, with the count and "{bot} loads

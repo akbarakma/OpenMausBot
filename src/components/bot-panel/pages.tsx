@@ -396,6 +396,7 @@ export function SkillsPage({ bot, detail, onDetail }: PageContext & DetailContex
   const [source, setSource] = useState("");
   const [importing, setImporting] = useState(false);
   const [confirming, setConfirming] = useState<ManagedSkill | null>(null);
+  const [reading, setReading] = useState<{ skill: ManagedSkill; text: string } | null>(null);
   const [imported, setImported] = useState<string[]>([]);
   const [showGlobal, setShowGlobal] = useState(false);
   const home = useDesktopCapabilities().capabilities.host?.homeDir;
@@ -425,6 +426,16 @@ export function SkillsPage({ bot, detail, onDetail }: PageContext & DetailContex
       return false;
     } finally {
       skills.setWorking("");
+    }
+  };
+  const showSkill = async (skill: ManagedSkill) => {
+    skills.setError("");
+    try {
+      const result = (await api(skill.origin === "library" ? `/api/skills-library/${encodeURIComponent(skill.name)}` : `/api/bots/${bot.id}/skills/${encodeURIComponent(skill.name)}`)) as { text?: string };
+      if (!result.text) throw new Error(t("skills.error.contentsRelearn"));
+      setReading({ skill, text: result.text });
+    } catch (cause) {
+      skills.setError(errorText(cause, t("skills.error.contentsRelearn")));
     }
   };
   const switchFor = (skill: ManagedSkill) => (
@@ -493,16 +504,20 @@ export function SkillsPage({ bot, detail, onDetail }: PageContext & DetailContex
               />
             </div>
           ) : (
-            <label data-panel-row={`skill:${open.name}`} className={switchRowCls}>
-              <RowText
-                title={t("botSettings.simple.skillToggle", { name: open.name })}
-                hint={(open.source && open.source !== open.description) || openUnlisted ? <>
-                  {open.source && open.source !== open.description && <span className="block break-all">{open.source}</span>}
-                  {openUnlisted && <span data-skill-unlisted className="block">{t("skills.foundWhenNeeded")}</span>}
-                </> : undefined}
-              />
+            <div data-panel-row={`skill:${open.name}`} className={openRowCls}>
+              <button
+                type="button"
+                data-panel-open={`skill-text:${open.name}`}
+                onClick={() => void showSkill(open)}
+                className={openRowButtonCls}
+              >
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[14px] font-medium text-ink">{t("botSettings.simple.skillToggle", { name: open.name })}</span>
+                  {openUnlisted && <span data-skill-unlisted className="mt-px block truncate text-[13px] leading-[1.35] text-ink-secondary">{t("skills.foundWhenNeeded")}</span>}
+                </span>
+              </button>
               {switchFor(open)}
-            </label>
+            </div>
           )}
           {skills.error && !skills.reviewing && <NoteRow tone="warn">{skills.error}</NoteRow>}
         </Card>
@@ -517,6 +532,17 @@ export function SkillsPage({ bot, detail, onDetail }: PageContext & DetailContex
             {t("botPanel.skills.removeAction")}
           </button>
         </div>}
+        {reading && (
+          <SkillReviewDialog
+            skill={reading.skill}
+            text={reading.text}
+            error=""
+            working={false}
+            read
+            onCancel={() => setReading(null)}
+            onEnable={() => {}}
+          />
+        )}
         {reviewDialog}
         {confirmDialog}
       </>
