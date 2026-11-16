@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
+import { serverLine } from "./server-lines.ts";
 import type { Message, Store, TaskRecord } from "./store.ts";
 
 export const ONE_CHAT_ENV = "OMB_ONE_CHAT";
@@ -71,7 +72,8 @@ export type PairMarker = "asked" | "replied";
 
 export function pairMarkerLine(kind: PairMarker, peerName: string, text: string): string {
   const said = snippet(text);
-  return `${kind === "asked" ? "Message from" : "Replied to"} ${peerName}${said ? `: ${said}` : ""}`;
+  const line = serverLine(undefined, kind === "asked" ? "server.oneChat.messageFrom" : "server.oneChat.repliedTo", { bot: peerName });
+  return said ? `${line}: ${said}` : line;
 }
 
 /** One thin row in a bot's main chat for a message another bot sent it, or for its answer; the row opens the hidden exchange. */
@@ -94,8 +96,8 @@ export function markPairExchange(store: WorkStore, input: {
  * #Title", "#Title replied"); `name` is the title, with upstream's "#" on a finished job. */
 export function sideJobLine(kind: "started" | "finished", name: string, upstream: string): string {
   if (!oneChatOn()) return upstream;
-  if (kind === "started") return `Started a side job: ${name}`;
-  return name.startsWith("#") ? `Side job finished: ${name.slice(1)}` : upstream;
+  if (kind === "started") return serverLine(undefined, "server.oneChat.sideJobStarted", { title: name });
+  return name.startsWith("#") ? serverLine(undefined, "server.oneChat.sideJobFinished", { title: name.slice(1) }) : upstream;
 }
 
 /** The person's request as quoted to the work it started. A side job's own brief is complete, and the quote is the
