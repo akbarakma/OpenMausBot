@@ -79,7 +79,7 @@ function WorkDialog({ pair, onClose, onBack }: { pair: { a: string; b: string } 
             className="ui-icon-button absolute end-3 top-1/2 -translate-y-1/2 cursor-pointer"><X size={16} /></button>
         </header>
         <div className="ui-modal-divider" />
-        <div className="min-h-0 flex-1">
+        <div className="min-h-0 flex-1 bg-app [&_[data-look=chat-header]]:hidden">
           {panel ? <HiddenWork /> : pair && <Transcript a={pair.a} b={pair.b} />}
         </div>
         <div className="ui-modal-divider" />
