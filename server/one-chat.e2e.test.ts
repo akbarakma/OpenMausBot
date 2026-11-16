@@ -60,7 +60,9 @@ it("keeps one chat per bot: a teammate's message, a side job and a webhook's run
     await expect.poll(() => ran("SIDE", "SIDE-SELF", "SIDE-DONE"), { timeout: 30_000 }).toBe(true);
     expect(await shown(mira.id)).toEqual(["Main Chat"]);
     expect((await hidden(mira.id)).sort()).toEqual(["@Kara · work", "Ledger A"]);
-    expect((await rows(mira.activeTaskId)).join("\n")).toContain("SIDE-DONE: ledger A balances.");
+    const afterJob = await rows(mira.activeTaskId);
+    expect(afterJob.join("\n")).toContain("SIDE-DONE: ledger A balances.");
+    expect(afterJob).toEqual(expect.arrayContaining(["Started a side job: Ledger A", "Side job finished: Ledger A"]));
 
     const { webhook, credential } = await api("/api/webhooks", { name: "Gmail new-mail triage", prompt: "Triage the new mail.", botId: mira.id });
     const fired = await fetch(credential.url, { method: "POST", headers: { "content-type": "application/json", "idempotency-key": "mail-1" }, body: JSON.stringify({ from: "ada@example.test" }) });

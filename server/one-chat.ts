@@ -90,6 +90,14 @@ export function markPairExchange(store: WorkStore, input: {
   });
 }
 
+/** The rows a side job leaves in the main chat. Upstream words them as a thread the person can open ("Opened thread
+ * #Title", "#Title replied"); `name` is the title, with upstream's "#" on a finished job. */
+export function sideJobLine(kind: "started" | "finished", name: string, upstream: string): string {
+  if (!oneChatOn()) return upstream;
+  if (kind === "started") return `Started a side job: ${name}`;
+  return name.startsWith("#") ? `Side job finished: ${name.slice(1)}` : upstream;
+}
+
 const HIDDEN_TOOLS = new Set(["list_threads", "close_thread", "rename_thread"]);
 const TOOL_DESCRIPTIONS: Record<string, string> = {
   start_thread:
@@ -107,13 +115,15 @@ export function oneChatTools<Tool extends CatalogTool>(tools: readonly Tool[], e
     .map((tool) => (TOOL_DESCRIPTIONS[tool.name] ? { ...tool, description: TOOL_DESCRIPTIONS[tool.name]! } : tool));
 }
 
-/** A work session of the bot's own (a side job, a Burst part, a teammate's message, a scheduled run) recalls the bot's
- * other conversations.
+/** A teammate's message and a scheduled run recall the bot's other conversations. A side job or Burst part the bot
+ * started itself does not; it reads them with session_search.
  * SECURITY: a webhook's or app event's run and a Bot API chat read text from outside, which can word itself to pull a
  * private passage in. They never recall conversations. */
-export function workSessionRecalls(task: Pick<TaskRecord, "routineRunId" | "botApi" | "outside"> | undefined,
-  turn: { apiFenced: boolean; automationSource?: string }): boolean {
+export function workSessionRecalls(task: Pick<TaskRecord, "routineRunId" | "botApi" | "outside" | "openedBy"> | undefined,
+  turn: { apiFenced: boolean; automationSource?: string; botId?: string }): boolean {
   if (!oneChatOn() || turn.apiFenced || task?.botApi || task?.outside) return false;
+  // A side job's best recall match is the request that started it, and it then repeats that request instead of its own job.
+  if (turn.botId !== undefined && task?.openedBy?.botId === turn.botId) return false;
   return isWorkSession(task) || turn.automationSource === "schedule" || turn.automationSource === "manual";
 }
 

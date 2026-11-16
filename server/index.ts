@@ -8425,7 +8425,7 @@ async function beginTurn(
       // Recall rides in front of this turn's message, never the system prompt, whose volatile half is re-sent whole on any change.
       const recalled = autoRecallPrompt(bot, threadId, resolvedImages.text, {
         // A routine run starts fresh, and a webhook is untrusted: neither pulls earlier conversations in.
-        conversations: (commsDepth === 0 && !coordinationNode && !opts?.automationSource && !opts?.unattended && !apiFenced) || workSessionRecalls(task, { apiFenced, automationSource: opts?.automationSource }),
+        conversations: (commsDepth === 0 && !coordinationNode && !opts?.automationSource && !opts?.unattended && !apiFenced) || workSessionRecalls(task, { apiFenced, automationSource: opts?.automationSource, botId: bot.id }),
         userName: userNameFor(threadId),
       });
       if (!directTurnClaimIsCurrent(bot.id, dispatchClaimId, threadId)) {

@@ -1,4 +1,5 @@
 import { isServerLine, serverLine } from "../server-lines.ts";
+import { sideJobLine } from "../one-chat.ts";
 import type { Message } from "../store.ts";
 
 export const WAIT_CARD_CLOSED_REASON = "The card it waited on was replaced or closed";
@@ -23,7 +24,7 @@ export function sentRow(input: { sender: Who; recipient: Who; threadId: string; 
   language?: string; /** The files passed with it, shown as chips. */ attachments?: Message["attachments"] }): Omit<Message, "id" | "at"> {
   const { sender, recipient, threadId, room, via, language } = input;
   const outside = room && via === "direct" ? room : undefined;
-  const name = sender.id === recipient.id ? serverLine(language, "server.rooms.openedThread", { title: input.title ?? "" })
+  const name = sender.id === recipient.id ? sideJobLine("started", input.title ?? "", serverLine(language, "server.rooms.openedThread", { title: input.title ?? "" }))
     : outside ? outside.here ? serverLine(language, "server.teammates.sentDirectlyHere", { bot: recipient.name })
     : serverLine(language, "server.teammates.sentDirectly", { bot: recipient.name, room: outside.name })
     : room && !room.here ? serverLine(language, "server.teammates.sentInRoom", { bot: recipient.name, room: room.name })
@@ -51,7 +52,7 @@ export function teammateResultRow(language: string | undefined, child: { status:
   const bot = botName ?? serverLine(language, "server.teammates.teammate");
   if (child.status === "completed") {
     return child.groupId ? serverLine(language, "server.teammates.repliedInRoom", { bot, room: roomName || serverLine(language, "server.teammates.room") })
-      : serverLine(language, "server.teammates.replied", { bot });
+      : sideJobLine("finished", bot, serverLine(language, "server.teammates.replied", { bot }));
   }
   const key = child.status === "failed" ? "server.teammates.failed" : child.status === "cancelled" ? "server.teammates.cancelled" : "server.teammates.other";
   const detail = child.status === "cancelled" && isServerLine("server.teammates.waitCardClosed", child.result)

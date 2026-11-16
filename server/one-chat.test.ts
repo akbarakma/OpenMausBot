@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import {
-  hideWorkSession, isWorkSession, loadOneChat, mainChatPosts, markPairExchange, MAIN_THREAD_ALIAS, ONE_CHAT_ENV, oneChatOn, oneChatTools,
+  hideWorkSession, isWorkSession, loadOneChat, mainChatPosts, markPairExchange, sideJobLine, MAIN_THREAD_ALIAS, ONE_CHAT_ENV, oneChatOn, oneChatTools,
   pairMarkerLine, pairThread, threadsPrompt, withMainThread, workSessionRecalls,
 } from "./one-chat.ts";
 
@@ -124,5 +124,15 @@ it("recalls other conversations in the bot's own work, never in work that read t
   expect(workSessionRecalls({ ...work, outside: true }, { apiFenced: false })).toBe(false);
   expect(workSessionRecalls({ ...work, botApi: true }, { apiFenced: false })).toBe(false);
   expect(workSessionRecalls(work, { apiFenced: true })).toBe(false);
+  expect(workSessionRecalls({ ...work, openedBy: { botId: "b1" } as any }, { apiFenced: false, botId: "b1" })).toBe(false);
+  expect(workSessionRecalls({ ...work, openedBy: { botId: "b2" } as any }, { apiFenced: false, botId: "b1" })).toBe(true);
   expect(workSessionRecalls(undefined, { apiFenced: false })).toBe(false);
+});
+
+it("words a side job's rows as a job, and leaves a teammate's reply as upstream wrote it", () => {
+  expect(sideJobLine("started", "Review PR 12", "Opened thread #Review PR 12")).toBe("Started a side job: Review PR 12");
+  expect(sideJobLine("finished", "#Review PR 12", "#Review PR 12 replied")).toBe("Side job finished: Review PR 12");
+  expect(sideJobLine("finished", "Mira", "Mira replied")).toBe("Mira replied");
+  delete process.env[ONE_CHAT_ENV];
+  expect(sideJobLine("started", "Review PR 12", "Opened thread #Review PR 12")).toBe("Opened thread #Review PR 12");
 });

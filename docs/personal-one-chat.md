@@ -26,9 +26,12 @@ below.
   `rename_thread`. `start_thread`, `post_to_thread` and the threads paragraph
   of the prompt describe hidden work. `post_to_thread` takes `thread_id`
   `"main"` for the bot's main chat.
-- **Recall.** A side job, a Burst part, a teammate's message and a scheduled
-  or manual routine run recall the bot's other conversations, as a person's
-  message does. A webhook's or app event's run and a Bot API chat do not:
+- **Recall.** A teammate's message and a scheduled or manual routine run
+  recall the bot's other conversations, as a person's message does. A side
+  job or Burst part the bot started itself does not: its best match was the
+  request that started it, and it repeated that request. It reads the main
+  chat with `session_search`. A webhook's or app event's run and a Bot API
+  chat do not:
   they read text from outside, which could word itself to pull a private
   passage in.
 - **New bots** start with a chat titled "Main Chat".
@@ -60,6 +63,7 @@ behaves as upstream's. Tests turn it on with the launcher's `oneChat` option.
 | `server/index.ts` | `start_thread`: `oneChatOn()` joins `body.reportBack === true` |
 | `server/index.ts` | `hideWorkSession` in the Burst and Bot API `opened` callbacks |
 | `server/index.ts` | `withMainThread` around the `post-to-thread` body |
+| `server/host/handoff-sent.ts` | `sideJobLine` around the two rows a side job leaves: "Started a side job: Title" and "Side job finished: Title" |
 | `server/index.ts` | `mainChatPosts(store, …)` as the store `leaveThreadPost` writes to: a bot's own post into its main chat is stored as its text, so every client shows it |
 | `server/index.ts` | `workSessionRecalls` in the direct turn's `autoRecallPrompt` call |
 | `server/index.ts` | `threadsPrompt(THREADS_PROMPT)` in the direct turn's prompt |
