@@ -30,7 +30,8 @@ rail gets no bot drag, because it can only reorder inside a list.
 
 | File | Fork change |
 | --- | --- |
-| `src/components/Sidebar.tsx` | Where the bot lists are built (`activeBotsFirst` for pinned, `newestBotsFirst` for the rest); `botDrag.arrange` is off in the rail; the bot row has no Alt+Up/Down. |
+| `src/components/Sidebar.tsx` | Where the bot lists are built (`activeBotsFirst` for pinned, `newestBotsFirst` for the rest); `botDrag.arrange` is off in the rail; the bot row has no Alt+Up/Down. In Simple mode the row's ⋯ button and its provider mark sit at `right-2`, 28 px wide. |
+| `src/components/SidebarRowMarkers.tsx` | The unread dot sits at `right-2 top-1`, 28 px wide, in the same column as the ⋯ button and the provider mark. |
 | `src/lib/sidebar-layout.ts` | `newestBotsFirst`. |
 | `src/components/SidebarBotDrag.tsx` | `allowed` refuses a move inside the bot's own list; the row and zone drag-over show no line for one; `step` goes through `allowed`. |
 | `src/components/Sidebar.departments.test.ts` | Tests the order and the refused moves. |
@@ -40,3 +41,7 @@ rail gets no bot drag, because it can only reorder inside a list.
 If upstream changes how the sidebar orders bots, or adds another way to
 reorder a bot inside its list, keep the fork's rule: lists other than pinned
 go newest first, and nothing reorders a bot inside its own list.
+
+If upstream moves a Simple-mode row's ⋯ button, unread dot or engine badge,
+keep the three in the fork's column: `right-2`, 28 px wide. The last test in
+`Sidebar.simple-mode.test.ts`'s bot row case fails when one of them drifts.
