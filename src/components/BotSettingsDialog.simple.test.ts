@@ -666,7 +666,7 @@ describe("the first page", () => {
     expect(card.props).toMatchObject({ dataLabel: "computer.tab.data", folder: undefined });
     (card.props.onData as () => void)();
     expect(onOpen).toHaveBeenLastCalledWith("data");
-    expect([...rendered.html.matchAll(/data-panel-item="([\w-]+)"/g)].map((match) => match[1])).toEqual(["find", "start-fresh"]);
+    expect([...rendered.html.matchAll(/data-panel-item="([\w-]+)"/g)].map((match) => match[1])).toEqual(["find"]);
     expect(rendered.html).toContain(">Find in conversation<");
   });
 

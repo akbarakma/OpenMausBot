@@ -117,11 +117,11 @@ describe("ChatMoreMenu, the round ⋯ for the bot panel", () => {
     expect(menuOf(createElement(ChatMoreMenu, { bot: fresh })).items.find((one) => one.key === "start-fresh")!.disabled).toBe(true);
   });
 
-  it("offers no new thread and no thread list when the app shows one chat per bot", () => {
+  it("offers no new thread, no thread list and no Start fresh when the app shows one chat per bot", () => {
     fixture.oneChat = true;
     try {
       const keys = menuOf(createElement(ChatMoreMenu, { bot })).items.map((item) => item.key);
-      expect(keys).toContain("start-fresh");
+      expect(keys).not.toContain("start-fresh");
       expect(keys).not.toContain("new-thread");
       expect(keys).not.toContain("threads");
     } finally { fixture.oneChat = false; }

@@ -95,17 +95,19 @@ existing line.
 - Nothing starts or switches threads: the chat ⋯ menu has no New thread and
   no thread list, the sidebar's bot menu has no thread items, the + menu has
   no "New conversation with", ⌘⇧N does nothing, and a message has no Fork.
-  Start fresh is on the panel's first page and in the ⋯ menu.
+- There is no Start fresh. Its divider cut off the bot's context in its only
+  chat with one click and no undo. A long chat is summarized by
+  auto-compaction, or by Compact on the panel's Context card.
 
 | File | Change |
 |---|---|
 | `src/state/thread-navigation.ts` | `openThread` opens hidden work in the fork panel |
 | `src/components/ChatView.tsx` | no message box for hidden work in the fork panel; no Fork on a message |
-| `src/components/ChatMoreMenu.tsx` | no `new-thread` and `threads` items |
+| `src/components/ChatMoreMenu.tsx` | no `new-thread`, `threads` and `start-fresh` items |
 | `src/components/SidebarBotMenu.tsx` | no thread items in Simple's bot menu |
 | `src/components/Sidebar.tsx` | no "New conversation with" in the + menu |
 | `src/App.tsx` | ⌘⇧N starts no thread; the fork panel counts as covering the bot panel, so the bot panel closes for it and returns after it |
-| `src/components/bot-panel/PanelHome.tsx` | no `BotConversations` |
+| `src/components/bot-panel/PanelHome.tsx` | no `BotConversations` and no Start fresh row |
 
 Upstream's tests for those menus mock `@/lib/one-chat` with `ONE_CHAT: false`,
 so they still test upstream's paths. Add that mock to a new upstream test

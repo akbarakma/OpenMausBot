@@ -47,7 +47,6 @@ export function PanelHome({ bot, onOpen }: { bot: Bot; onOpen: (page: SimplePage
   const automationState = useBotAutomations(bot.id);
   const automationsOn = automationState.automations.filter((automation) => automation.enabled).length;
   const find = items.find((item) => item.key === "find");
-  const startFresh = items.find((item) => item.key === "start-fresh");
   const { pages, apps, shared, unshared } = useMemo(() => libraryItems(bot), [bot]);
   const made = pages.length + apps.length + shared.length + unshared.length;
 
@@ -86,7 +85,6 @@ export function PanelHome({ bot, onOpen }: { bot: Bot; onOpen: (page: SimplePage
       <Card label={t("botPanel.section.conversation")} anchor="conversation">
         <NavRow data-panel-page="files" icon={FolderOpen} title={t("computer.tab.files")} value={made > 0 ? made : t("botPanel.none")} onClick={() => onOpen("files")} />
         {find && <ItemRow item={find} />}
-        {startFresh && <ItemRow item={startFresh} />}
         <NavRow data-panel-page="activity" icon={History} title={t("activity.panel.title")} onClick={() => onOpen("activity")} />
       </Card>
 

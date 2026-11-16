@@ -51,10 +51,11 @@ where a chevron's drawn stroke ends, so their right edges line up.
     row with Tidy memory shows only for a heavy bot. It sits here, not on Bot
     settings as upstream has it, because it acts on memory and people rarely
     open the gear.
-  - **This conversation:** Files (with a count), Find, Start fresh and
-    Activity. Start fresh is upstream's item from `useChatMoreItems`. Upstream's
-    Inspector row is left out: it is a debug log, and it stays in the chat's
-    ⋯ menu.
+  - **This conversation:** Files (with a count), Find and Activity.
+    Upstream's Start fresh is left out: in a bot's one chat a single click
+    cut off the bot's context with no undo, and auto-compaction and Compact
+    already shorten a long chat. Upstream's Inspector row is left out too: it
+    is a debug log, and it stays in the chat's ⋯ menu.
   - **Context:** the conversation's share of the model's window, its bar, and
     Compact now from 80%. It shows once the conversation reports usage.
   Usage is not in the chat's ⋯ menu. In Simple mode the composer has no
