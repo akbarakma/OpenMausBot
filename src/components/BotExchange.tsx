@@ -2,8 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ArrowLeftRight, ChevronRight } from "lucide-react";
 import { api } from "@/state/api";
-import { currentTaskBot, formatTime, useStore, type Bot } from "@/state/store";
-import { closeExchange, openExchange, useShownExchange, type ExchangeLine, type ExchangeRow } from "@/lib/bot-exchange";
+import { currentTaskBot, formatTime, openThread, useStore, type Bot } from "@/state/store";
+import { closeExchange, openExchange, useShownExchange, type ExchangeLine, type OneChatRow } from "@/lib/bot-exchange";
+import { useShowThreads } from "@/lib/thread-preferences";
+import { cn } from "@/lib/cn";
 import { useModalDialog } from "@/hooks/use-modal-dialog";
 import { localDay } from "@/lib/transcript-derivations";
 import { MAUS_COLORS } from "@/lib/mascot";
@@ -17,15 +19,34 @@ import { SIMPLE_BOT_BUBBLE } from "./chat-bubble";
 
 const nameColor = (bot: Bot) => (bot.color === "chrome" ? undefined : { color: MAUS_COLORS[bot.color] });
 
-export function ExchangeRowLine({ row }: { row: ExchangeRow }) {
-  const { state } = useStore();
+const LINE = "inline-flex h-7 max-w-full cursor-pointer items-center gap-1.5 rounded-lg px-2.5 text-[13px] transition-colors hover:bg-ink/[0.06]";
+
+export function OneChatLine({ row }: { row: OneChatRow }) {
+  const { state, dispatch } = useStore();
+  const showThreads = useShowThreads();
+  if (row.kind === "sideJob") {
+    if (!row.ended) return null;
+    const stopped = !row.ok && row.name.startsWith(t("server.teammates.cancelled", { bot: `#${row.title}`, detail: "" }));
+    const failed = !row.ok && !stopped;
+    return (
+      <div className="flex justify-center">
+        <button type="button" data-side-job-line={row.threadId} title={row.ok ? undefined : row.name}
+          onClick={() => openThread(dispatch, { botId: row.ownId, threadId: row.threadId }, state, showThreads)}
+          className={cn(LINE, failed ? "text-danger" : "text-ink-secondary hover:text-ink")}>
+          <span className="shrink-0">{t(failed ? "chat.sideJob.failed" : stopped ? "chat.sideJob.stopped" : "chat.sideJob.finished")}</span>
+          <span aria-hidden="true">·</span>
+          <span className={cn("truncate font-medium", !failed && "text-ink")}>{row.title}</span>
+          <ChevronRight size={13} className="shrink-0 opacity-60" aria-hidden="true" />
+        </button>
+      </div>
+    );
+  }
   const peer = state.bots.find((bot) => bot.id === row.peerId);
   if (!peer) return null;
   return (
     <div className="flex justify-center">
       <button type="button" data-exchange-line={row.peerId} onClick={() => openExchange(row.ownId, row.peerId)}
-        aria-label={t("chat.exchange.open", { name: peer.name })}
-        className="inline-flex h-7 max-w-full cursor-pointer items-center gap-1.5 rounded-lg px-2.5 text-[13px] text-ink-secondary transition-colors hover:bg-ink/[0.06] hover:text-ink">
+        aria-label={t("chat.exchange.open", { name: peer.name })} className={cn(LINE, "text-ink-secondary hover:text-ink")}>
         <span className="shrink-0">{t(row.sent ? "chat.exchange.messaged" : "chat.exchange.messageFrom")}</span>
         <BotAvatar bot={peer} state="happy" size={16} animated={false} />
         <span className="truncate font-medium text-ink">{peer.name}</span>

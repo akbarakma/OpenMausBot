@@ -91,9 +91,13 @@ existing line.
 
 - A message between two bots shows in each bot's chat as one centered line,
   "Messaged Kara" or "Message from Kara", with Kara's face and no text.
-  `exchangeRow` in `src/lib/bot-exchange.ts` picks these rows; a side job's
-  rows keep upstream's look. A click opens the exchange in a modal: both
-  bots' messages, oldest first, with the time under each reply.
+  A click opens the exchange in a modal: both bots' messages, oldest first,
+  with the time under each reply.
+- A side job shows one centered line when it ends: "Side job finished ·
+  Count again", "Side job failed" in red, or "Side job stopped". Its start
+  row and its result box are not drawn, because the bot says both in its own
+  words. `oneChatRow` in `src/lib/bot-exchange.ts` picks these rows and the
+  exchange rows; `OneChatLine` draws them.
 - A click on anything that names hidden work opens it read only in the same
   modal: a "See run" link, a side job row, an Inbox line, a notification, a
   `#Title` link. `openThread` in
@@ -114,7 +118,7 @@ existing line.
 |---|---|
 | `src/state/thread-navigation.ts` | `openThread` opens hidden work in the fork panel |
 | `src/state/fork-panel.ts` | `openForkPanel` leaves the bot panel and other side panels open |
-| `src/components/ThreadChip.tsx` | `exchangeRow` draws a bot exchange row as `ExchangeRowLine` |
+| `src/components/ThreadChip.tsx` | `oneChatRow` draws a bot exchange or side job row as `OneChatLine` |
 | `src/components/ChatView.tsx` | no message box and no note for hidden work in the fork panel; no Fork on a message |
 | `src/components/ChatMoreMenu.tsx` | no `new-thread`, `threads` and `start-fresh` items |
 | `src/components/SidebarBotMenu.tsx` | no thread items in Simple's bot menu |
