@@ -104,7 +104,7 @@ import { LiveCallBar } from "./LiveCallBar";
 import { LiveCallChip } from "./LiveCallPill";
 import { effectivePlace, toolPlace, type EffectivePlace } from "@/lib/place";
 import { cn } from "@/lib/cn";
-import { activeLocale, intlLocale, t } from "@/lib/i18n";
+import { activeLocale, intlLocale, t } from "@/lib/i18n"; import { hiddenWork, ONE_CHAT } from "@/lib/one-chat";
 import { COMPACT_BUBBLE } from "@/lib/compact-chip";
 import { groupTranscript, isStatusActivity, turnDurations, workedLabel } from "@/lib/activity-runs";
 import { StatusActivityRow } from "@/components/StatusActivityRow";
@@ -325,7 +325,7 @@ const Bubble = memo(function Bubble({
   onReply: (message: Message) => void;
 }) {
   const { botId, threadId, botName, voiceId, tts, localVoice, bots, mentionPeers, mentionPerson, focus, dispatch, onBranch, bubbleStyle, conversational, simple, canReact, openedAt, speakerViewer, phone } = useChatRows(), busy = use(ChatBusyContext);
-  const forkAction = !phone && message.kind === "text" && !message.id.startsWith("optimistic-")
+  const forkAction = !ONE_CHAT && !phone && message.kind === "text" && !message.id.startsWith("optimistic-")
     ? [forkMessageItem({ kind: "bot", ownerId: botId, threadId, messageId: message.id }, dispatch, busy)] : [];
   const remoteClient = window.ogb?.remoteClient?.active === true;
   const peer = peerLine(message) ?? peerRequest(message, botId);
@@ -1246,7 +1246,9 @@ export const ChatView = memo(function ChatView({ bot: profile, inForkPanel = fal
         </div>
       )}
       <LiveCallBar bot={bot} />
-      {canWrite === false ? (
+      {inForkPanel && hiddenWork(profile.tasks?.find((candidate) => candidate.threadId === bot.threadId)) ? (
+        <p data-work-read-only className="border-t border-hairline px-4 py-3 text-center text-[13px] text-ink-secondary">{t("chat.workSession.readOnly")}</p>
+      ) : canWrite === false ? (
         <NewConversationInstead bot={bot} onNew={() => dispatch({ type: "newTask", botId: bot.id })} />
       ) : (
       <Composer

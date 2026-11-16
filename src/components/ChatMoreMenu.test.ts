@@ -16,8 +16,10 @@ const fixture = vi.hoisted(() => {
     find: vi.fn(),
     team: false,
     open: vi.fn(),
+    oneChat: false,
   };
 });
+vi.mock("@/lib/one-chat", () => ({ get ONE_CHAT() { return fixture.oneChat; }, hiddenWork: () => false }));
 vi.mock("@/state/store", async (importOriginal) => {
   const original = await importOriginal<typeof import("@/state/store")>();
   return { ...original, useStore: () => ({ state: { ...original.initialState, inspectorOpen: fixture.inspectorOpen, ...(fixture.team ? { config: { ...original.initialState.config, team: { id: "acme", name: "Acme" } } } : {}) }, dispatch: fixture.dispatch }) };
@@ -113,6 +115,16 @@ describe("ChatMoreMenu, the round ⋯ for the bot panel", () => {
     const fresh = { ...bot, messages: [...bot.messages!, { id: "d", role: "bot" as const, kind: "compaction" as const, at: 2, parentId: "hi",
       compaction: { summary: "", firstKeptId: "", foldedThroughId: "hi", tokensBefore: 0, by: "person" as const, fresh: true as const } }], activeLeafId: "d" };
     expect(menuOf(createElement(ChatMoreMenu, { bot: fresh })).items.find((one) => one.key === "start-fresh")!.disabled).toBe(true);
+  });
+
+  it("offers no new thread and no thread list when the app shows one chat per bot", () => {
+    fixture.oneChat = true;
+    try {
+      const keys = menuOf(createElement(ChatMoreMenu, { bot })).items.map((item) => item.key);
+      expect(keys).toContain("start-fresh");
+      expect(keys).not.toContain("new-thread");
+      expect(keys).not.toContain("threads");
+    } finally { fixture.oneChat = false; }
   });
 
   it("starts a new thread with the bot", () => {

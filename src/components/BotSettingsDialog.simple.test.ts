@@ -624,10 +624,10 @@ describe("the avatar editor", () => {
 
 
 describe("the first page", () => {
-  it("runs Computer, Setup, What it knows, This conversation, then the conversations, with no Thinking row", () => {
+  it("runs Computer, Setup, What it knows, then This conversation, with no Thinking row and no list of conversations", () => {
     const rendered = home(makeBot());
     expect(ofType(rendered, ModelPicker)!.props).toMatchObject({ bot: expect.objectContaining({ id: "scout" }), threadId: "thread-scout", contained: true });
-    expect(ofType(rendered, BotConversations)!.props.bot).toMatchObject({ id: "scout" });
+    expect(ofType(rendered, BotConversations)).toBeUndefined();
     const order = ['data-panel-card="computer"', 'data-panel-card="model"', 'data-panel-row="model"', 'data-panel-page="routines"', 'data-panel-card="keeps"',
       'data-panel-card="conversation"', 'data-panel-page="files"', 'data-panel-item="find"', 'data-panel-page="activity"']
       .map((marker) => rendered.html.indexOf(marker));

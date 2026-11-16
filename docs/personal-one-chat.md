@@ -74,6 +74,37 @@ behaves as upstream's. Tests turn it on with the launcher's `oneChat` option.
 `scripts/testing/file-size-ratchet.test.ts`, so each line above joins an
 existing line.
 
+## Desktop app
+
+`ONE_CHAT` in `src/lib/one-chat.ts` is true in this app.
+
+- A click on anything that names hidden work opens it beside the chat, in
+  upstream's fork panel: a "See run" link, a teammate row, a thread chip, an
+  Inbox line, a notification, a `#Title` link. `openThread` in
+  `src/state/thread-navigation.ts` decides it for all of them, by the
+  thread's `routineRunId`. With no chat on screen it shows that bot's chat
+  first.
+- In the fork panel, hidden work has no message box. It shows "Read only.
+  You talk to each bot in its own chat." (`chat.workSession.readOnly`).
+- Nothing starts or switches threads: the chat ⋯ menu has no New thread and
+  no thread list, the sidebar's bot menu has no thread items, the + menu has
+  no "New conversation with", ⌘⇧N does nothing, and a message has no Fork.
+  Start fresh is on the panel's first page and in the ⋯ menu.
+
+| File | Change |
+|---|---|
+| `src/state/thread-navigation.ts` | `openThread` opens hidden work in the fork panel |
+| `src/components/ChatView.tsx` | no message box for hidden work in the fork panel; no Fork on a message |
+| `src/components/ChatMoreMenu.tsx` | no `new-thread` and `threads` items |
+| `src/components/SidebarBotMenu.tsx` | no thread items in Simple's bot menu |
+| `src/components/Sidebar.tsx` | no "New conversation with" in the + menu |
+| `src/App.tsx` | ⌘⇧N starts no thread |
+| `src/components/bot-panel/PanelHome.tsx` | no `BotConversations` |
+
+Upstream's tests for those menus mock `@/lib/one-chat` with `ONE_CHAT: false`,
+so they still test upstream's paths. Add that mock to a new upstream test
+that fails on a missing thread item.
+
 ## Merging an upstream release
 
 1. For a conflict in a file above, keep upstream's change and put the fork's
@@ -81,5 +112,6 @@ existing line.
 2. If upstream adds a place that calls `store.createTask` for a bot, decide
    where it leads: the main chat, or a hidden thread with `hideWorkSession`.
    List it here.
-3. Run `corepack pnpm exec vitest run server/one-chat file-size-ratchet`,
-   then upstream's tests named after each file above, with the setting off.
+3. Run `corepack pnpm exec vitest run server/one-chat thread-navigation ChatMoreMenu ChatView.controls ChatView.automation SidebarBotRead Sidebar.simple-mode Sidebar.plus-menu Sidebar.working-folder file-size-ratchet`,
+   then upstream's tests named after each server file above, with the
+   setting off.

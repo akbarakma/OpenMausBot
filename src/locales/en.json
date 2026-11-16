@@ -2654,6 +2654,7 @@
   "chat.forkConversation": "Fork conversation from here",
   "chat.forkPanel": "Forked conversation",
   "chat.closeForkPanel": "Close forked conversation",
+  "chat.workSession.readOnly": "Read only. You talk to each bot in its own chat.",
   "chat.loadingFork": "Loading conversation…",
   "chat.forkUnavailable": "Conversation unavailable.",
   "chat.reply": "Reply",

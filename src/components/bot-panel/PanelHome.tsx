@@ -8,7 +8,6 @@ import { useChatMoreItems } from "../ChatMoreMenu";
 import { EffortRow, ModelPicker } from "../ModelPicker";
 import type { SidebarMenuItem } from "../SidebarPopoverMenu";
 import { useBotAutomations } from "./AutomationsPage";
-import { BotConversations } from "./Conversations";
 import { ComputerCard } from "./ComputerTab";
 import { PanelContextCard } from "./ContextCard";
 import { chatFolder, KnowsCard, libraryItems } from "./LibraryTab";
@@ -93,7 +92,6 @@ export function PanelHome({ bot, onOpen }: { bot: Bot; onOpen: (page: SimplePage
 
       <PanelContextCard bot={bot} />
 
-      <BotConversations bot={bot} />
     </div>
   );
 }

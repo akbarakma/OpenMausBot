@@ -12,6 +12,7 @@ import {
 } from "@/lib/export-transcript";
 import { cn } from "@/lib/cn";
 import { t } from "@/lib/i18n";
+import { ONE_CHAT } from "@/lib/one-chat";
 import { localizedTaskTitle } from "@/lib/task-title";
 import { useContextAction } from "./ContextWarning";
 import { ELEVATED_CONTROL, ELEVATED_HOVER, ELEVATED_OPEN } from "./elevated";
@@ -90,7 +91,7 @@ export function useChatMoreItems(profile: Bot, phoneHeader = false): { items: Si
       onSelect: () => requestChatFind(bot.threadId),
     },
     ...phoneScreen,
-    ...(showThreads || side === "team" ? [] : [{
+    ...(ONE_CHAT || showThreads || side === "team" ? [] : [{
       key: "new-thread",
       heading: t("task.list"),
       separatorBefore: true,
@@ -99,7 +100,7 @@ export function useChatMoreItems(profile: Bot, phoneHeader = false): { items: Si
       onSelect: () => dispatch({ type: "newTask", botId: profile.id }),
     } satisfies SidebarMenuItem]),
     // With one thread there is nothing to switch to.
-    ...(threads.length < 2 ? [] : [{
+    ...(ONE_CHAT || threads.length < 2 ? [] : [{
       key: "threads",
       ...(side === "team" ? { heading: t("task.list"), separatorBefore: true } : {}),
       label: t("task.switch"),

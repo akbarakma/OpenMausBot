@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { setTeamChats } from "./team-chats";
-import { markedThread, openBotRow, openRoomThread } from "./thread-navigation";
+import { markedThread, openBotRow, openRoomThread, openThread } from "./thread-navigation";
 
 type Task = { threadId: string; activity?: string; unread?: boolean; busy?: boolean; routineRunId?: string; archivedAt?: number; createdAt?: number; updatedAt?: number };
 const chief = (tasks: Task[], threadId = "main", mainThreadId = "main") => ({ id: "cos", threadId, mainThreadId, tasks: [{ threadId: "main", createdAt: 1 }, ...tasks] });
@@ -82,5 +82,32 @@ describe("a hand-off's chip for work in a room", () => {
   it("opens the room when it names no thread, or one the room no longer has", () => {
     expect(clicked({ groupId: "room" })).toEqual([{ type: "select", id: "room" }]);
     expect(clicked({ groupId: "room", threadId: "deleted" })).toEqual([{ type: "select", id: "room" }]);
+  });
+});
+
+describe("a click on hidden work", () => {
+  const bots = [
+    { id: "kara", name: "Kara", threadId: "kara-main", tasks: [{ threadId: "kara-main" }] },
+    { id: "mira", name: "Mira", threadId: "mira-main", tasks: [{ threadId: "mira-main" }, { threadId: "pair", routineRunId: "work:pair" }] },
+  ];
+  const clicked = (state: object, threadId: string) => {
+    const dispatch = vi.fn();
+    expect(openThread(dispatch, { botId: "mira", threadId }, { bots, groups: [], ...state }, false)).toBe(true);
+    return dispatch.mock.calls.map(([action]) => action);
+  };
+
+  it("opens it beside the chat on screen, whichever bot's chat that is", () => {
+    expect(clicked({ activeView: "chat", selectedId: "kara" }, "pair")).toEqual([{ type: "openForkPanel", kind: "bot", ownerId: "mira", threadId: "pair" }]);
+  });
+
+  it("shows its bot's chat first when no chat is on screen", () => {
+    expect(clicked({ activeView: "inbox", selectedId: "kara" }, "pair")).toEqual([
+      { type: "select", id: "mira" },
+      { type: "openForkPanel", kind: "bot", ownerId: "mira", threadId: "pair" },
+    ]);
+  });
+
+  it("leaves a bot's own chat to open as ever", () => {
+    expect(clicked({ activeView: "chat", selectedId: "kara" }, "mira-main").map((action) => action.type)).not.toContain("openForkPanel");
   });
 });

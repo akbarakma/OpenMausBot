@@ -66,6 +66,7 @@ import { cloudFirstRun, cloudWelcomeVisible, useCloudWelcome } from "@/lib/cloud
 import { engineReady } from "@/components/EngineLibrary";
 import { CommandPalette } from "@/components/CommandPalette";
 import { t } from "@/lib/i18n";
+import { ONE_CHAT } from "@/lib/one-chat";
 import { botCycleStep, shouldOpenKeyboardShortcuts } from "@/lib/keyboard-shortcuts";
 import { effectiveLanguage, useLanguageChoice, usePageLanguage } from "@/lib/language-preference";
 import { botUnreadCount, showBrowserUnread } from "@/lib/bot-unread";
@@ -214,7 +215,7 @@ function Shell({ viewer }: { viewer: WelcomeViewer | null }) {
         e.preventDefault();
         if (e.shiftKey) {
           const selected = state.bots.find((bot) => bot.id === state.selectedId && !bot.hidden);
-          if (!e.repeat && selected && selected.yourAccess !== "view") dispatch({ type: "newTask", botId: selected.id });
+          if (!ONE_CHAT && !e.repeat && selected && selected.yourAccess !== "view") dispatch({ type: "newTask", botId: selected.id });
         } else {
           dispatch({ type: "newBot" });
         }

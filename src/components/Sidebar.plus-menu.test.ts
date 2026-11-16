@@ -3,6 +3,7 @@ import { Children, isValidElement, type ReactElement, type ReactNode } from "rea
 import { describe, expect, it, vi } from "vitest";
 
 const fixture = vi.hoisted(() => ({ values: [] as unknown[], index: 0, admin: true as boolean | null, team: false, state: {} as Record<string, unknown> }));
+vi.mock("@/lib/one-chat", () => ({ ONE_CHAT: false, hiddenWork: () => false }));
 vi.mock("react", async (original) => ({
   ...await original<typeof import("react")>(),
   useState: (initial: unknown) => {

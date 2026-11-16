@@ -57,13 +57,13 @@ where a chevron's drawn stroke ends, so their right edges line up.
     ⋯ menu.
   - **Context:** the conversation's share of the model's window, its bar, and
     Compact now from 80%. It shows once the conversation reports usage.
-  - **Conversations:** the list, shown once the bot has 2 or more.
   Usage is not in the chat's ⋯ menu. In Simple mode the composer has no
   context ring and the chat shows no context warning; Advanced keeps both.
   Since upstream 0.1.151 Simple is the only mode (`SIMPLE_ONLY` in
   `src/lib/simple-only.ts`), so nothing shows the ring. Its code stays for the
-  day that flag is false again. The list has no New conversation button; New thread stays in the
-  chat header's ⋯ menu. Upstream's "Try asking" card is removed. The hero
+  day that flag is false again. The first page has no list of conversations
+  and nothing starts a new thread: a bot has one chat (see
+  [`personal-one-chat.md`](personal-one-chat.md)). Upstream's "Try asking" card is removed. The hero
   avatar shows the same face as the sidebar and chat header (see "One face per
   bot" below). The Signed-in sites row is hidden; its page stays for links, and
   the list stays in the browser's Manage profiles.
@@ -259,7 +259,7 @@ the same state, motion beat and working ring.
 | `src/components/BotSettingsDialog.tsx` | Simple panel: Escape does not close it, ✕ records the close, a quiet reopen leaves focus alone |
 | `src/lib/guided-tour.ts` | Simple tour steps never open the computer |
 | `src/components/bot-panel/AutomationsPage.tsx` | New: `useBotAutomations` and the grouped Automations page |
-| `src/components/bot-panel/Conversations.tsx` | No New conversation button; a "Conversations" `CardLabel` with a 36px search button; renders nothing with one conversation |
+| `src/components/bot-panel/Conversations.tsx` | No New conversation button; a "Conversations" `CardLabel` with a 36px search button; renders nothing with one conversation. `PanelHome` no longer draws it |
 | `src/components/bot-panel/PanelHero.tsx` | Avatar takes its props from `useBotFace`, with `hops` while it is on screen; no `activeState` prop |
 | `src/components/bot-panel/HeavyBotRow.tsx` | The bare row, with no card, so it sits inside the What {name} knows card |
 | `src/components/bot-panel/ContextCard.tsx` | New: the Context card on the first page; Compact now waits only on the open conversation, not the bot's other work |

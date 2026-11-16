@@ -1,4 +1,5 @@
 import { notificationTrayPinned } from "@/lib/notification-preferences";
+import { hiddenWork } from "@/lib/one-chat";
 import type { Action, AppState } from "./store";
 import { openOwnTeamChat, teamChats } from "./team-chats";
 import { teamThreadToOpen } from "./team-side";
@@ -108,7 +109,7 @@ export interface ThreadTarget {
   threadId: string;
 }
 
-interface ThreadOpeningState extends NotificationRoutingState {
+interface ThreadOpeningState extends NotificationRoutingState, Partial<Pick<AppState, "activeView" | "selectedId">> {
   bots: Array<NotificationThreadOwner & { name: string }>;
 }
 
@@ -125,6 +126,11 @@ export function openThread(
   // A room notification carries the asker bot with the room's thread id; switching the bot to it would 404.
   const group = state.groups.find(owns), owner = group ? undefined : state.bots.find(owns);
   const named = state.bots.find((candidate) => candidate.id === target.botId);
+  if (owner && hiddenWork(owner.tasks?.find((task) => task.threadId === target.threadId))) {
+    if (state.activeView !== "chat" || !state.selectedId) openBot(dispatch, owner, threadsShown);
+    dispatch({ type: "openForkPanel", kind: "bot", ownerId: owner.id, threadId: target.threadId });
+    return true;
+  }
   if (group) {
     dispatch({ type: "select", id: group.id });
     if (group.threadId !== target.threadId) dispatch({ type: "switchGroupTask", groupId: group.id, threadId: target.threadId });

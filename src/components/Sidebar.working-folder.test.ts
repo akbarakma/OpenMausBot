@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Bot } from "@/state/store";
 
 const access = vi.hoisted(() => ({ admin: true, advanced: true }));
+vi.mock("@/lib/one-chat", () => ({ ONE_CHAT: false, hiddenWork: () => false }));
 vi.mock("@/lib/use-owner-or-admin", () => ({ useOwnerOrAdmin: () => access.admin }));
 vi.mock("@/lib/interface-mode", async (original) => ({
   ...await original<typeof import("@/lib/interface-mode")>(), useAdvancedMode: () => access.advanced,

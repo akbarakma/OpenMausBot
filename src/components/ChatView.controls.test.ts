@@ -24,6 +24,7 @@ vi.mock("@/state/store", async (importOriginal) => {
   }) };
 });
 // The real useCaptionChrome rides along: it only asks this module for the window chrome.
+vi.mock("@/lib/one-chat", () => ({ ONE_CHAT: false, hiddenWork: () => false }));
 vi.mock("./DesktopCapabilities", async (importOriginal) => ({
   ...await importOriginal<typeof import("./DesktopCapabilities")>(),
   useDesktopCapabilities: () => ({ capabilities: { windowChrome: fixture.windowChrome, windowFrame: false, dictation: { available: false }, host: { packaged: true, platform: fixture.platform }, localComputer: { available: false, reasonCode: fixture.localReasonCode, message: fixture.localMessage } }, ready: true }),
