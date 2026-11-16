@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ArrowLeftRight, ChevronRight, X } from "lucide-react";
+import { ArrowLeftRight, ChevronRight } from "lucide-react";
 import { api } from "@/state/api";
 import { currentTaskBot, formatTime, useStore, type Bot } from "@/state/store";
 import { closeExchange, openExchange, useShownExchange, type ExchangeLine, type ExchangeRow } from "@/lib/bot-exchange";
@@ -61,7 +61,7 @@ function WorkDialog({ pair, onClose }: { pair: { a: string; b: string } | null; 
       onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
       <div ref={dialog} role="dialog" aria-modal="true" tabIndex={-1} aria-label={label} data-work-modal=""
         className="ui-modal animate-pop-in flex h-[min(760px,calc(100vh-48px))] w-[min(600px,calc(100vw-32px))] flex-col overflow-hidden text-ink outline-none motion-reduce:animate-none">
-        <header className="relative flex h-14 shrink-0 items-center justify-center px-14">
+        <header className="flex h-14 shrink-0 items-center justify-center px-5">
           {panel ? <h2 className="truncate text-[14px] font-medium">{label}</h2> : a && b && (
             <h2 className="flex min-w-0 items-center gap-2 text-[14px] font-medium" aria-label={label}>
               <BotAvatar bot={a} state="happy" size={22} animated={false} /><span className="truncate">{a.name}</span>
@@ -69,8 +69,6 @@ function WorkDialog({ pair, onClose }: { pair: { a: string; b: string } | null; 
               <BotAvatar bot={b} state="happy" size={22} animated={false} /><span className="truncate">{b.name}</span>
             </h2>
           )}
-          <button type="button" onClick={onClose} aria-label={t("common.close")}
-            className="ui-icon-button absolute end-3 top-1/2 -translate-y-1/2 cursor-pointer"><X size={16} /></button>
         </header>
         <div className="ui-modal-divider" />
         <div className="min-h-0 flex-1 bg-app [&_[data-look=chat-header]]:hidden">
