@@ -248,7 +248,7 @@ export function SkillReviewDialog({
         <div id="skill-review-title" className="text-[16px] font-semibold text-ink">
           {read ? skill.name : t("skills.reviewTitle", { name: skill.name })}
         </div>
-        <div className="mt-1 truncate text-[12px] text-ink-secondary" title={skill.source}>
+        <div className="mt-1 shrink-0 truncate text-[12px] text-ink-secondary" title={skill.source}>
           {t("skills.source", { source: skill.source })}
         </div>
         {skill.warnings.length > 0 && (
