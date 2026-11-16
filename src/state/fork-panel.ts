@@ -1,4 +1,4 @@
-import { api } from "./api";
+import { api } from "./api"; import { ONE_CHAT } from "@/lib/one-chat";
 import { loadFullThread } from "./message-history";
 import { optimisticMessageId, optimisticUserMessage } from "./optimistic-send";
 import type { Action, AppState, BotAnnouncement, Group, Message } from "./store";
@@ -27,7 +27,7 @@ export function reduceForkPanel(state: AppState, action: ForkPanelAction): AppSt
   switch (action.type) {
     case "forkMessage": return state;
     case "openForkPanel":
-      return { ...state, settingsOpen: false, computerOpen: false, inspectorOpen: false, activityOpen: false,
+      return { ...state, ...(ONE_CHAT ? {} : { settingsOpen: false, computerOpen: false, inspectorOpen: false, activityOpen: false }),
         forkPanel: { kind: action.kind, ownerId: action.ownerId, threadId: action.threadId, messages: [], activeLeafId: null,
           loading: true, loadId: action.loadId ?? "", loadFailed: false } };
     case "forkPanelLoaded": {

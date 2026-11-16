@@ -5,14 +5,14 @@ import { t } from "@/lib/i18n";
 import { activityText } from "@/lib/activity-text";
 import { cn } from "@/lib/cn";
 import { BotAvatar } from "./Avatar";
-import { HandoffReply } from "./HandoffReply";
+import { HandoffReply } from "./HandoffReply"; import { ExchangeRowLine } from "./BotExchange"; import { exchangeRow } from "@/lib/bot-exchange";
 
 export function ThreadChip({ message, threadId }: { message: Message; threadId?: string }) {
   const { state, dispatch } = useStore();
   const showThreads = useShowThreads();
   const ref = message.threadRef;
   const tool = message.tool;
-  if (!ref || !tool) return null;
+  if (!ref || !tool) return null; const exchange = exchangeRow(message, threadId, state.bots); if (exchange) return <ExchangeRowLine row={exchange} />;
   const bot = state.bots.find((candidate) => candidate.id === ref.botId);
   const direct = message.sentDirectly;
   const label = !direct ? activityText(tool, tool.name)

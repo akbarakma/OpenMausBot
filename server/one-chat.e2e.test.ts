@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { expect, it } from "vitest";
 import { launchVerificationServer, runControlOmb } from "../scripts/control-omb.ts";
 import { request } from "../scripts/mcp-server.ts";
+import { exchangeRow } from "../src/lib/bot-exchange.ts";
 
 const SETTLED = "Your downstream room requests have settled.";
 
@@ -63,6 +64,20 @@ it("keeps one chat per bot: a teammate's message, a side job and a webhook's run
     const afterJob = await rows(mira.activeTaskId);
     expect(afterJob.join("\n")).toContain("SIDE-DONE: ledger A balances.");
     expect(afterJob).toEqual(expect.arrayContaining(["Started a side job: Ledger A", "Side job finished: Ledger A"]));
+
+    const pairWork = (await tasksOf(mira.id)).find((task) => task.title === "@Kara · work").threadId;
+    const exchange = (await api(`/api/bots/${kara.id}/exchange/${mira.id}`)).lines as any[];
+    expect(exchange.map((line) => [line.botId === kara.id ? "Kara" : "Mira", line.text])).toEqual([
+      ["Kara", "PAIR-ASK: delete your hourly routine"], ["Mira", "PAIR: deleted the hourly routine."],
+      ["Kara", "PAIR-ASK: delete your hourly routine"], ["Mira", "PAIR: deleted the hourly routine."],
+    ]);
+    expect(exchange.filter((line) => line.workThreadId).map((line) => line.workThreadId)).toEqual([pairWork, pairWork]);
+    expect((await api(`/api/bots/${mira.id}/exchange/${kara.id}`)).lines).toEqual(exchange);
+    const bots = (await api("/api/bots")).bots as any[];
+    const lines = async (bot: any) => ((await api(`/api/threads/${bot.activeTaskId}/messages`)).messages as any[])
+      .flatMap((message) => { const row = exchangeRow(message, bot.activeTaskId, bots.map((each) => ({ ...each, threadId: each.activeTaskId }))); return row ? [row] : []; });
+    expect(await lines(kara)).toEqual([...Array(2)].flatMap(() => [{ ownId: kara.id, peerId: mira.id, sent: true }, { ownId: kara.id, peerId: mira.id, sent: false }]));
+    expect(await lines(mira)).toEqual([...Array(2)].flatMap(() => [{ ownId: mira.id, peerId: kara.id, sent: false }, { ownId: mira.id, peerId: kara.id, sent: true }]));
 
     const { webhook, credential } = await api("/api/webhooks", { name: "Gmail new-mail triage", prompt: "Triage the new mail.", botId: mira.id });
     const fired = await fetch(credential.url, { method: "POST", headers: { "content-type": "application/json", "idempotency-key": "mail-1" }, body: JSON.stringify({ from: "ada@example.test" }) });

@@ -15,6 +15,9 @@ below.
   gets one row for the message and one for its answer: "Message from Kara: …"
   and "Replied to Kara: …". Each row carries a `threadRef` to the hidden
   thread. The sender's chat gets upstream's own request and result rows.
+  `GET /api/bots/<a>/exchange/<b>` returns what two bots said to each other,
+  both ways, oldest first, at most 200 lines, with secrets redacted. Each
+  reply carries the hidden thread it was written in.
 - **Side jobs.** `start_thread` on the bot itself always reports back
   (upstream's `report_back`), so the job runs hidden and its result resumes
   the chat that started it.
@@ -51,7 +54,9 @@ behaves as upstream's. Tests turn it on with the launcher's `oneChat` option.
 
 ## Files
 
-`server/one-chat.ts` holds the logic. `server/one-chat.test.ts` and
+`server/one-chat.ts` holds the logic, and `server/one-chat-exchange.ts` the
+exchange route. The rows' words are `server.oneChat.*` in `en.json`,
+`de.json` and `pt-br.json`. `server/one-chat.test.ts` and
 `server/one-chat.e2e.test.ts` cover it. Upstream's files only call it:
 
 | File | Line the fork adds |
@@ -67,6 +72,7 @@ behaves as upstream's. Tests turn it on with the launcher's `oneChat` option.
 | `server/host/handoff-sent.ts` | `sideJobLine` around the two rows a side job leaves: "Started a side job: Title" and "Side job finished: Title" |
 | `server/index.ts` | `mainChatPosts(store, …)` as the store `leaveThreadPost` writes to: a bot's own post into its main chat is stored as its text, so every client shows it |
 | `server/index.ts` | `workSessionRecalls` in the direct turn's `autoRecallPrompt` call |
+| `server/index.ts` | `exchangeRoute` from `server/one-chat-exchange.ts`, before the bot overview route |
 | `server/index.ts` | `threadsPrompt(THREADS_PROMPT)` in the direct turn's prompt |
 | `server/index.ts` | a person's message reveals a run thread only when `!isWorkSession(task)` |
 | `server/host/chief-notices.ts` | `deps.mainChat` before the notices thread lookup |
@@ -84,14 +90,20 @@ existing line.
 
 `ONE_CHAT` in `src/lib/one-chat.ts` is true in this app.
 
-- A click on anything that names hidden work opens it beside the chat, in
-  upstream's fork panel: a "See run" link, a teammate row, a thread chip, an
-  Inbox line, a notification, a `#Title` link. `openThread` in
+- A message between two bots shows in each bot's chat as one centered line,
+  "Messaged Kara" or "Message from Kara", with Kara's face and no text.
+  `exchangeRow` in `src/lib/bot-exchange.ts` picks these rows; a side job's
+  rows keep upstream's look. A click opens the exchange in a modal: both
+  bots' messages, oldest first, with "See work" under each reply.
+- A click on anything that names hidden work opens it read only in the same
+  modal: a "See run" link, a side job row, "See work", an Inbox line, a
+  notification, a `#Title` link. `openThread` in
   `src/state/thread-navigation.ts` decides it for all of them, by the
-  thread's `routineRunId`. With no chat on screen it shows that bot's chat
-  first.
-- In the fork panel, hidden work has no message box. It shows "Read only.
-  You talk to each bot in its own chat." (`chat.workSession.readOnly`).
+  thread's `routineRunId`, and opens upstream's fork panel state, which
+  `WorkModal` shows instead of the side panel. Opened from an exchange, it
+  has a Back button. With no chat on screen it shows that bot's chat first.
+- Hidden work has no message box. It shows "Read only. You talk to each bot
+  in its own chat." (`chat.workSession.readOnly`).
 - Nothing starts or switches threads: the chat ⋯ menu has no New thread and
   no thread list, the sidebar's bot menu has no thread items, the + menu has
   no "New conversation with", ⌘⇧N does nothing, and a message has no Fork.
@@ -102,11 +114,13 @@ existing line.
 | File | Change |
 |---|---|
 | `src/state/thread-navigation.ts` | `openThread` opens hidden work in the fork panel |
+| `src/state/fork-panel.ts` | `openForkPanel` leaves the bot panel and other side panels open |
+| `src/components/ThreadChip.tsx` | `exchangeRow` draws a bot exchange row as `ExchangeRowLine` |
 | `src/components/ChatView.tsx` | no message box for hidden work in the fork panel; no Fork on a message |
 | `src/components/ChatMoreMenu.tsx` | no `new-thread`, `threads` and `start-fresh` items |
 | `src/components/SidebarBotMenu.tsx` | no thread items in Simple's bot menu |
 | `src/components/Sidebar.tsx` | no "New conversation with" in the + menu |
-| `src/App.tsx` | ⌘⇧N starts no thread; the fork panel counts as covering the bot panel, so the bot panel closes for it and returns after it |
+| `src/App.tsx` | ⌘⇧N starts no thread; `WorkModal` in place of `ForkPanel`, which neither collapses the sidebar nor closes on a narrow window |
 | `src/components/bot-panel/PanelHome.tsx` | no `BotConversations` and no Start fresh row |
 
 Upstream's tests for those menus mock `@/lib/one-chat` with `ONE_CHAT: false`,
@@ -120,6 +134,6 @@ that fails on a missing thread item.
 2. If upstream adds a place that calls `store.createTask` for a bot, decide
    where it leads: the main chat, or a hidden thread with `hideWorkSession`.
    List it here.
-3. Run `corepack pnpm exec vitest run server/one-chat thread-navigation ChatMoreMenu ChatView.controls ChatView.automation SidebarBotRead Sidebar.simple-mode Sidebar.plus-menu Sidebar.working-folder file-size-ratchet`,
+3. Run `corepack pnpm exec vitest run server/one-chat src/lib/bot-exchange ThreadChip thread-navigation ChatMoreMenu ChatView.controls ChatView.automation SidebarBotRead Sidebar.simple-mode Sidebar.plus-menu Sidebar.working-folder file-size-ratchet`,
    then upstream's tests named after each server file above, with the
    setting off.

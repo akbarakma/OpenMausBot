@@ -19,7 +19,7 @@ import { viewerClosedRelease } from "@/components/computer-takeover";
 import { Sidebar } from "@/components/Sidebar";
 import { ChatView } from "@/components/ChatView";
 import { GroupView } from "@/components/GroupView";
-import { ForkPanel } from "@/components/ForkPanel";
+import { ForkPanel } from "@/components/ForkPanel"; import { WorkModal } from "@/components/BotExchange";
 import { SIDEBAR_AND_PANEL_FIT, SIDEBAR_INLINE, TWO_SIDE_PANELS_FIT, useMediaQuery } from "@/lib/use-media-query";
 import { preloadConnectedApps } from "@/lib/connected-apps";
 import {
@@ -109,7 +109,7 @@ function Shell({ viewer }: { viewer: WelcomeViewer | null }) {
   const sidebarAndPanelFit = useMediaQuery(SIDEBAR_AND_PANEL_FIT, true);
   const sidebarInline = useMediaQuery(SIDEBAR_INLINE, false);
   useEffect(() => {
-    if (!sidebarInline && state.forkPanel) dispatch({ type: "closeForkPanel" });
+    if (!ONE_CHAT && !sidebarInline && state.forkPanel) dispatch({ type: "closeForkPanel" });
   }, [sidebarInline, state.forkPanel, dispatch]);
   useEffect(() => {
     if (!window.ogb?.environments) return;
@@ -164,7 +164,7 @@ function Shell({ viewer }: { viewer: WelcomeViewer | null }) {
   const notificationFeed = useNotificationFeed() && !remoteClient;
   const advanced = useAdvancedMode();
   const roomPanelOpen = useRoomPanelShown({ group, state, simple: !advanced && !remoteClient });
-  const sidePanelOpen = (Boolean(bot) && (state.settingsOpen || state.computerOpen || state.inspectorOpen || state.activityOpen)) || Boolean(state.forkPanel) || roomPanelOpen || (notificationFeed && state.notificationsOpen) || inboxShown;
+  const sidePanelOpen = (Boolean(bot) && (state.settingsOpen || state.computerOpen || state.inspectorOpen || state.activityOpen)) || Boolean(state.forkPanel && !ONE_CHAT) || roomPanelOpen || (notificationFeed && state.notificationsOpen) || inboxShown;
   const collapseSidebar = sidePanelOpen && !sidebarAndPanelFit;
   const simpleSide = useSimpleSidePanel({
     active: !advanced && !remoteClient,
@@ -173,7 +173,7 @@ function Shell({ viewer }: { viewer: WelcomeViewer | null }) {
     dispatch,
     inline: sidebarInline,
     covered: state.activeView !== "chat" || state.computerOpen || state.inspectorOpen || state.activityOpen || state.appSettingsOpen
-      || state.pluginsOpen || inboxShown || (notificationFeed && state.notificationsOpen) || Boolean(state.forkPanel),
+      || state.pluginsOpen || inboxShown || (notificationFeed && state.notificationsOpen),
   });
   const calendarFocus = state.activeView === "routines" && state.routinesFocus.view === "calendar";
   const notificationTray = notificationFeed && !calendarFocus;
@@ -447,7 +447,7 @@ function Shell({ viewer }: { viewer: WelcomeViewer | null }) {
         )
       )}
       <AppPreviewPanel />
-      {state.forkPanel && sidebarInline && <ForkPanel />}
+      {ONE_CHAT ? <WorkModal /> : state.forkPanel && sidebarInline && <ForkPanel />}
       {!state.forkPanel && roomPanelOpen && group && (
         <RoomPanel key={`room:${group.id}`} group={group} overlay={notificationFeed && state.notificationsOpen && !twoSidePanelsFit} />
       )}
