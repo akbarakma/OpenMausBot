@@ -173,7 +173,7 @@ function Shell({ viewer }: { viewer: WelcomeViewer | null }) {
     dispatch,
     inline: sidebarInline,
     covered: state.activeView !== "chat" || state.computerOpen || state.inspectorOpen || state.activityOpen || state.appSettingsOpen
-      || state.pluginsOpen || inboxShown || (notificationFeed && state.notificationsOpen),
+      || state.pluginsOpen || inboxShown || (notificationFeed && state.notificationsOpen) || Boolean(state.forkPanel),
   });
   const calendarFocus = state.activeView === "routines" && state.routinesFocus.view === "calendar";
   const notificationTray = notificationFeed && !calendarFocus;

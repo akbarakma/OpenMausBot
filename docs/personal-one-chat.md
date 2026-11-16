@@ -60,6 +60,7 @@ behaves as upstream's. Tests turn it on with the launcher's `oneChat` option.
 | `server/index.ts` | `start_thread`: `oneChatOn()` joins `body.reportBack === true` |
 | `server/index.ts` | `hideWorkSession` in the Burst and Bot API `opened` callbacks |
 | `server/index.ts` | `withMainThread` around the `post-to-thread` body |
+| `server/index.ts` | `mainChatPosts(store, …)` as the store `leaveThreadPost` writes to: a bot's own post into its main chat is stored as its text, so every client shows it |
 | `server/index.ts` | `workSessionRecalls` in the direct turn's `autoRecallPrompt` call |
 | `server/index.ts` | `threadsPrompt(THREADS_PROMPT)` in the direct turn's prompt |
 | `server/index.ts` | a person's message reveals a run thread only when `!isWorkSession(task)` |
@@ -98,7 +99,7 @@ existing line.
 | `src/components/ChatMoreMenu.tsx` | no `new-thread` and `threads` items |
 | `src/components/SidebarBotMenu.tsx` | no thread items in Simple's bot menu |
 | `src/components/Sidebar.tsx` | no "New conversation with" in the + menu |
-| `src/App.tsx` | ⌘⇧N starts no thread |
+| `src/App.tsx` | ⌘⇧N starts no thread; the fork panel counts as covering the bot panel, so the bot panel closes for it and returns after it |
 | `src/components/bot-panel/PanelHome.tsx` | no `BotConversations` |
 
 Upstream's tests for those menus mock `@/lib/one-chat` with `ONE_CHAT: false`,
