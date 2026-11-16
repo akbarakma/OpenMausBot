@@ -27,7 +27,7 @@ it("lists both directions between two bots, oldest first, and nothing else", () 
     ["mira", "ask n4", undefined], ["kara", "reply n4", undefined],
     ["kara", "ask n7", undefined], ["mira", "", "working"],
   ]);
-  expect(lines[1]).toMatchObject({ workThreadId: "t-n2", at: 25 });
+  expect(lines[1]).toMatchObject({ at: 25 });
   expect(botExchange(nodes, "mira", "kara", (text) => text)).toEqual(lines);
 });
 

@@ -65,13 +65,11 @@ it("keeps one chat per bot: a teammate's message, a side job and a webhook's run
     expect(afterJob.join("\n")).toContain("SIDE-DONE: ledger A balances.");
     expect(afterJob).toEqual(expect.arrayContaining(["Started a side job: Ledger A", "Side job finished: Ledger A"]));
 
-    const pairWork = (await tasksOf(mira.id)).find((task) => task.title === "@Kara · work").threadId;
     const exchange = (await api(`/api/bots/${kara.id}/exchange/${mira.id}`)).lines as any[];
     expect(exchange.map((line) => [line.botId === kara.id ? "Kara" : "Mira", line.text])).toEqual([
       ["Kara", "PAIR-ASK: delete your hourly routine"], ["Mira", "PAIR: deleted the hourly routine."],
       ["Kara", "PAIR-ASK: delete your hourly routine"], ["Mira", "PAIR: deleted the hourly routine."],
     ]);
-    expect(exchange.filter((line) => line.workThreadId).map((line) => line.workThreadId)).toEqual([pairWork, pairWork]);
     expect((await api(`/api/bots/${mira.id}/exchange/${kara.id}`)).lines).toEqual(exchange);
     const bots = (await api("/api/bots")).bots as any[];
     const lines = async (bot: any) => ((await api(`/api/threads/${bot.activeTaskId}/messages`)).messages as any[])

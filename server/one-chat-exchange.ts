@@ -5,7 +5,6 @@ export interface ExchangeLine {
   at: number;
   botId: string;
   text: string;
-  workThreadId?: string;
   status?: "working" | "failed" | "cancelled";
 }
 
@@ -19,7 +18,7 @@ export function botExchange(nodes: readonly HandoffView[], a: string, b: string,
     const asker = node.parentId ? byId.get(node.parentId)?.botId : undefined;
     if (!asker || asker === node.botId || node.groupId || !pair.has(asker) || !pair.has(node.botId)) return [];
     const ask: ExchangeLine = { id: `${node.id}:ask`, at: node.createdAt, botId: asker, text: redact(node.text.trim()) };
-    const reply: ExchangeLine = { id: `${node.id}:reply`, at: node.lastProgressAt ?? node.createdAt, botId: node.botId, text: redact(node.result.trim()), workThreadId: node.threadId };
+    const reply: ExchangeLine = { id: `${node.id}:reply`, at: node.lastProgressAt ?? node.createdAt, botId: node.botId, text: redact(node.result.trim()) };
     if (node.status === "completed") return reply.text ? [ask, reply] : [ask];
     return [ask, { ...reply, status: node.status === "failed" || node.status === "cancelled" ? node.status : "working" }];
   });
