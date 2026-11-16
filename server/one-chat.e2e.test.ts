@@ -48,7 +48,8 @@ it("keeps one chat per bot: a teammate's message, a side job and a webhook's run
     const miraMain = await rows(mira.activeTaskId);
     expect(miraMain).toContain("Message from Kara: PAIR-ASK: delete your hourly routine");
     expect(miraMain).toContain("Replied to Kara: PAIR: deleted the hourly routine.");
-    expect(miraMain.join("\n")).toContain("PAIR-NOTE: Kara asked me to delete a routine.");
+    const note = ((await api(`/api/threads/${mira.activeTaskId}/messages`)).messages as any[]).find((message) => message.threadPost);
+    expect(note).toMatchObject({ role: "bot", kind: "text", text: "PAIR-NOTE: Kara asked me to delete a routine." });
 
     await cli("send", "--bot", kara.id, "--task", kara.activeTaskId, "--text", "ASK-JOB: ask Mira once more");
     await expect.poll(() => evidence().filter((turn) => turn.planKey === "ASK-DONE").length, { timeout: 30_000 }).toBe(2);

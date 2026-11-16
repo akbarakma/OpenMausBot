@@ -50,6 +50,17 @@ export function withMainThread(body: unknown, mainThreadId: string | undefined):
   return oneChatOn() && mainThreadId && named ? { ...body, toThreadId: mainThreadId } : body;
 }
 
+/** A bot's own post into its main chat is its message to the person, so it is stored as the bot's text: every client shows
+ * text, and none shows a posted row while tool steps are hidden. */
+export function mainChatPosts<S extends Pick<Store, "appendMessage" | "patchTask">>(store: S, mainThreadId: string | undefined): Pick<Store, "appendMessage" | "patchTask"> {
+  if (!oneChatOn() || !mainThreadId) return store;
+  return {
+    patchTask: (...args) => store.patchTask(...args),
+    appendMessage: (threadId, row) => store.appendMessage(threadId, threadId === mainThreadId && row.threadPost && row.tool?.output
+      ? { role: "bot", kind: "text", text: row.tool.output, threadPost: row.threadPost } : row),
+  };
+}
+
 const SNIPPET_CHARS = 140;
 const snippet = (text: string) => {
   const line = text.replace(/\s+/g, " ").trim();

@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import {
-  hideWorkSession, isWorkSession, loadOneChat, markPairExchange, MAIN_THREAD_ALIAS, ONE_CHAT_ENV, oneChatOn, oneChatTools,
+  hideWorkSession, isWorkSession, loadOneChat, mainChatPosts, markPairExchange, MAIN_THREAD_ALIAS, ONE_CHAT_ENV, oneChatOn, oneChatTools,
   pairMarkerLine, pairThread, threadsPrompt, withMainThread, workSessionRecalls,
 } from "./one-chat.ts";
 
@@ -102,6 +102,18 @@ it("sends a post to \"main\" to the main chat, and any other id through unchange
   expect(withMainThread({ toThreadId: "t9", message: "hi" }, "t1")).toEqual({ toThreadId: "t9", message: "hi" });
   expect(withMainThread({ toThreadId: "main" }, undefined)).toEqual({ toThreadId: "main" });
   expect(withMainThread(null, "t1")).toBeNull();
+});
+
+it("stores a bot's own post into its main chat as its text, and any other post as the posted row", () => {
+  const rows: Array<[string, any]> = [];
+  const store = { appendMessage: (threadId: string, row: any) => { rows.push([threadId, row]); return row; }, patchTask: () => null } as any;
+  const post = { role: "bot", kind: "activity", tool: { name: "Mira posted a message here", ok: true, output: "The backup is done." }, threadPost: { deliveryId: "d1", fromBotId: "b1", fromThreadId: "work" } };
+  mainChatPosts(store, "main").appendMessage("main", post as any);
+  mainChatPosts(store, "main").appendMessage("other", post as any);
+  mainChatPosts(store, undefined).appendMessage("main", post as any);
+  expect(rows[0]).toEqual(["main", { role: "bot", kind: "text", text: "The backup is done.", threadPost: post.threadPost }]);
+  expect(rows[1]![1]).toBe(post);
+  expect(rows[2]![1]).toBe(post);
 });
 
 it("recalls other conversations in the bot's own work, never in work that read text from outside", () => {
