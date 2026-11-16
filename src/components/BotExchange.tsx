@@ -1,11 +1,12 @@
-import { useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ArrowLeftRight, ChevronRight } from "lucide-react";
+import { ArrowLeftRight } from "lucide-react";
 import { api } from "@/state/api";
-import { currentTaskBot, formatTime, openThread, useStore, type Bot } from "@/state/store";
+import { currentTaskBot, formatTime, openThread, StoreContext, useStore, type Bot } from "@/state/store";
 import { closeExchange, openExchange, useShownExchange, type ExchangeLine, type OneChatRow } from "@/lib/bot-exchange";
 import { useShowThreads } from "@/lib/thread-preferences";
 import { cn } from "@/lib/cn";
+import { openBotSettings } from "./bot-panel/panel-link";
 import { useModalDialog } from "@/hooks/use-modal-dialog";
 import { localDay } from "@/lib/transcript-derivations";
 import { MAUS_COLORS } from "@/lib/mascot";
@@ -20,6 +21,18 @@ import { SIMPLE_BOT_BUBBLE } from "./chat-bubble";
 const nameColor = (bot: Bot) => (bot.color === "chrome" ? undefined : { color: MAUS_COLORS[bot.color] });
 
 const LINE = "inline-flex h-7 max-w-full cursor-pointer items-center gap-1.5 rounded-lg px-2.5 text-[13px] transition-colors hover:bg-ink/[0.06]";
+
+export function SkillChangeLine({ line, botId, name }: { line: string; botId: string; name: string }) {
+  const dispatch = useContext(StoreContext)?.dispatch;
+  return (
+    <div className="flex justify-center">
+      <button type="button" data-skill-change-line={name} onClick={() => { if (dispatch) openBotSettings(dispatch, "skills", { botId, page: "skills", detail: name }); }}
+        className={cn(LINE, "text-ink-secondary hover:text-ink")}>
+        <span className="truncate">{line}</span>
+      </button>
+    </div>
+  );
+}
 
 export function OneChatLine({ row }: { row: OneChatRow }) {
   const { state, dispatch } = useStore();
@@ -36,7 +49,6 @@ export function OneChatLine({ row }: { row: OneChatRow }) {
           <span className="shrink-0">{t(failed ? "chat.sideJob.failed" : stopped ? "chat.sideJob.stopped" : "chat.sideJob.finished")}</span>
           <span aria-hidden="true">·</span>
           <span className={cn("truncate font-medium", !failed && "text-ink")}>{row.title}</span>
-          <ChevronRight size={13} className="shrink-0 opacity-60" aria-hidden="true" />
         </button>
       </div>
     );
@@ -50,7 +62,6 @@ export function OneChatLine({ row }: { row: OneChatRow }) {
         <span className="shrink-0">{t(row.sent ? "chat.exchange.messaged" : "chat.exchange.messageFrom")}</span>
         <BotAvatar bot={peer} state="happy" size={16} animated={false} />
         <span className="truncate font-medium text-ink">{peer.name}</span>
-        <ChevronRight size={13} className="shrink-0 text-ink-tertiary" aria-hidden="true" />
       </button>
     </div>
   );

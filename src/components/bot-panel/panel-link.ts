@@ -13,6 +13,7 @@ export interface PanelLink {
   page?: PageId;
   /** A card on the panel's first page to scroll to, such as "conversations". */
   anchor?: string;
+  detail?: string;
   nonce: number;
 }
 
@@ -27,9 +28,9 @@ const watchers = new Set<() => void>();
 export function openBotSettings(
   dispatch: (action: Action) => void,
   section: BotSettingsSection,
-  options: { botId?: string; page?: PageId; anchor?: string } = {},
+  options: { botId?: string; page?: PageId; anchor?: string; detail?: string } = {},
 ): void {
-  latest = { section, ...(options.page ? { page: options.page } : {}), ...(options.anchor ? { anchor: options.anchor } : {}), nonce: (latest?.nonce ?? 0) + 1 };
+  latest = { section, ...(options.page ? { page: options.page } : {}), ...(options.anchor ? { anchor: options.anchor } : {}), ...(options.detail ? { detail: options.detail } : {}), nonce: (latest?.nonce ?? 0) + 1 };
   dispatch({ type: "toggleSettings", open: true, section, ...(options.botId !== undefined ? { botId: options.botId } : {}) });
   for (const watch of Array.from(watchers)) watch();
 }
@@ -56,6 +57,6 @@ const SIMPLE_ALIAS: Partial<Record<PageId, SimplePageId>> = { mcp: "apps" };
 export function linkTarget(section: BotSettingsSection, link: PanelLink | null): PanelTarget {
   const ours = link?.section === section ? link : null;
   const page = ours?.page && (SIMPLE_ALIAS[ours.page] ?? ours.page);
-  if (page && isSimplePage(page)) return { page };
+  if (page && isSimplePage(page)) return { page, ...(ours.detail ? { detail: ours.detail } : {}) };
   return ours?.anchor ? { ...sectionTarget(section), anchor: ours.anchor } : sectionTarget(section);
 }

@@ -63,6 +63,8 @@ export interface PanelTarget {
   anchor?: string;
   /** Opens the Instructions editor in place on the Bot settings page. */
   editInstructions?: boolean;
+  /** One item on the page, such as a skill by name. */
+  detail?: string;
 }
 
 const SECTION_TARGET: Record<BotSettingsSection, PanelTarget> = {

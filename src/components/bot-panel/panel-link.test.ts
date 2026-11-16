@@ -30,6 +30,11 @@ describe("named links into a bot's settings", () => {
     expect(linkTarget("access", link({ section: "access" }))).toEqual({ anchor: "computer" });
   });
 
+  it("lands a link that names one skill on that skill's page", () => {
+    expect(linkTarget("skills", link({ section: "skills", page: "skills", detail: "browser-site-login" }))).toEqual({ page: "skills", detail: "browser-site-login" });
+    expect(linkTarget("skills", link({ section: "skills", page: "skills" }))).toEqual({ page: "skills" });
+  });
+
   it("lands a link that names a card on that card, and on no other section", () => {
     expect(linkTarget("overview", link({ section: "overview", anchor: "conversations" }))).toEqual({ anchor: "conversations" });
     expect(linkTarget("access", link({ section: "access", anchor: "conversations" }))).toEqual({ anchor: "conversations" });

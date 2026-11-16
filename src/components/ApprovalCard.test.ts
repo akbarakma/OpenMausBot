@@ -1,7 +1,9 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
+const fixture = vi.hoisted(() => ({ oneChat: false }));
+vi.mock("@/lib/one-chat", () => ({ get ONE_CHAT() { return fixture.oneChat; }, hiddenWork: () => false }));
 import { ApprovalCard } from "./ApprovalCard";
 import { pendingApprovals, PendingApprovalActions, PendingApprovalPanel, spokenApprovalPrompt, type Pending } from "./PendingApproval";
 import { StoreProvider, type Bot, type Message } from "@/state/store";
@@ -723,6 +725,25 @@ describe("ApprovalCard for a change that applied on its own", () => {
       },
     }));
     expect(skill).toContain("Scout added a skill: file-expense");
+  });
+
+  it("draws a skill change in one chat as a centered line with no Undo or Details", () => {
+    fixture.oneChat = true;
+    try {
+      const skill = render(applied({
+        tool: "stage_skill",
+        skillRequest: {
+          version: 1, requestId: "s", botId: "bot-1", threadId: "thread-1", stagedId: "staged", action: "create",
+          name: "file-expense", gist: "Files an expense.", warnings: [], createdAt: 1,
+        },
+      }));
+      expect(skill).toContain('data-skill-change-line="file-expense"');
+      expect(skill).toContain("Scout added a skill: file-expense");
+      expect(skill).not.toContain("Undo");
+      expect(skill).not.toContain("Details");
+    } finally {
+      fixture.oneChat = false;
+    }
   });
 
   it("reads team setup and team memory as one line, with Undo except for a deletion", () => {

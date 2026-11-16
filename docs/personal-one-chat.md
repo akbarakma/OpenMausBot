@@ -98,6 +98,12 @@ existing line.
   row and its result box are not drawn, because the bot says both in its own
   words. `oneChatRow` in `src/lib/bot-exchange.ts` picks these rows and the
   exchange rows; `OneChatLine` draws them.
+- A skill a bot added, updated or turned on or off on its own shows as one
+  centered line, "Test Bot 1 added a skill: browser-site-login", with no
+  Undo and no Details. A click opens that skill's page in the bot panel,
+  where its switch and Remove are. Other changes a bot makes on its own keep
+  upstream's line.
+- No centered line has a chevron.
 - A click on anything that names hidden work opens it read only in the same
   modal: a "See run" link, a side job row, an Inbox line, a notification, a
   `#Title` link. `openThread` in
@@ -118,6 +124,8 @@ existing line.
 |---|---|
 | `src/state/thread-navigation.ts` | `openThread` opens hidden work in the fork panel |
 | `src/state/fork-panel.ts` | `openForkPanel` leaves the bot panel and other side panels open |
+| `src/components/ApprovalCard.tsx` | `SkillChangeLine` for a skill change that applied on its own |
+| `src/components/bot-panel/panel-link.ts`, `page-registry.ts`, `PanelShell.tsx` | a panel link may name one item (`detail`), so the panel opens on that skill |
 | `src/components/ThreadChip.tsx` | `oneChatRow` draws a bot exchange or side job row as `OneChatLine` |
 | `src/components/ChatView.tsx` | no message box and no note for hidden work in the fork panel; no Fork on a message |
 | `src/components/ChatMoreMenu.tsx` | no `new-thread`, `threads` and `start-fresh` items |
@@ -137,6 +145,6 @@ that fails on a missing thread item.
 2. If upstream adds a place that calls `store.createTask` for a bot, decide
    where it leads: the main chat, or a hidden thread with `hideWorkSession`.
    List it here.
-3. Run `corepack pnpm exec vitest run server/one-chat src/lib/bot-exchange ThreadChip thread-navigation ChatMoreMenu ChatView.controls ChatView.automation SidebarBotRead Sidebar.simple-mode Sidebar.plus-menu Sidebar.working-folder file-size-ratchet`,
+3. Run `corepack pnpm exec vitest run server/one-chat src/lib/bot-exchange ThreadChip thread-navigation ChatMoreMenu ApprovalCard panel-link ChatView.controls ChatView.automation SidebarBotRead Sidebar.simple-mode Sidebar.plus-menu Sidebar.working-folder file-size-ratchet`,
    then upstream's tests named after each server file above, with the
    setting off.

@@ -41,7 +41,7 @@ export function BotPanel({ bot, derived, linkedSection, onClose }: {
   const [anchor, setAnchor] = useState<string | null>(() => initialTarget(linkedSection, link)?.anchor ?? null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingInstructions, setEditingInstructions] = useState(() => Boolean(initialTarget(linkedSection, link)?.editInstructions));
-  const [detail, setDetail] = useState<string | null>(null);
+  const [detail, setDetail] = useState<string | null>(() => initialTarget(linkedSection, link)?.detail ?? null);
   const [activityRefresh, setActivityRefresh] = useState(0);
   const bodyRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<HTMLDivElement>(null);
@@ -56,7 +56,7 @@ export function BotPanel({ bot, derived, linkedSection, onClose }: {
     setAnchor(target.anchor ?? null);
     setEditorOpen(false);
     setEditingInstructions(Boolean(target.editInstructions));
-    setDetail(null);
+    setDetail(target.detail ?? null);
     scrollTop();
   };
   const openPage = (next: SimplePageId) => {
