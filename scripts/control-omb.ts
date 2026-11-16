@@ -283,7 +283,7 @@ export async function launchVerificationServer(
   /** A stand-in enterprise layer (the folder shape core loads) and the key
    * it should accept, so a recipe can prove entitled behaviour offline. */
   enterprise?: { dir: string; licenseKey: string },
-  room?: { scripted: boolean },
+  room?: { scripted: boolean; oneChat?: boolean },
   /** Optional repository-owned fake providers for multi-engine setup checks. */
   extraProviders: Array<"codex" | "cline" | "copilot" | "customAcp" | "opencode"> = [],
   /** Programmatic tests only: an owned loopback Boat provider, never a live account. */
@@ -377,6 +377,7 @@ export async function launchVerificationServer(
     AGENT_BROWSER_EXECUTABLE_PATH: browser.executablePath,
   });
   if (boatFixtureApi) childEnv.OMB_BOAT_API = boatFixtureApi;
+  if (room?.oneChat) childEnv.OMB_ONE_CHAT = "1";
   if (staticDir) childEnv.OMB_STATIC_DIR = staticDir;
   const child = spawn(process.execPath, verificationServerArgs(childEnv), {
     cwd: ROOT,

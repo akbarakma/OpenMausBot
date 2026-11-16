@@ -5,6 +5,7 @@
 import { AGENTS_PROXY_ENV } from "./agents-bridge-switch.ts";
 import { roleToolEnv } from "./chief-level.ts";
 import { TOOLS_OFF_ENV } from "../shared/tool-groups.ts";
+import { ONE_CHAT_ENV, oneChatOn } from "./one-chat.ts";
 
 /** The facts of a conversation that decide its agents tools. A settings change may change them; a turn never does. */
 export interface AgentsConversation {
@@ -54,6 +55,7 @@ export function agentsServerEnv(conversation: AgentsConversation, turn: AgentsTu
     OMB_APP_HOSTING: flag(host.appHosting === true),
     OMB_COMPUTER_SELECTION: flag(!conversation.room && bot.computer !== "off" && !conversation.teamComputer && !conversation.botDriven),
     [TOOLS_OFF_ENV]: (bot.toolsOff ?? []).join(","),
+    [ONE_CHAT_ENV]: flag(oneChatOn()),
   };
 }
 

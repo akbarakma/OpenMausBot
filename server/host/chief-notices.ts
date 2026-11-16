@@ -37,6 +37,8 @@ export interface ChiefNoticeDeps {
   /** Security invariant: a read-and-draft run's prompt and reply carry mail and invite text, so its failures and
    * questions never reach a Chief as a notice. */
   quietThread?(botId: string, threadId: string): boolean;
+  /** With one chat per bot, the Chief hears of a problem in its main chat. */
+  mainChat?(botId: string): string | undefined;
   /** A person's private chat on a Team Cloud: its notices go to that person, never into a Chief's thread the team reads. */
   privateThread?(threadId: string): boolean;
   /** Security invariant: a confined conversation's words never start a Chief's turn at its own level, so its notices go to a person. */
@@ -155,7 +157,8 @@ export function createChiefNotices(deps: ChiefNoticeDeps) {
     const routing = deps.routing;
     const person = chief && routing ? routing.personOf(chief) : null;
     if (!chief || !reachesChief(chief, bot, threadId)) return tellThePerson();
-    const notices = store.tasks(chief.id).find((candidate) => (candidate.title === input.title || (input.title === INCIDENTS_THREAD_TITLE && candidate.title === OLD_INCIDENTS_THREAD_TITLE)) && !candidate.archivedAt &&
+    const main = deps.mainChat?.(chief.id);
+    const notices = (main ? store.taskByThread(chief.id, main) : undefined) ?? store.tasks(chief.id).find((candidate) => (candidate.title === input.title || (input.title === INCIDENTS_THREAD_TITLE && candidate.title === OLD_INCIDENTS_THREAD_TITLE)) && !candidate.archivedAt &&
         (!routing || routing.startedBy(candidate.threadId) === (person ?? undefined)))
       ?? store.createTask(chief.id, input.title, false, undefined, { botId: chief.id, name: chief.name, at: Date.now() }, undefined, undefined, undefined,
         routing && person ? (created) => routing.open(created.threadId, person) : undefined);

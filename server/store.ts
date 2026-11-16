@@ -41,7 +41,7 @@ import { initialGreetingMessage } from "./initial-greeting.ts"; import { createD
 import { appsFromCreator } from "./inherited-apps.ts"; import { newBotOwner, sharedAsMaker, sharedUnlessRestricted, type NewBotSharingRule } from "./new-bot-sharing.ts";
 import { ThreadCache, type ThreadState } from "./thread-cache.ts";
 import { titleFromMessage, UNTITLED_TASK } from "./thread-title.ts";
-import { buildTask, threadTitleFrom, UNTITLED_THREAD } from "./task-record.ts";
+import { buildTask, threadTitleFrom, UNTITLED_THREAD } from "./task-record.ts"; import { MAIN_CHAT_TITLE, oneChatOn } from "./one-chat.ts";
 import { createBotFork, createGroupFork } from "./store-forks.ts";
 import { activeGroupTask, groupTaskByThread, groupTasks, migrateGroupTaskRead, mirrorActiveGroupTask, refreshGroupUnread, setGroupTaskRead, syncGroupReadPatch } from "./group-task-state.ts";
 export { titleFromMessage, UNTITLED_TASK } from "./thread-title.ts";
@@ -1341,7 +1341,7 @@ export class Store {
     if (profile.cwd) bot.cwd = profile.cwd;
     bot.tasks = [{
       threadId: bot.threadId,
-      title: UNTITLED_THREAD,
+      title: oneChatOn() ? MAIN_CHAT_TITLE : UNTITLED_THREAD,
       createdAt: bot.createdAt,
       updatedAt: bot.createdAt,
       resumeCursors: {},
@@ -2268,7 +2268,7 @@ export class Store {
     const doomed = new Set(deleted); this.threadsGoing(deleted);
     mdb.deleteThreads(deleted, () => this.commitBotChange(bot, "the thread deletion", () => {
       const kept = bot.tasks!.filter((t) => !doomed.has(t.threadId));
-      const visible = nextOpenThread(kept) ?? buildTask(bot);
+      const visible = nextOpenThread(kept) ?? buildTask(bot, oneChatOn() ? MAIN_CHAT_TITLE : undefined);
       bot.tasks = kept.includes(visible) ? kept : [visible, ...kept];
       if (doomed.has(bot.threadId) || this.taskByThread(botId, bot.threadId)?.routineRunId) this.mirrorActiveTask(bot, visible);
       bot.unread = bot.tasks.some(taskCountsAsBotUnread);

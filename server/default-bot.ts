@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { writeFileAtomic } from "./atomic.ts";
 import { DEFAULT_BOT_COLOR, DEFAULT_BOT_NAME, defaultBotPerson } from "../shared/default-bot.ts";
 import { takeImportName } from "../shared/import-name.ts";
+import { oneChatOn } from "./one-chat.ts";
 import type { BotRecord, Message, Store } from "./store.ts";
 
 export type DefaultBotStore = Pick<Store, "bots" | "bot" | "createBot" | "patchBot" | "appendMessage" | "messagesFor" | "createTask" | "setChiefOfStaff">;
@@ -87,7 +88,7 @@ export function seededMausBot(bots: readonly BotRecord[]): BotRecord | undefined
  * top of a new one, so no earlier message moves. */
 function introduce(store: DefaultBotStore, bot: BotRecord, team?: string | null): void {
   const untouched = !store.messagesFor(bot.threadId).some((message) => message.role === "user");
-  const threadId = untouched ? bot.threadId : store.createTask(bot.id, `What ${bot.name} can do`)?.threadId;
+  const threadId = untouched || oneChatOn() ? bot.threadId : store.createTask(bot.id, `What ${bot.name} can do`)?.threadId;
   if (threadId) store.appendMessage(threadId, helperIntroMessage(bot, team));
 }
 
