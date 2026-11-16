@@ -1,14 +1,15 @@
 ---
 name: upstream-release
-description: "Check a new upstream OpenMausBot release tag against this fork, report what breaks and what's new, then sync bb-1 and the fork on a go. Use when Akbar says check upstream, asks about a new upstream tag or release, or mentions a new milind-soni/OpenMausBot version."
+description: "Check a new upstream OpenMausBot release tag against this fork, report what breaks and what's new, then merge it and install the fork's server package on bb-1 on a go. Use when Akbar says check upstream, asks about a new upstream tag or release, or mentions a new milind-soni/OpenMausBot version."
 ---
 
 # Upstream release
 
-This fork merges upstream release tags, never upstream `main`, so the
-Personal UI matches the server version bb-1 runs. Syncing a tag means two
-things: bb-1 installs it, then the fork merges it. The check part only
-reports. The sync part runs only on Akbar's go.
+This fork merges upstream release tags, never upstream `main`. bb-1 runs
+this fork's own server package, built on mb-0, so syncing a tag means: the
+fork merges it, then bb-1 installs the package built from that merge. Nothing
+updates by itself. The check part only reports. The sync part runs only on
+Akbar's go.
 
 ## Check
 
@@ -19,7 +20,9 @@ Change nothing in this part: no merge, no checkout, no service restart.
    `NEW=$(git tag --sort=-creatordate | head -1)`. If they match, report
    "up to date" and stop.
 3. Read bb-1's version (read the `device-fleet` skill first):
-   `ssh bb-1 'grep "\"version\"" ~/Documents/OpenMausBot/app/lib/node_modules/openmausbot/package.json'`.
+   `ssh bb-1 'grep -E "\"(version|personalCommit)\"" ~/Documents/OpenMausBot/app/lib/node_modules/openmausbot/package.json'`.
+   `personalCommit` is the fork commit the package was built from. A package
+   without it is an official one.
 4. Read the release notes of every tag after `OLD`:
    `gh release view <tag> -R milind-soni/OpenMausBot --json body -q .body`.
 5. Dry-run the merge: `git merge-tree --write-tree --name-only main $NEW`.
@@ -58,8 +61,8 @@ Keep it brief, in this order:
 2. **Will it break:** the conflict table (area, files, hunks), the
    modify/delete conflicts, and the clean-merge risks from step 6.
 3. **New features:** the user-visible ones, one line each.
-4. **Sync proposals**, in Akbar's proposal layout: update bb-1 to `NEW`, then
-   merge `NEW` on `chore/upstream-<NEW>`.
+4. **Sync proposals**, in Akbar's proposal layout: merge `NEW` on
+   `chore/upstream-<NEW>`, then install the fork's server package on bb-1.
 5. **Layout decisions** from step 8: what you decided, each with its
    before/after picture and the fork choice behind it. Akbar can overrule any
    of them in his go.
@@ -106,36 +109,75 @@ Stop there and wait for the go.
 ## Sync
 
 A go on the check report covers every step below, including the layout
-answers. Stop only at step 6, for Akbar's OK.
+answers. Stop only at step 4, for Akbar's OK.
 
-1. **Check bb-1 is idle.** Run `ssh bb-1 'systemctl --user status openmausbot --no-pager'`.
-   A `claude` or `codex` child process means a bot is mid-turn. Wait and
-   check again; after two busy checks, ask Akbar.
-2. **Update bb-1** (no data backup; Akbar chose that):
-
-   ```sh
-   ssh bb-1 'bash -lc "source ~/.nvm/nvm.sh; systemctl --user stop openmausbot \
-     && npm install --global --prefix ~/Documents/OpenMausBot/app openmausbot@<version> \
-     && systemctl --user start openmausbot"'
-   ```
-
-   Then confirm the version from Check step 3, `systemctl --user is-active openmausbot`,
-   and `curl -s http://127.0.0.1:8799/api/health` on bb-1 answering
-   `{"app":"openmausbot"}`. If the start fails, read
-   `journalctl --user -u openmausbot -n 50` and report it.
-3. **Merge on a branch.** From `main`, run `git switch -c chore/upstream-<NEW>`
+1. **Merge on a branch.** From `main`, run `git switch -c chore/upstream-<NEW>`
    and `git merge --no-ff <NEW>`. Follow the doc's "Merging an upstream
    release" section, and apply the layout answers. Record each answer in the
-   doc's file table in the same merge.
-4. **Commit** the merge as `chore: the fork runs upstream <NEW>`, with a body
+   doc's file table in the same merge. Read the server rules in `AGENTS.md`
+   first: a conflict in a server file keeps the fork's hook and upstream's
+   change.
+2. **Commit** the merge as `chore: the fork runs upstream <NEW>`, with a body
    that names each layout choice and each non-obvious resolution.
-5. **Verify:** run the doc's test list and `i18n:check`, plus the tests named
+3. **Verify:** run the doc's test list and `i18n:check`, plus the tests named
    after any other conflicted file, then `corepack pnpm typecheck` and
-   `corepack pnpm lint`.
-6. **Show it:** run `corepack pnpm dev:personal` and wait for Akbar's OK on
-   the changed screens.
-7. **Land it:** fast-forward `main` to the branch, run `git push origin main`, run
-   `corepack pnpm package:personal --install`, and confirm the running
-   Personal window shows the change. If `electron/resources/speech-helper.swift`
-   changed between the tags, run `corepack pnpm build:speech` first:
-   `package:personal` otherwise copies the old helper out of the installed app.
+   `corepack pnpm lint`. Run the tests named after the fork's own server
+   files too.
+4. **Show it:** run `corepack pnpm dev:personal` and wait for Akbar's OK on
+   the changed screens. `dev:personal` talks to bb-1's current server, so a
+   screen that needs the new server shows only after step 7.
+5. **Land it:** fast-forward `main` to the branch. Do not push unless Akbar
+   asks.
+6. **Build and test the server package.** Run
+   `corepack pnpm package:personal-server`; it prints the tarball's path.
+   Install it into an empty folder on mb-0 and start it on its own data
+   folder, home and a free port:
+
+   ```sh
+   T=$(mktemp -d) && mkdir $T/home $T/data
+   npm install --global --prefix $T/prefix release/npm/openmausbot-<version>.tgz
+   HOME=$T/home $T/prefix/bin/openmausbot serve --port <free port> --data-dir $T/data --no-pair
+   ```
+
+   `curl http://127.0.0.1:<free port>/api/health` must answer
+   `{"app":"openmausbot","version":"<version>"}`. Stop that server and
+   remove `$T`.
+7. **Install on bb-1** (read the `device-fleet` skill first). Check it is
+   idle: `ssh bb-1 'systemctl --user status openmausbot --no-pager'` shows
+   only the two `node` processes. A `claude` or `codex` child means a bot is
+   mid-turn. Wait and check again; after two busy checks, ask Akbar. Then
+   copy the tarball to `~/Documents/OpenMausBot/packages/` as
+   `openmausbot-personal-<commit>.tgz` and run on bb-1:
+
+   ```sh
+   source ~/.nvm/nvm.sh
+   B=~/Documents/OpenMausBot
+   S=$B/backups/$(date +%F-%H%M)-before-<commit>
+   mkdir -p $S
+   systemctl --user stop openmausbot
+   cp -p $B/data/bots.json $B/data/routines.json $B/data/webhooks.json $B/data/messages.db* $S/
+   npm install --global --prefix $B/app $B/packages/openmausbot-personal-<commit>.tgz
+   systemctl --user start openmausbot
+   ```
+
+   Then confirm the version and `personalCommit` from Check step 3,
+   `systemctl --user is-active openmausbot`, and
+   `curl -s http://127.0.0.1:8799/api/health` answering `{"app":"openmausbot"}`.
+   Compare each automation's `enabled` in `routines.json` and `webhooks.json`
+   with the copies in `$S`: a restart must not switch one on or off. Mira's
+   mail relay keeps a push it could not deliver and resends it with the next
+   one, so a stop of a few seconds loses no mail.
+8. **If the start fails,** read `journalctl --user -u openmausbot -n 50`,
+   then install the previous tarball from `packages/` with the same `npm
+   install` line and start the service. Copy the files in `$S` back only when
+   the log names a data file the old server cannot read. Report what
+   happened. `openmausbot@<version>` from npm is the official package, the
+   last fallback: it ignores the fork's server changes.
+9. **Install Personal:** run `corepack pnpm package:personal --install` and
+   confirm the running Personal window shows the change. If
+   `electron/resources/speech-helper.swift` changed between the tags, run
+   `corepack pnpm build:speech` first: `package:personal` otherwise copies
+   the old helper out of the installed app.
+
+Never touch bb-1's other services: the Gmail relay and its tunnel, the
+watch timers and `otp-cleaner`.

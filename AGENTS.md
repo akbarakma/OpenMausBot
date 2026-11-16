@@ -1,28 +1,32 @@
 # OpenMausBot agent notes
 
-## Personal desktop fork
+## Personal fork
 
-This public fork customizes the desktop interface for Akbar's mb-0.
-The upstream repository is `milind-soni/OpenMausBot`.
+This public fork customizes the desktop interface for Akbar's mb-0 and the
+server bb-1 runs. The upstream repository is `milind-soni/OpenMausBot`.
 
 Before starting Personal development or packaging, read
 [`docs/personal-development.md`](docs/personal-development.md) for profile isolation and the authenticated client workflow.
 
-- Keep personal changes in the desktop UI and client connection code.
 - Keep mb-0 as a client; do not start a local agent server during normal use.
-- Keep bb-1 on official upstream builds; do not deploy this fork there or change its services.
+- bb-1 runs this fork's server package. Build it with `corepack pnpm package:personal-server` and install it with the steps in the `upstream-release` skill. Nothing updates by itself: Akbar asks for each update.
+- Do not change bb-1's other services: the Gmail relay and its tunnel, the watch timers and `otp-cleaner`.
+- Put a server change in a new file and call it from upstream's file in one line. Every such line is listed in [`docs/personal-one-chat.md`](docs/personal-one-chat.md); read that doc before changing the server or merging a tag that touches a file it lists.
+- Keep each server change behind the one-chat setting (`oneChatOn()` in `server/one-chat.ts`), so upstream's tests pass with it off.
+- A change to saved data only adds fields. An official package must still read the data folder.
 - Preserve the server's existing API contracts and authentication.
 - Keep the iOS app in `ios-personal/`; install it with `ios-personal/run-sim.sh` on the simulator and `ios-personal/run-device.sh` on Akbar's iPhone. Upstream has no `ios/`, so leave upstream files alone for iOS work.
 - Show an iOS change to Akbar on the simulator (`ios-personal/run-sim.sh`) and wait for his OK before `ios-personal/run-device.sh` installs it on his iPhone. State this step in the plan instead of asking about it.
 - Test an iOS change yourself: drive the simulator with the device tools and look at the screens you changed, and run `swift test --filter` on the unit tests named after the changed files. Do not run the XCUITest files in `ios-personal/UITests` unless Akbar asks; each test relaunches the app, and a few files take over 10 minutes.
 - Defer release notifications until Akbar requests them.
 - Use isolated fixtures for development and verification; do not mutate live conversations or settings during tests.
+- When a check needs a real engine on bb-1, use only Test Bot 1 (DeepSeek) and Test Bot 3 (Haiku). Never test on Mira, Maui, Frosty or Kara.
 - Give the fork a separate app identity and profile before installing it alongside the official app.
 - Disable upstream binary auto-updates or point them at this fork's releases before installing a custom build.
 - Installed Personal shows its bundled UI; bb-1 answers only API, stream, upload and WebSocket requests.
 - Build and install Personal with `corepack pnpm package:personal --install`; use `dev:personal` while editing.
 - Before reporting a UI change as installed, confirm the running Personal window shows it, not only that the bundle contains it.
-- Merge upstream release tags, not upstream `main`, so the fork's UI matches the version bb-1 runs.
+- Merge upstream release tags, not upstream `main`, so the fork's UI and server stay on one released version.
 - Before merging a tag that touches `src/components/bot-panel/` or another file listed in [`docs/personal-bot-panel.md`](docs/personal-bot-panel.md), read that doc.
 - Before merging a tag that touches a file listed in [`docs/personal-sidebar.md`](docs/personal-sidebar.md), read that doc.
 - Test a Personal UI change with only the test files named after the changed files, for example `corepack pnpm exec vitest run WorkingRing ChatView.controls`, plus `typecheck` and `lint`. This takes seconds.
