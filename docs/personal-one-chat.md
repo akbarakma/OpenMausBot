@@ -63,6 +63,7 @@ behaves as upstream's. Tests turn it on with the launcher's `oneChat` option.
 | `server/index.ts` | `start_thread`: `oneChatOn()` joins `body.reportBack === true` |
 | `server/index.ts` | `hideWorkSession` in the Burst and Bot API `opened` callbacks |
 | `server/index.ts` | `withMainThread` around the `post-to-thread` body |
+| `server/runtime/envelope.ts` | `sideJobQuote` around the person's quoted request: a side job's note does not quote it |
 | `server/host/handoff-sent.ts` | `sideJobLine` around the two rows a side job leaves: "Started a side job: Title" and "Side job finished: Title" |
 | `server/index.ts` | `mainChatPosts(store, …)` as the store `leaveThreadPost` writes to: a bot's own post into its main chat is stored as its text, so every client shows it |
 | `server/index.ts` | `workSessionRecalls` in the direct turn's `autoRecallPrompt` call |

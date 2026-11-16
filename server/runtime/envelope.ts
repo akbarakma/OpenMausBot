@@ -3,6 +3,7 @@
 import { CONSENT_RULE, escapeNotes, quoteInNote } from "../peer-provenance.ts";
 import { AUTHORITY, botWho, fromNote, type Authority } from "../provenance-label.ts";
 import { personOnly, requesterDecides, withDefault } from "./questions.ts";
+import { sideJobQuote } from "../one-chat.ts";
 import type { Assignment, EnvelopeNames, Level, OriginSource, TurnEvidence } from "./types.ts";
 
 /** Every envelope opens with this, the one note every line a bot reads carries; model text that imitates it is escaped. */
@@ -56,7 +57,7 @@ const authorityOf = (a: Assignment): Authority => a.origin.kind === "person" || 
 
 function lineage(a: Assignment, names: EnvelopeNames, person: string): string {
   if (a.origin.kind === "person") {
-    const request = quote(a.origin.quote, QUOTE_MAX);
+    const request = sideJobQuote(a.requester.botId === a.assignee.botId, quote(a.origin.quote, QUOTE_MAX));
     const asked = request ? `${person} asked: "${request}".` : `${person}'s own request started this work.`;
     return `${asked} This is your task, sent on ${person}'s behalf: do it with your own tools and permissions.`;
   }

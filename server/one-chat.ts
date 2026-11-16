@@ -98,6 +98,12 @@ export function sideJobLine(kind: "started" | "finished", name: string, upstream
   return name.startsWith("#") ? `Side job finished: ${name.slice(1)}` : upstream;
 }
 
+/** The person's request as quoted to the work it started. A side job's own brief is complete, and the quote is the
+ * person asking for a side job, which the job then tries to start again. */
+export function sideJobQuote(ownJob: boolean, quote: string): string {
+  return oneChatOn() && ownJob ? "" : quote;
+}
+
 const HIDDEN_TOOLS = new Set(["list_threads", "close_thread", "rename_thread"]);
 const TOOL_DESCRIPTIONS: Record<string, string> = {
   start_thread:

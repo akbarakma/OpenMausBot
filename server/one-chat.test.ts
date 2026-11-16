@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import {
-  hideWorkSession, isWorkSession, loadOneChat, mainChatPosts, markPairExchange, sideJobLine, MAIN_THREAD_ALIAS, ONE_CHAT_ENV, oneChatOn, oneChatTools,
+  hideWorkSession, isWorkSession, loadOneChat, mainChatPosts, markPairExchange, sideJobLine, sideJobQuote, MAIN_THREAD_ALIAS, ONE_CHAT_ENV, oneChatOn, oneChatTools,
   pairMarkerLine, pairThread, threadsPrompt, withMainThread, workSessionRecalls,
 } from "./one-chat.ts";
 
@@ -133,6 +133,8 @@ it("words a side job's rows as a job, and leaves a teammate's reply as upstream 
   expect(sideJobLine("started", "Review PR 12", "Opened thread #Review PR 12")).toBe("Started a side job: Review PR 12");
   expect(sideJobLine("finished", "#Review PR 12", "#Review PR 12 replied")).toBe("Side job finished: Review PR 12");
   expect(sideJobLine("finished", "Mira", "Mira replied")).toBe("Mira replied");
+  expect(sideJobQuote(true, "start a side job")).toBe("");
+  expect(sideJobQuote(false, "ask Mira")).toBe("ask Mira");
   delete process.env[ONE_CHAT_ENV];
   expect(sideJobLine("started", "Review PR 12", "Opened thread #Review PR 12")).toBe("Opened thread #Review PR 12");
 });
