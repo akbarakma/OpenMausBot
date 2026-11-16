@@ -158,6 +158,7 @@ const { Switch } = await import("./SettingsPrimitives");
 const { ConfirmDialog } = await import("./ConfirmDialog");
 const { OrgSkillsCard } = await import("./bot-settings/OrgSkillsCard");
 const { PackageProvenance } = await import("./bot-settings/PackageProvenance");
+const { AdvancedSettingsRow } = await import("./bot-panel/AdvancedSettingsRow");
 
 afterAll(() => vi.unstubAllGlobals());
 
@@ -665,7 +666,7 @@ describe("the first page", () => {
     expect(card.props).toMatchObject({ dataLabel: "computer.tab.data", folder: undefined });
     (card.props.onData as () => void)();
     expect(onOpen).toHaveBeenLastCalledWith("data");
-    expect([...rendered.html.matchAll(/data-panel-item="(\w+)"/g)].map((match) => match[1])).toEqual(["find"]);
+    expect([...rendered.html.matchAll(/data-panel-item="([\w-]+)"/g)].map((match) => match[1])).toEqual(["find", "start-fresh"]);
     expect(rendered.html).toContain(">Find in conversation<");
   });
 
@@ -800,6 +801,16 @@ describe("the Bot settings page", () => {
     expect(html).toContain(">Slack<");
     expect(html.indexOf('data-panel-row="slack"')).toBeGreaterThan(html.indexOf('data-panel-page="botapi"'));
     expect(html.indexOf('data-panel-row="slack"')).toBeLessThan(html.indexOf('data-panel-row="default-bot-hide"'));
+  });
+
+  it("says Sending on your behalf and app access live in Advanced mode, and opens them there", () => {
+    const html = settingsPage(makeBot()).html;
+    expect(html).toContain('data-panel-row="advanced"');
+    expect(html).toContain("Sending on your behalf and app access are set there.");
+    expect(html.indexOf('data-panel-row="advanced"')).toBeGreaterThan(html.indexOf('data-panel-row="job"'));
+    click(find(capture(() => AdvancedSettingsRow()), "data-panel-row", "advanced"));
+    expect(fixture.setAdvanced).toHaveBeenCalledExactlyOnceWith(true);
+    expect(fixture.dispatch).toHaveBeenCalledExactlyOnceWith({ type: "toggleSettings", open: true, section: "permissions" });
   });
 
   it("shows the first line of the instructions, or how to start, and edits them in place with Done", () => {
@@ -1352,8 +1363,12 @@ describe("the drill-in pages", () => {
     await Promise.resolve();
     expect(onDetail).toHaveBeenLastCalledWith(null);
     click(find(body("skills", makeBot(), "triage"), "data-panel-action", "remove-skill:triage"));
-    (confirm(body("skills", makeBot(), "triage")).props.onConfirm as () => void)();
-    expect(fixture.skills.putAssignments).toHaveBeenCalledWith("triage", true);
+    const unassign = confirm(body("skills", makeBot(), "triage"));
+    expect(unassign.props.title).toBe("Unassign “triage” from this bot? The skill stays in the library.");
+    (unassign.props.onConfirm as () => void)();
+    await Promise.resolve();
+    expect(fixture.api).toHaveBeenCalledWith("/api/bots/scout/skills/triage", { method: "DELETE" });
+    expect(fixture.skills.putAssignments).not.toHaveBeenCalled();
 
     (find(rendered, "data-panel-form", "skill-import").props.onChange as (value: string) => void)("owner/repo");
     (find(body("skills"), "data-panel-form", "skill-import").props.onSubmit as () => void)();

@@ -1,11 +1,11 @@
-import { FolderOpen, History, Sparkles, Zap } from "lucide-react";
+import { FolderOpen, Gauge, History, Sparkles, Zap } from "lucide-react";
 import { useMemo } from "react";
 
 import { cn } from "@/lib/cn";
 import { t } from "@/lib/i18n";
 import type { Bot } from "@/state/store";
 import { useChatMoreItems } from "../ChatMoreMenu";
-import { ModelPicker } from "../ModelPicker";
+import { EffortRow, ModelPicker } from "../ModelPicker";
 import type { SidebarMenuItem } from "../SidebarPopoverMenu";
 import { useBotAutomations } from "./AutomationsPage";
 import { BotConversations } from "./Conversations";
@@ -22,9 +22,10 @@ function ItemRow({ item }: { item: SidebarMenuItem }) {
       type="button"
       data-panel-item={item.key}
       disabled={item.disabled}
+      title={item.title}
       aria-pressed={item.active || undefined}
       onClick={item.onSelect}
-      className={cn(rowCls, "w-full text-left enabled:hover:bg-ink/[0.03] disabled:cursor-default disabled:opacity-45")}
+      className={cn(rowCls, "w-full text-left enabled:cursor-pointer enabled:hover:bg-ink/[0.03] disabled:cursor-not-allowed disabled:opacity-45")}
     >
       <span className="flex shrink-0 text-ink-secondary [&_svg]:size-4 [&_svg]:stroke-[1.75]" aria-hidden="true">
         {item.icon}
@@ -40,6 +41,7 @@ export function PanelHome({ bot, onOpen }: { bot: Bot; onOpen: (page: SimplePage
   const automationState = useBotAutomations(bot.id);
   const automationsOn = automationState.automations.filter((automation) => automation.enabled).length;
   const find = items.find((item) => item.key === "find");
+  const startFresh = items.find((item) => item.key === "start-fresh");
   const { pages, apps, shared, unshared } = useMemo(() => libraryItems(bot), [bot]);
   const made = pages.length + apps.length + shared.length + unshared.length;
 
@@ -57,6 +59,13 @@ export function PanelHome({ bot, onOpen }: { bot: Bot; onOpen: (page: SimplePage
             label={<><RowIcon icon={Sparkles} /><span className="shrink-0 text-[14px] font-medium text-ink">{t("model.simple.model")}</span></>}
           />
         </div>
+        <EffortRow
+          bot={bot}
+          threadId={bot.threadId}
+          compact
+          className={cn(rowCls, "cursor-pointer hover:bg-ink/[0.03]")}
+          label={<span className="flex shrink-0 items-center gap-2.5"><RowIcon icon={Gauge} /><span className="text-[14px] font-medium text-ink">{t("model.simple.reasoning")}</span></span>}
+        />
         <NavRow
           data-panel-page="routines"
           icon={Zap}
@@ -71,6 +80,7 @@ export function PanelHome({ bot, onOpen }: { bot: Bot; onOpen: (page: SimplePage
       <Card label={t("botPanel.section.conversation")} anchor="conversation">
         <NavRow data-panel-page="files" icon={FolderOpen} title={t("computer.tab.files")} value={made > 0 ? made : t("botPanel.none")} onClick={() => onOpen("files")} />
         {find && <ItemRow item={find} />}
+        {startFresh && <ItemRow item={startFresh} />}
         <NavRow data-panel-page="activity" icon={History} title={t("activity.panel.title")} onClick={() => onOpen("activity")} />
       </Card>
 

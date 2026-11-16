@@ -9,7 +9,7 @@ import { t } from "@/lib/i18n";
 import { formatTokens } from "@/lib/usage";
 import { usePopoverDismiss } from "@/hooks/use-popover-dismiss";
 import { visibleMessages, type Bot, type TaskUsage } from "@/state/store";
-import { useCompact } from "./ContextWarning";
+import { useContextAction } from "./ContextWarning";
 import { useMenuMotion } from "./MenuMotion";
 
 const OPEN_DELAY_MS = 150;
@@ -99,7 +99,7 @@ export function ContextBar({ reading }: { reading: ContextMeterReading }) {
 }
 
 export function CompactButton({ bot, usage }: { bot: Bot; usage: TaskUsage }) {
-  const { pending, run } = useCompact();
+  const { pending, run } = useContextAction();
   if (threadContextWarning(usage, visibleMessages(bot)) === null) return null;
   const busy = Boolean(bot.busy);
   return (

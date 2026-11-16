@@ -1052,10 +1052,7 @@ export const CursorAvatar = React.forwardRef<CursorAvatarHandle, CursorAvatarPro
 
     useEffect(() => {
       if (!autoExpression || expression !== undefined || reduced) return
-      if (still || paused) {
-        selectExpression(POOLS[state][0])
-        return
-      }
+      if (still || paused) return void selectExpression(POOLS[state][0])
       let timer: ReturnType<typeof setTimeout>
       const tick = () => {
         const [lo, hi] = EXPR_CADENCE[state]

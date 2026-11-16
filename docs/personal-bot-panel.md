@@ -41,14 +41,16 @@ where a chevron's drawn stroke ends, so their right edges line up.
       page: screen pictures don't record their source.
     - bb-1's live stream runs one command per bot at a time, so a view opened
       during a bot's browser command shows "{name} is using this browser".
-  - **Setup:** Model and Automations.
+  - **Setup:** Model, Reasoning and Automations. Reasoning is upstream's
+    `EffortRow` as a row; it shows only for a model with reasoning levels.
   - **What {name} knows:** Memories, Skills, Folder and Data. Folder shows the
     open chat's own folder when it keeps one, else the bot's. Data opens the
     Data page. Above Memories, upstream's "This bot loads a lot every turn"
     row with Tidy memory shows only for a heavy bot. It sits here, not on Bot
     settings as upstream has it, because it acts on memory and people rarely
     open the gear.
-  - **This conversation:** Files (with a count), Find, and Activity. Upstream's
+  - **This conversation:** Files (with a count), Find, Start fresh and
+    Activity. Start fresh is upstream's item from `useChatMoreItems`. Upstream's
     Inspector row is left out: it is a debug log, and it stays in the chat's
     ⋯ menu.
   - **Context:** the conversation's share of the model's window, its bar, and
@@ -79,10 +81,13 @@ where a chevron's drawn stroke ends, so their right edges line up.
   automation opens that page's New box. Upstream's in-panel routine editor is
   not used. Until routines and app events arrive, the row has no value and the
   page says Checking; a failed routine load shows its error, not an empty list.
-  While one switch's request runs, every switch waits.
+  While one switch's request runs, every switch waits. On the Automations
+  page a row with a problem shows upstream's red problem line and Fix button.
 - **Bot settings (gear):** Profile (Job title, Instructions), Rules (Before it
   acts, Apps it can use), Models (Backup AIs), Calls (Call mode), Replies
   (Reply style, Notifications), Advanced (Bot API, Slack, Hide from sidebar).
+  Upstream's `AdvancedSettingsRow` follows the Advanced card; it renders
+  nothing while `SIMPLE_ONLY` is true.
   Upstream's `PackageProvenance` line sits above Profile; it shows only for a
   bot installed from an organization library.
   Backup AIs and Bot API are rows that open their own pages. "In this
@@ -94,8 +99,8 @@ where a chevron's drawn stroke ends, so their right edges line up.
   the desktop app; its page stays for links.
 - **Memories:** one row per note showing only its text; a struck or expired
   note is left out, as the server no longer reads it. A tap opens the note
-  with its source and date and a Delete button. Upstream's Memory upkeep
-  switch and its Changes list follow the notes. The Add card ends with
+  with its source and date and a Delete button. Upstream's team memory
+  entries, Memory upkeep switch and Changes list follow the notes. The Add card ends with
   upstream's "Edit as text" row, which swaps the page for a text editor of
   MEMORY.md (`MemoryTextEditor`).
 - **Skills:** two cards, split by the `origin` each skill carries. The bot's
@@ -110,11 +115,14 @@ where a chevron's drawn stroke ends, so their right edges line up.
   these on its own", and each row reads "Always on". A tap shows "{bot} loads
   this on its own" and the skill's folder, with no switch or Remove, because
   the server rejects both for a native skill.
-  A switch reads `skillSwitchOn`, not `enabled`: a skill from this computer
-  can be on but left out of the bot's list (`listed: false`), and the bot
-  finds it by search. Its switch shows off, the Skills count leaves it out,
-  and its page says "Not in this bot's list". A tap puts it in the list.
+  A skill from this computer can be on but left out of the bot's list
+  (`listed: false`), and the bot finds it by search. Since upstream 0.1.161
+  its switch shows on and the Skills count includes it, so one click turns it
+  off. Its page says "Not in this bot's list".
   `SkillsPage.dom.test.ts` covers the split and the unlisted skill.
+  Between the two cards, "In this project" lists `project` skills, the ones
+  the project folder brings. They have no switch or Remove.
+  Remove always sends upstream's `DELETE` for the skill, a library skill too.
   Upstream's `OrgSkillsCard` follows the global card, in upstream's own style.
   It shows only when an organization library offers skills.
 
@@ -282,7 +290,7 @@ the same state, motion beat and working ring.
 | `src/lib/context-meter.ts` | New: the ring's reading (red above 90%) and the Advanced card's token rows |
 | `src/components/Composer.tsx` | Renders `ComposerContextMeter` in Advanced one-to-one chats, before Stop so Stop keeps the right-hand slot; stays at 1,000 lines for the size ratchet |
 | `src/components/ChatMoreMenu.tsx` | No Usage item |
-| `src/components/ContextWarning.tsx` | `useCompact` is exported for the ring's card |
+| `src/components/ContextWarning.tsx` | `useContextAction` is exported for the ring's card |
 | `electron/window-chrome.mjs` | `TRAFFIC_LIGHTS.unframed` is `{ x: 16, y: 23 }`, so the lights' center is y=30 (upstream: y=16, center y=23) |
 | `src/components/SidebarSimpleTop.tsx` | `useTopBandLayout`, `TOP_BAND_HIT`, `TOP_BAND_BUTTON`; `SidebarSearchToggle` takes `band` |
 | `src/components/Sidebar.tsx` | A Simple row shows the name, then the job title in a small dark chip (`TITLE_CHIP`) that truncates first; its avatar takes `useBotFace`. `MAC_TRAFFIC_LIGHT_CENTER_Y` is 30. In the top band, the top row holds round Inbox, Search and New, and the Inbox row below is gone. In Simple's icon rail, Search, New and the Inbox square are gone from the top, the first bot starts 20px under the traffic lights, a line sits under the chief, and the tiles have no native tooltip: `SidebarRailCard` shows a card on hover instead. In Simple's chat view the header has no context warning |
@@ -360,5 +368,5 @@ end.
    the fork's added, changed and deleted keys. In `source-hashes.json`, drop
    upstream's entries for keys the fork deleted, and keep the fork's hash for
    keys whose English the fork changed. `i18n:check` fails on any miss.
-6. Run `corepack pnpm exec vitest run BotSettingsDialog.simple MemoryPage.team memory-notes PanelShell.dom page-registry panel-link simple-side-panel Conversations.dom BackupAis.dom ModelPicker ComputerPanel.android ComposerContextMeter context-meter ChatMoreMenu ChatView.controls Sidebar.header Sidebar.simple-layout SidebarTiles electron/window-chrome BrowserPanel ChromeRow StreamSurface guided-tour SkillsPage.dom HeavyBotRow MemoryUpkeepCards MemoryPage.text`,
+6. Run `corepack pnpm exec vitest run BotSettingsDialog.simple MemoryPage.team memory-notes PanelShell.dom page-registry panel-link simple-side-panel Conversations.dom BackupAis.dom ModelPicker ComputerPanel.android ComposerContextMeter context-meter ChatMoreMenu ChatView.controls Sidebar.header Sidebar.simple-layout SidebarTiles electron/window-chrome BrowserPanel ChromeRow StreamSurface guided-tour SkillsPage.dom HeavyBotRow MemoryUpkeepCards MemoryPage.text TriggersPage page-open SkillsSection file-size-ratchet`,
    `corepack pnpm i18n:check`, `typecheck` and `lint`.

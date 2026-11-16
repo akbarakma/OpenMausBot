@@ -1,8 +1,10 @@
 import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from "react";
-import { ChevronRight, FileText, FolderOpen, Plus, Server } from "lucide-react";
+import { createPortal } from "react-dom";
+import { ChevronRight, FileText, FolderOpen, Maximize2, Minimize2, Plus, Server } from "lucide-react";
 
 import { appSwitchPatch } from "@/lib/bot-app-access";
 import { cn } from "@/lib/cn";
+import { useModalDialog } from "@/hooks/use-modal-dialog";
 import { skillsLibraryEnabled } from "@/lib/feature-flags";
 import { activeLocale, t } from "@/lib/i18n";
 import { mcpServersForBot, mcpServersOfBot, mcpSwitch, useMcpServers } from "@/lib/mcp-servers";
@@ -35,9 +37,10 @@ import { MadeHere } from "./LibraryTab";
 import { SettingsPage } from "./SettingsPage";
 import { memoryNoteKey, memoryNoteParts, panelMemoryNotes, withMemoryNote, withoutMemoryNote, type PanelMemoryNote } from "./memory-notes";
 import type { SimplePageId } from "./page-registry";
-import { BotSwitch, buttonCls, Card, ColRow, LinkRow, NavRow, NoteRow, openRowButtonCls, openRowCls, RadioRow, RowIcon, rowCls, RowText, switchRowCls, TextRow } from "./rows";
+import { BotSwitch, buttonCls, Card, ColRow, ItemRow, LinkRow, NavRow, NoteRow, openRowButtonCls, openRowCls, RadioRow, RowIcon, rowCls, RowText, switchRowCls, TextRow, TrashButton } from "./rows";
 import { MemoryUpkeepCards } from "./MemoryUpkeepCards";
 import { useMemoryDoc } from "./use-memory-doc";
+import { useTeamMemoryEntries } from "../conversation-share/conversation-share";
 
 type Derived = ReturnType<typeof useBotSettingsDerived>;
 
@@ -153,6 +156,7 @@ export function AppsPage({ bot, derived }: PageContext) {
  * the hash it was read at, so a note the bot added meanwhile is never lost: a conflict re-reads and asks again. */
 export function MemoryPage({ bot, detail, onDetail }: PageContext & DetailContext) {
   const memory = useMemoryDoc(bot);
+  const teamSaved = useTeamMemoryEntries(bot.id, memory.mine && bot.memoryEnabled !== false && !bot.defaultBot?.person, memory.docs);
   const [draft, setDraft] = useState("");
   const [asText, setAsText] = useState<{ botId: string; doc: MemoryDoc } | null>(null);
   const [saving, setSaving] = useState(false);
@@ -267,7 +271,7 @@ export function MemoryPage({ bot, detail, onDetail }: PageContext & DetailContex
           <NoteRow tone="warn">{t("botPanel.library.memoryError")}</NoteRow>
         ) : notes === null ? (
           <NoteRow>{t("common.checking")}</NoteRow>
-        ) : notes.length === 0 ? (
+        ) : notes.length === 0 && teamSaved.entries.length === 0 ? (
           <NoteRow>{t("botPanel.memory.empty")}</NoteRow>
         ) : notes.map((note) => {
           return (
@@ -279,6 +283,15 @@ export function MemoryPage({ bot, detail, onDetail }: PageContext & DetailContex
             />
           );
         })}
+        {memoryOn && !memory.error && notes !== null && teamSaved.entries.map((entry) => (
+          <div key={entry.id} data-team-memory-entry={entry.id} className={rowCls}>
+            <div className="min-w-0 flex-1 text-[13px] leading-[1.45] text-ink">
+              {entry.text}
+              {entry.yours && <span className="block text-[12px] text-ink-secondary">{t("teamMemorySave.yours")}</span>}
+            </div>
+            <TrashButton label={t("common.delete")} disabled={saving} onClick={() => void change(async () => { await teamSaved.remove(entry.id); return true; })} />
+          </div>
+        ))}
         {error && <NoteRow tone="warn">{error}</NoteRow>}
       </Card>
       {memoryOn && (
@@ -321,6 +334,14 @@ function MemoryTextEditor({ bot, doc, mine, onDone }: {
   const [savedDraft, setSavedDraft] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Full window shows the same text over the whole app; going in or out keeps what was typed.
+  const [wide, setWide] = useState(false);
+  const field = useRef<HTMLTextAreaElement>(null);
+  const firstRender = useRef(true);
+  useEffect(() => {
+    if (firstRender.current) firstRender.current = false;
+    else field.current?.focus();
+  }, [wide]);
   // The file is saved either way; a save that lands after the person moved to another bot must not show in that bot's list.
   const mounted = useRef(true);
   useEffect(() => {
@@ -344,22 +365,24 @@ function MemoryTextEditor({ bot, doc, mine, onDone }: {
   };
   const reload = () => {
     if (!conflict) return;
-    setSavedDraft(text);
+    // A second Reload keeps the first kept draft too.
+    setSavedDraft((kept) => (kept === null || kept === text ? text : `${kept}\n\n${text}`));
     setBase({ text: conflict.current, hash: conflict.currentHash });
     setText(conflict.current);
     setConflict(null);
   };
 
-  return (
-    <Card>
-      <ColRow data-panel-row="memory-text">
+  const body = (
+    <>
         {conflict && <ConflictNotice botName={bot.name} busy={saving} onReload={reload} onOverwrite={() => void save(conflict.currentHash)} />}
         <textarea
+          ref={field}
           data-memory-text=""
-          className={cn(inputCls, "min-h-[280px] resize-y font-mono text-[13px] leading-relaxed")}
+          className={cn(inputCls, wide ? "min-h-0 flex-1 resize-none" : "min-h-[280px] resize-y", "font-mono text-[13px] leading-relaxed")}
           value={text}
           placeholder={t("memory.indexPlaceholder")}
           aria-label={t("memory.botMemory")}
+          readOnly={saving}
           onChange={(event) => setText(event.target.value)}
         />
         {error && <div className="text-[13px] text-warning">{error}</div>}
@@ -373,6 +396,10 @@ function MemoryTextEditor({ bot, doc, mine, onDone }: {
           </div>
         )}
         <div className="flex justify-end gap-2">
+          <button type="button" data-memory-wide="" className={cn(buttonCls, "mr-auto inline-flex items-center gap-1.5")} onClick={() => setWide(!wide)}>
+            {wide ? <Minimize2 size={14} aria-hidden="true" /> : <Maximize2 size={14} aria-hidden="true" />}
+            {t(wide ? "botPanel.memory.exitFullWindow" : "botPanel.memory.fullWindow")}
+          </button>
           <button type="button" className={buttonCls} disabled={saving} onClick={() => onDone(null)}>{t("common.cancel")}</button>
           <button
             type="button"
@@ -384,8 +411,34 @@ function MemoryTextEditor({ bot, doc, mine, onDone }: {
             {saving ? t("memory.saving") : t("memory.save")}
           </button>
         </div>
-      </ColRow>
+    </>
+  );
+
+  if (wide) return <MemoryFullWindow label={t("memory.botMemory")} onClose={() => setWide(false)}>{body}</MemoryFullWindow>;
+  return (
+    <Card>
+      <ColRow data-panel-row="memory-text">{body}</ColRow>
     </Card>
+  );
+}
+
+/** The memory text over the whole app window, so a long MEMORY.md is easy to read and edit; Escape goes back to the panel. */
+function MemoryFullWindow({ label, onClose, children }: { label: string; onClose: () => void; children: ReactNode }) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useModalDialog(dialogRef, onClose);
+  return createPortal(
+    <div
+      ref={dialogRef}
+      tabIndex={-1}
+      role="dialog"
+      aria-modal="true"
+      aria-label={label}
+      data-memory-full-window=""
+      className="fixed inset-0 z-[65] flex flex-col gap-3 bg-app p-4 outline-none"
+    >
+      {children}
+    </div>,
+    document.body,
   );
 }
 
@@ -401,7 +454,8 @@ export function SkillsPage({ bot, detail, onDetail }: PageContext & DetailContex
   const [showGlobal, setShowGlobal] = useState(false);
   const home = useDesktopCapabilities().capabilities.host?.homeDir;
   const libraryOn = skillsLibraryEnabled(state.config);
-  const own = skills.skills.filter((skill) => skill.origin !== "native");
+  const own = skills.skills.filter((skill) => skill.origin !== "native" && skill.origin !== "project");
+  const project = skills.skills.filter((skill) => skill.origin === "project");
   const native = skills.skills.filter((skill) => skill.origin === "native");
   const open = detail === null || skills.loading ? null : skills.skills.find((skill) => skill.name === detail) ?? null;
   const gone = detail !== null && !skills.loading && open === null;
@@ -415,11 +469,8 @@ export function SkillsPage({ bot, detail, onDetail }: PageContext & DetailContex
     skills.setWorking(skill.name);
     skills.setError("");
     try {
-      if (skill.origin === "library") await skills.putAssignments(skill.name, true);
-      else {
-        await api(`/api/bots/${bot.id}/skills/${encodeURIComponent(skill.name)}`, { method: "DELETE" });
-        await skills.refresh();
-      }
+      await api(`/api/bots/${bot.id}/skills/${encodeURIComponent(skill.name)}`, { method: "DELETE" });
+      await skills.refresh();
       return true;
     } catch (cause) {
       skills.setError(errorText(cause, t("botPanel.skills.removeFailed")));
@@ -476,7 +527,7 @@ export function SkillsPage({ bot, detail, onDetail }: PageContext & DetailContex
     <ConfirmDialog
       open={confirming !== null}
       tone="danger"
-      title={t("botPanel.skills.removeConfirm", { name: confirming?.name ?? "" })}
+      title={t(confirming?.origin === "library" ? "skills.unassignConfirm" : "botPanel.skills.removeConfirm", { name: confirming?.name ?? "" })}
       body={t("botPanel.skills.removeBody", { name: bot.name })}
       confirmLabel={t("botPanel.skills.removeAction")}
       pending={Boolean(skills.working)}
@@ -490,7 +541,7 @@ export function SkillsPage({ bot, detail, onDetail }: PageContext & DetailContex
   );
 
   if (open) {
-    const openUnlisted = open.enabled && !skillSwitchOn(open);
+    const openUnlisted = open.enabled && open.listed === false;
     return (
       <>
         <h3 className="mx-1 break-words text-[18px] font-semibold text-ink">{open.name}</h3>
@@ -584,6 +635,13 @@ export function SkillsPage({ bot, detail, onDetail }: PageContext & DetailContex
         ) : own.map((skill) => skillRow(skill, switchFor(skill)))}
         {skills.error && !skills.reviewing && <NoteRow tone="warn">{skills.error}</NoteRow>}
       </Card>
+      {project.length > 0 && (
+        <Card label={t("botPanel.skills.project")} anchor="project-skills">
+          {project.map((skill) => (
+            <ItemRow key={skill.name} data-panel-row={`project-skill:${skill.name}`} title={skill.name} hint={skill.description || skill.source} />
+          ))}
+        </Card>
+      )}
       {native.length > 0 && (
         <Card anchor="global-skills">
           <button

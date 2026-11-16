@@ -142,22 +142,22 @@ it("counts only the bot's own switched-on skills on the panel's Skills row", asy
   expect(host.querySelector('[data-panel-page="skills"]')?.textContent).toContain("None");
 });
 
-it("shows a skill from this computer that is on but not in the bot's list as off, found when a task needs it", async () => {
+it("shows a skill from this computer that is on but not in the bot's list as on, found when a task needs it", async () => {
   listed = [skill("browser-web-search", undefined, "learn:automatic review of this conversation"), { ...skill("shared-notes", "imported", "/home/ada/.claude/skills"), listed: false }];
   await act(async () => root.render(createElement(Skills)));
   await settle();
   const switchOf = (name: string) => host.querySelector(`[data-panel-row="skill:${name}"] [role="switch"]`)!.getAttribute("aria-checked");
-  expect(switchOf("shared-notes")).toBe("false");
+  expect(switchOf("shared-notes")).toBe("true");
   expect(switchOf("browser-web-search")).toBe("true");
   await act(async () => host.querySelector<HTMLButtonElement>('[data-panel-open="skill:shared-notes"]')!.click());
-  expect(switchOf("shared-notes")).toBe("false");
+  expect(switchOf("shared-notes")).toBe("true");
   expect(host.querySelector("[data-skill-unlisted]")?.textContent).toBe("Not in this bot's list. It finds this skill when a task needs it.");
 
   act(() => root.unmount());
   root = createRoot(host);
   await act(async () => root.render(createElement(LibraryTab, { bot, onOpen: () => {} })));
   await settle();
-  expect(host.querySelector('[data-panel-page="skills"]')?.textContent).toContain("1");
+  expect(host.querySelector('[data-panel-page="skills"]')?.textContent).toContain("2");
 });
 
 it("lists the skills again when the bot moves to another conversation", async () => {

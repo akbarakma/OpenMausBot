@@ -6,6 +6,7 @@ import { t } from "@/lib/i18n";
 import { engineDisplayName } from "@/lib/engine-name";
 import { copyText } from "@/lib/copy-text";
 import { DEVICE_SIGN_IN_COPY, DeviceSignIn, deviceSignInProvider } from "./DeviceSignIn";
+import { EngineBrowserSignIn } from "./EngineBrowserSignIn";
 import { ClaudeSignIn } from "./ClaudeSignIn";
 import { RefreshEngines } from "./EngineLibrary";
 import { AppCopyNotice, AppCopySetup } from "./EngineAppCopy";
@@ -15,6 +16,7 @@ export { installCommandFor };
 import { keyEntry, keyForInstance, type KeyId } from "./keys/key-catalog";
 import { openKeySettings } from "./keys/key-focus";
 import { KeyRow, SavedKeyLine } from "./keys/KeyRow";
+import { OllamaStatusLine } from "./OllamaStatusLine";
 
 export function needsSignIn(instance: InstanceInfo | undefined): boolean {
   return instance?.snapshot.state === "available" && instance.snapshot.authenticated === false;
@@ -245,9 +247,9 @@ export function EngineUpdateNotice({
           <p className="mt-0.5 text-[12px] leading-relaxed text-ink-secondary">{update.message}</p>
         </div>
       </div>
-      {instance?.install?.server
+      {update.command && (instance?.install?.server && update.serverInstall !== false
         ? <ServerEngineInstall instance={instance} mode="update" command={update.command} quiet={quiet} />
-        : <CommandRow command={update.command} actionLabel={t("engineSetup.openUpdate")} compact />}
+        : <CommandRow command={update.command} actionLabel={t("engineSetup.openUpdate")} compact />)}
     </div>
   );
 }
@@ -407,7 +409,7 @@ export function isApiKeyEngine(instance: InstanceInfo | undefined): boolean {
 }
 
 export function hasSavedApiKey(instance: InstanceInfo): boolean {
-  return isApiKeyEngine(instance) && instance.snapshot.authenticated === true;
+  return isApiKeyEngine(instance) && instance.serverKind !== "ollama" && instance.snapshot.authenticated === true;
 }
 
 function apiKeySetup(instance: InstanceInfo): boolean {
@@ -503,6 +505,17 @@ function ApiKeyEngineSetup({ instance, className, unframed, configured = false }
   );
 }
 
+function CheckEnginesAgain() {
+  const { refreshInstances } = useStore();
+  const [busy, setBusy] = useState(false);
+  return (
+    <button type="button" disabled={busy} className="ui-button" onClick={() => { setBusy(true); void refreshInstances().finally(() => setBusy(false)); }}>
+      {busy && <Loader2 size={12} className="animate-spin" aria-hidden="true" />}
+      {t("common.checkAgain")}
+    </button>
+  );
+}
+
 export function ApiKeyEngineManage({ instance, className }: { instance: InstanceInfo; className?: string }) {
   if (!hasSavedApiKey(instance)) return null;
   return <ApiKeyEngineSetup instance={instance} className={className} unframed={false} configured />;
@@ -537,6 +550,7 @@ export function EngineSetup({
   /** A Cloud's "not installed" reason only says to install it in a terminal or use Set CLI; the card says what to do instead. */
   const cloudReasonHidden = cloudCantInstall || (cloudHome && !signInOnly && Boolean(install?.server) && instance.snapshot.notEngineCli !== true);
   const deviceSignIn = signInOnly && instance.authentication?.method === "device-code";
+  const engineBrowserSignIn = signInOnly && instance.authentication?.method === "browser";
   const browserSignIn = signInOnly && instance.authentication?.method === "browser-pkce";
   const pasteSignIn = signInOnly && instance.authentication?.method === "paste-code";
   const provider = deviceSignInProvider(instance.driverKind);
@@ -545,7 +559,9 @@ export function EngineSetup({
     ? t("engineSetup.signInTitle", { name: engineDisplayName(instance) })
     : t("engineSetup.setupTitle", { name: engineDisplayName(instance) });
   const description = descriptionOverride ?? (signInOnly
-    ? browserSignIn
+    ? engineBrowserSignIn
+      ? t("engineSetup.engineBrowser.description", { name: engineDisplayName(instance) })
+      : browserSignIn
       ? t("engineSetup.chatgpt.description")
       : deviceSignIn
       ? t(DEVICE_SIGN_IN_COPY[provider].description)
@@ -586,15 +602,17 @@ export function EngineSetup({
     return (
       <div className={cn(!unframed && "rounded-xl border border-hairline/40 bg-control/30 p-3", className)}>
         <div className="text-[13px] font-semibold text-ink">{t("engineSetup.notReady", { name: engineDisplayName(instance) })}</div>
-        <p className="mt-1 text-[12px] leading-relaxed text-ink-secondary">
-          {instance.snapshot.authenticationUnavailableReason ?? instance.snapshot.reason ?? t("engineSetup.noReason")}
-        </p>
+        {instance.snapshot.ollama
+          ? <div className="mt-1 flex flex-col items-start gap-2"><OllamaStatusLine status={instance.snapshot.ollama} /><CheckEnginesAgain /></div>
+          : <p className="mt-1 text-[12px] leading-relaxed text-ink-secondary">
+              {instance.snapshot.authenticationUnavailableReason ?? instance.snapshot.reason ?? t("engineSetup.noReason")}
+            </p>}
       </div>
     );
   }
 
   // The app's own copy is out of reach of the person's terminal, so its sign-in is finished here.
-  if (signInOnly && install.appCopy && !deviceSignIn && !browserSignIn && !pasteSignIn) {
+  if (signInOnly && install.appCopy && !deviceSignIn && !browserSignIn && !engineBrowserSignIn && !pasteSignIn) {
     return <AppCopySetup instance={instance} className={className} unframed={unframed} />;
   }
 
@@ -621,7 +639,9 @@ export function EngineSetup({
         </p>
       ))}
 
-      {deviceSignIn || browserSignIn ? (
+      {engineBrowserSignIn ? (
+        <EngineBrowserSignIn key={instance.instanceId} instanceId={instance.instanceId} />
+      ) : deviceSignIn || browserSignIn ? (
         <>
           <DeviceSignIn key={instance.instanceId} instanceId={instance.instanceId} browserPkce={browserSignIn} provider={provider} />
           {deviceSignIn && provider !== "codex" && signInCommand && serverTerminal(cloudHome) && (

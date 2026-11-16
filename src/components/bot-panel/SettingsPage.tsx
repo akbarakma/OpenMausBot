@@ -23,6 +23,7 @@ import { useBotApps } from "../bot-settings/useBotApps";
 import { useSlackManagementUrl } from "../bot-settings/useSlackManagement";
 import type { useBotSettingsDerived } from "../bot-settings/useBotSettingsDerived";
 import { useThreadApproval } from "../thread-approval";
+import { AdvancedSettingsRow } from "./AdvancedSettingsRow";
 import { SoulChanges } from "./SoulChanges";
 import type { SimplePageId } from "./page-registry";
 import { buttonCls, Card, ColRow, NavRow, RowIcon, rowCls, RowText, Segmented, SwitchRow, TrashButton, type SegmentOption } from "./rows";
@@ -276,6 +277,8 @@ export function SettingsPage({ bot, derived, onOpen, editingInstructions = false
         )}
         <HideFromSidebarRow bot={bot} />
       </Card>
+
+      <AdvancedSettingsRow />
       {approval.dialogs}
     </div>
   );

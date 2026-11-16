@@ -82,6 +82,8 @@ describe("the panel's page requests", () => {
 
 describe("a published page's Open in the app", () => {
   it("shows the bot's browser, whatever tab its computer was left on", () => {
+    const kept = new Map<string, string>();
+    vi.stubGlobal("localStorage", { getItem: (key: string) => kept.get(key) ?? null, setItem: (key: string, value: string) => void kept.set(key, value) });
     writeComputerPanelView("pepper", "files");
     const actions: unknown[] = [];
     const ref = { state: () => ({ selectedId: "pepper", bots: [{ id: "pepper" }], groups: [], config: facts().config }), dispatch: (action: unknown) => actions.push(action) } as unknown as StoreRef;
@@ -97,6 +99,7 @@ describe("a published page's Open in the app", () => {
     } finally {
       root.unmount();
       Reflect.deleteProperty(window, "ogb");
+      vi.unstubAllGlobals();
     }
   });
 });
