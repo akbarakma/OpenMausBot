@@ -36,6 +36,13 @@ function ItemRow({ item }: { item: SidebarMenuItem }) {
   );
 }
 
+// Upstream's select, stretched over the row so a click anywhere opens it, and drawn like the Model row's value.
+const REASONING_ROW = cn(
+  "relative [&_div:has(>select)]:absolute [&_div:has(>select)]:inset-0 [&_div:has(>select)]:max-w-none",
+  "[&_select]:h-full [&_select]:rounded-none [&_select]:bg-transparent [&_select]:py-0 [&_select]:pr-[30px] [&_select]:text-ink-secondary [&_select]:[text-align-last:right] [&_select]:hover:bg-ink/[0.03]",
+  "[&_div:has(>select)>svg]:right-[13px] [&_div:has(>select)>svg]:size-3 [&_div:has(>select)>svg]:text-ink-tertiary",
+);
+
 export function PanelHome({ bot, onOpen }: { bot: Bot; onOpen: (page: SimplePageId) => void }) {
   const { items } = useChatMoreItems(bot);
   const automationState = useBotAutomations(bot.id);
@@ -63,7 +70,7 @@ export function PanelHome({ bot, onOpen }: { bot: Bot; onOpen: (page: SimplePage
           bot={bot}
           threadId={bot.threadId}
           compact
-          className={cn(rowCls, "cursor-pointer hover:bg-ink/[0.03]")}
+          className={cn(rowCls, REASONING_ROW)}
           label={<span className="flex shrink-0 items-center gap-2.5"><RowIcon icon={Gauge} /><span className="text-[14px] font-medium text-ink">{t("model.simple.reasoning")}</span></span>}
         />
         <NavRow

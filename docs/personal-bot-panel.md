@@ -42,7 +42,9 @@ where a chevron's drawn stroke ends, so their right edges line up.
     - bb-1's live stream runs one command per bot at a time, so a view opened
       during a bot's browser command shows "{name} is using this browser".
   - **Setup:** Model, Reasoning and Automations. Reasoning is upstream's
-    `EffortRow` as a row; it shows only for a model with reasoning levels.
+    `EffortRow`; it shows only for a model with reasoning levels.
+    `REASONING_ROW` in `PanelHome.tsx` stretches its select over the row and
+    draws the value like the Model row's.
   - **What {name} knows:** Memories, Skills, Folder and Data. Folder shows the
     open chat's own folder when it keeps one, else the bot's. Data opens the
     Data page. Above Memories, upstream's "This bot loads a lot every turn"
