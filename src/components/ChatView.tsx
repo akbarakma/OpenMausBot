@@ -1246,9 +1246,7 @@ export const ChatView = memo(function ChatView({ bot: profile, inForkPanel = fal
         </div>
       )}
       <LiveCallBar bot={bot} />
-      {inForkPanel && hiddenWork(profile.tasks?.find((candidate) => candidate.threadId === bot.threadId)) ? (
-        <p data-work-read-only className="border-t border-hairline px-4 py-3 text-center text-[13px] text-ink-secondary">{t("chat.workSession.readOnly")}</p>
-      ) : canWrite === false ? (
+      {inForkPanel && hiddenWork(profile.tasks?.find((candidate) => candidate.threadId === bot.threadId)) ? null : canWrite === false ? (
         <NewConversationInstead bot={bot} onNew={() => dispatch({ type: "newTask", botId: bot.id })} />
       ) : (
       <Composer

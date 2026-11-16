@@ -12,7 +12,6 @@ export interface ExchangeLine {
   at: number;
   botId: string;
   text: string;
-  workThreadId?: string;
   status?: "working" | "failed" | "cancelled";
 }
 

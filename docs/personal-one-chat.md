@@ -16,8 +16,7 @@ below.
   and "Replied to Kara: …". Each row carries a `threadRef` to the hidden
   thread. The sender's chat gets upstream's own request and result rows.
   `GET /api/bots/<a>/exchange/<b>` returns what two bots said to each other,
-  both ways, oldest first, at most 200 lines, with secrets redacted. Each
-  reply carries the hidden thread it was written in.
+  both ways, oldest first, at most 200 lines, with secrets redacted.
 - **Side jobs.** `start_thread` on the bot itself always reports back
   (upstream's `report_back`), so the job runs hidden and its result resumes
   the chat that started it.
@@ -94,16 +93,16 @@ existing line.
   "Messaged Kara" or "Message from Kara", with Kara's face and no text.
   `exchangeRow` in `src/lib/bot-exchange.ts` picks these rows; a side job's
   rows keep upstream's look. A click opens the exchange in a modal: both
-  bots' messages, oldest first, with "See work" under each reply.
+  bots' messages, oldest first, with the time under each reply.
 - A click on anything that names hidden work opens it read only in the same
-  modal: a "See run" link, a side job row, "See work", an Inbox line, a
-  notification, a `#Title` link. `openThread` in
+  modal: a "See run" link, a side job row, an Inbox line, a notification, a
+  `#Title` link. `openThread` in
   `src/state/thread-navigation.ts` decides it for all of them, by the
   thread's `routineRunId`, and opens upstream's fork panel state, which
-  `WorkModal` shows instead of the side panel. Opened from an exchange, it
-  has a Back button. With no chat on screen it shows that bot's chat first.
-- Hidden work has no message box. It shows "Read only. You talk to each bot
-  in its own chat." (`chat.workSession.readOnly`).
+  `WorkModal` shows instead of the side panel. With no chat on screen it
+  shows that bot's chat first.
+- Hidden work has no message box and no note in its place. A bot reads its
+  own hidden sessions with `session_search` when asked why something failed.
 - Nothing starts or switches threads: the chat ⋯ menu has no New thread and
   no thread list, the sidebar's bot menu has no thread items, the + menu has
   no "New conversation with", ⌘⇧N does nothing, and a message has no Fork.
@@ -116,7 +115,7 @@ existing line.
 | `src/state/thread-navigation.ts` | `openThread` opens hidden work in the fork panel |
 | `src/state/fork-panel.ts` | `openForkPanel` leaves the bot panel and other side panels open |
 | `src/components/ThreadChip.tsx` | `exchangeRow` draws a bot exchange row as `ExchangeRowLine` |
-| `src/components/ChatView.tsx` | no message box for hidden work in the fork panel; no Fork on a message |
+| `src/components/ChatView.tsx` | no message box and no note for hidden work in the fork panel; no Fork on a message |
 | `src/components/ChatMoreMenu.tsx` | no `new-thread`, `threads` and `start-fresh` items |
 | `src/components/SidebarBotMenu.tsx` | no thread items in Simple's bot menu |
 | `src/components/Sidebar.tsx` | no "New conversation with" in the + menu |

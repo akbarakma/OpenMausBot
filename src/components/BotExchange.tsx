@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ArrowLeftRight, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { ArrowLeftRight, ChevronRight, X } from "lucide-react";
 import { api } from "@/state/api";
-import { currentTaskBot, formatTime, openThread, useStore, type Bot } from "@/state/store";
+import { currentTaskBot, formatTime, useStore, type Bot } from "@/state/store";
 import { closeExchange, openExchange, useShownExchange, type ExchangeLine, type ExchangeRow } from "@/lib/bot-exchange";
 import { useModalDialog } from "@/hooks/use-modal-dialog";
-import { useShowThreads } from "@/lib/thread-preferences";
 import { localDay } from "@/lib/transcript-derivations";
 import { MAUS_COLORS } from "@/lib/mascot";
 import { t } from "@/lib/i18n";
@@ -44,10 +43,10 @@ export function WorkModal() {
   useEffect(() => closeExchange, [state.selectedId, state.activeView]);
   if (!pair && !panel) return null;
   const close = () => { closeExchange(); dispatch({ type: "closeForkPanel" }); };
-  return <WorkDialog pair={pair} onClose={close} onBack={pair && panel ? () => dispatch({ type: "closeForkPanel" }) : undefined} />;
+  return <WorkDialog pair={pair} onClose={close} />;
 }
 
-function WorkDialog({ pair, onClose, onBack }: { pair: { a: string; b: string } | null; onClose: () => void; onBack: (() => void) | undefined }) {
+function WorkDialog({ pair, onClose }: { pair: { a: string; b: string } | null; onClose: () => void }) {
   const { state } = useStore();
   const dialog = useRef<HTMLDivElement>(null);
   useModalDialog(dialog, onClose);
@@ -63,11 +62,6 @@ function WorkDialog({ pair, onClose, onBack }: { pair: { a: string; b: string } 
       <div ref={dialog} role="dialog" aria-modal="true" tabIndex={-1} aria-label={label} data-work-modal=""
         className="ui-modal animate-pop-in flex h-[min(760px,calc(100vh-48px))] w-[min(600px,calc(100vw-32px))] flex-col overflow-hidden text-ink outline-none motion-reduce:animate-none">
         <header className="relative flex h-14 shrink-0 items-center justify-center px-14">
-          {onBack && (
-            <button type="button" onClick={onBack} className="ui-button absolute start-3 top-1/2 inline-flex h-9 -translate-y-1/2 cursor-pointer items-center gap-0.5 ps-1.5 pe-3 text-[13px]">
-              <ChevronLeft size={16} aria-hidden="true" />{t("chat.exchange.back")}
-            </button>
-          )}
           {panel ? <h2 className="truncate text-[14px] font-medium">{label}</h2> : a && b && (
             <h2 className="flex min-w-0 items-center gap-2 text-[14px] font-medium" aria-label={label}>
               <BotAvatar bot={a} state="happy" size={22} animated={false} /><span className="truncate">{a.name}</span>
@@ -115,8 +109,7 @@ function HiddenWork() {
 }
 
 function Transcript({ a, b }: { a: string; b: string }) {
-  const { state, dispatch } = useStore();
-  const showThreads = useShowThreads();
+  const { state } = useStore();
   const [lines, setLines] = useState<ExchangeLine[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
@@ -147,7 +140,6 @@ function Transcript({ a, b }: { a: string; b: string }) {
       {lines.map((line, index) => {
         const bot = state.bots.find((candidate) => candidate.id === line.botId);
         const newDay = index === 0 || localDay(lines[index - 1]!.at) !== localDay(line.at);
-        const work = line.workThreadId;
         return (
           <div key={line.id}>
             {newDay && <DaySeparator at={line.at} today={today} simple />}
@@ -157,15 +149,7 @@ function Transcript({ a, b }: { a: string; b: string }) {
                 <span className="px-1 text-[13px] font-semibold text-ink-secondary" style={bot ? nameColor(bot) : undefined}>{bot?.name}</span>
                 {line.text ? <div className={SIMPLE_BOT_BUBBLE}><ChatMarkdown text={line.text} /></div>
                   : <div className="px-1 text-[13px] text-ink-secondary">{t(`chat.exchange.${line.status ?? "working"}`)}</div>}
-                {work && (
-                  <span className="flex items-center gap-1 px-1 text-[12px] text-ink-tertiary">
-                    {formatTime(line.at)}
-                    <button type="button" className="inline-flex h-7 cursor-pointer items-center gap-0.5 rounded-md px-1.5 text-ink-secondary hover:bg-ink/[0.06] hover:text-ink"
-                      onClick={() => openThread(dispatch, { botId: line.botId, threadId: work }, state, showThreads)}>
-                      {t("chat.exchange.seeWork")}<ChevronRight size={12} aria-hidden="true" />
-                    </button>
-                  </span>
-                )}
+                {line.id.endsWith(":reply") && <span className="px-1 text-[12px] text-ink-tertiary">{formatTime(line.at)}</span>}
               </div>
             </div>
           </div>
