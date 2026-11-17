@@ -2,7 +2,7 @@ import { useContext, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ArrowLeftRight } from "lucide-react";
 import { api } from "@/state/api";
-import { currentTaskBot, formatTime, openThread, StoreContext, useStore, type Bot } from "@/state/store";
+import { currentTaskBot, formatTime, openThread, StoreContext, useStore, type Action, type Bot, type OptionCardData } from "@/state/store";
 import { closeExchange, openExchange, useShownExchange, type ExchangeLine, type OneChatRow } from "@/lib/bot-exchange";
 import { useShowThreads } from "@/lib/thread-preferences";
 import { cn } from "@/lib/cn";
@@ -20,16 +20,40 @@ import { SIMPLE_BOT_BUBBLE } from "./chat-bubble";
 
 const nameColor = (bot: Bot) => (bot.color === "chrome" ? undefined : { color: MAUS_COLORS[bot.color] });
 
-const LINE = "inline-flex h-7 max-w-full cursor-pointer items-center gap-1.5 rounded-lg px-2.5 text-[13px] transition-colors hover:bg-ink/[0.06]";
+const LINE_SHAPE = "inline-flex h-7 max-w-full items-center gap-1.5 rounded-lg px-2.5 text-[13px]";
+const LINE = cn(LINE_SHAPE, "cursor-pointer transition-colors hover:bg-ink/[0.06]");
 
-export function SkillChangeLine({ line, botId, name }: { line: string; botId: string; name: string }) {
+type Dispatch = (action: Action) => void;
+
+// A line opens the place that holds what changed; a deleted thing, a wait or an app setting has no such place.
+function appliedTarget(card: OptionCardData): ((dispatch: Dispatch) => void) | undefined {
+  const skill = card.skillRequest;
+  if (skill) return skill.action === "delete" ? undefined : (dispatch) => openBotSettings(dispatch, "skills", { botId: skill.botId, page: "skills", detail: skill.name });
+  const automation = card.routineRequest ?? card.webhookRequest ?? card.appTriggerRequest;
+  if (automation) return automation.operation.action === "delete" ? undefined
+    : (dispatch) => openBotSettings(dispatch, "routines", { botId: automation.operation.forBot?.botId ?? automation.botId, page: "routines" });
+  const model = card.modelRequest;
+  if (model) return (dispatch) => openBotSettings(dispatch, "model", { botId: model.targetBotId });
+  const profile = card.profileRequest;
+  if (profile) return (dispatch) => profile.changes.soul !== undefined
+    ? openBotSettings(dispatch, "soul", { botId: profile.targetBotId })
+    : openBotSettings(dispatch, "identity", { botId: profile.targetBotId, page: "settings" });
+  if ((card.teamSetupRequest && !card.teamSetupRequest.deletion) || card.teamMemoryRequest) return (dispatch) => dispatch({ type: "showTeamMap" });
+  return undefined;
+}
+
+export function AppliedLine({ card, name, line }: { card: OptionCardData; name: string; line: string }) {
   const dispatch = useContext(StoreContext)?.dispatch;
+  const open = appliedTarget(card);
+  const wait = card.waitRequest;
+  const hint = wait?.followUp ? t("approval.applied.waitFollowUp", { name, followUp: wait.followUp }) : line;
   return (
-    <div className="flex justify-center">
-      <button type="button" data-skill-change-line={name} onClick={() => { if (dispatch) openBotSettings(dispatch, "skills", { botId, page: "skills", detail: name }); }}
-        className={cn(LINE, "text-ink-secondary hover:text-ink")}>
-        <span className="truncate">{line}</span>
-      </button>
+    <div className="flex justify-center" data-applied-line="">
+      {open ? (
+        <button type="button" title={hint} onClick={() => { if (dispatch) open(dispatch); }} className={cn(LINE, "text-ink-secondary hover:text-ink")}>
+          <span className="truncate">{line}</span>
+        </button>
+      ) : <div title={hint} className={cn(LINE_SHAPE, "text-ink-secondary")}><span className="truncate">{line}</span></div>}
     </div>
   );
 }

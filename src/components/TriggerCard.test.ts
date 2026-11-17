@@ -18,6 +18,7 @@ vi.mock("@/state/store", async (importOriginal) => ({
   api: (...args: unknown[]) => fixture.api(...args),
 }));
 vi.mock("@/lib/thread-preferences", () => ({ useShowThreads: () => false }));
+vi.mock("@/lib/one-chat", () => ({ ONE_CHAT: false, hiddenWork: () => false }));
 
 const { ApprovalCard } = await import("./ApprovalCard");
 

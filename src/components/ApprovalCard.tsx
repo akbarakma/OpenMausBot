@@ -19,7 +19,7 @@ import { yourComputerAsk } from "@/lib/your-computer";
 import { computerAskWords } from "@/lib/computer-ask";
 import { mcpRequestActionLabel } from "@/lib/mcp-request-label";
 import { TriggerCard } from "./TriggerCard";
-import { CardHint } from "./CardHint"; import { SkillChangeLine } from "./BotExchange"; import { ONE_CHAT } from "@/lib/one-chat";
+import { CardHint } from "./CardHint"; import { AppliedLine } from "./BotExchange"; import { ONE_CHAT } from "@/lib/one-chat";
 
 interface ToolLabels {
   [tool: string]: LocaleKey;
@@ -450,11 +450,11 @@ export function ApprovalCard({
 }) {
   const card = message.card;
   if (!card) return null;
-  if (cardAutomation(card)) return <TriggerCard card={card} threadId={threadId} />;
   const applied = card.autoApplied === true && card.answered === "allow" && !card.held
     ? appliedChange(card, bot?.name ?? t("approval.someone"))
     : undefined;
-  if (applied && ONE_CHAT && card.skillRequest) return <SkillChangeLine line={card.undone ? `${applied.line} · ${t("approval.applied.undone")}` : applied.line} botId={card.skillRequest.botId} name={card.skillRequest.name} />; if (applied) return <AppliedChangeLine card={card} name={bot?.name ?? t("approval.someone")} originalName={message.from?.name} threadId={threadId} summary={applied} />;
+  if (ONE_CHAT && (applied || cardAutomation(card))) return <AppliedLine card={card} name={bot?.name ?? t("approval.someone")} line={!applied ? t("approval.applied.automation.create", { name: bot?.name ?? t("approval.someone"), title: card.appTriggerRequest?.undo?.name ?? card.title }) : card.undone && !applied.cancels ? `${applied.line} · ${t("approval.applied.undone")}` : applied.line} />;
+  if (cardAutomation(card)) return <TriggerCard card={card} threadId={threadId} />; if (applied) return <AppliedChangeLine card={card} name={bot?.name ?? t("approval.someone")} originalName={message.from?.name} threadId={threadId} summary={applied} />;
   const settled = card.answered;
   const expired = card.expired === true || staleRoutineCard(card);
   const via = card.answeredBy?.via;

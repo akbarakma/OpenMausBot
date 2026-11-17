@@ -6,6 +6,7 @@ import type { Message } from "@/state/store";
 
 const fixture = vi.hoisted(() => ({ admin: false as boolean | null }));
 vi.mock("@/lib/use-owner-or-admin", () => ({ useOwnerOrAdmin: () => fixture.admin }));
+vi.mock("@/lib/one-chat", () => ({ ONE_CHAT: false, hiddenWork: () => false }));
 
 const { ApprovalCard } = await import("./ApprovalCard");
 

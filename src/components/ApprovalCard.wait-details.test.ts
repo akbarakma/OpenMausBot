@@ -8,6 +8,8 @@ import * as session from "@/lib/session";
 import type { Message } from "@/state/store";
 import { ApprovalCard } from "./ApprovalCard";
 
+vi.mock("@/lib/one-chat", () => ({ ONE_CHAT: false, hiddenWork: () => false }));
+
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 let host: HTMLDivElement;
 let root: Root;

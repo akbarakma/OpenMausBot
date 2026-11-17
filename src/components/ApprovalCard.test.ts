@@ -727,20 +727,37 @@ describe("ApprovalCard for a change that applied on its own", () => {
     expect(skill).toContain("Scout added a skill: file-expense");
   });
 
-  it("draws a skill change in one chat as a centered line with no Undo or Details", () => {
+  it("draws every applied change in one chat as a centered line with no button but the line itself", () => {
     fixture.oneChat = true;
     try {
-      const skill = render(applied({
-        tool: "stage_skill",
-        skillRequest: {
-          version: 1, requestId: "s", botId: "bot-1", threadId: "thread-1", stagedId: "staged", action: "create",
-          name: "file-expense", gist: "Files an expense.", warnings: [], createdAt: 1,
-        },
-      }));
-      expect(skill).toContain('data-skill-change-line="file-expense"');
-      expect(skill).toContain("Scout added a skill: file-expense");
-      expect(skill).not.toContain("Undo");
-      expect(skill).not.toContain("Details");
+      const setup = { version: 1 as const, requestId: "t", botId: "bot-1", threadId: "thread-1", reason: "asked", createdAt: 1, requesterRevision: "r", newTeams: [] };
+      const skill = render(applied({ tool: "stage_skill", skillRequest: {
+        version: 1, requestId: "s", botId: "bot-1", threadId: "thread-1", stagedId: "staged", action: "create",
+        name: "file-expense", gist: "Files an expense.", warnings: [], createdAt: 1,
+      } }));
+      const team = render(applied({ tool: "set_up_team", teamSetupRequest: { ...setup, operations: [], resumed: true,
+        result: { state: "applied", newTeams: [], bots: [{ id: "b2", name: "Mira", action: "created" }] },
+        undo: { created: ["b2"], before: [], revisions: {} } } }));
+      const deleted = render(applied({ tool: "delete_bot", teamSetupRequest: { ...setup, operations: [], deletion: { botId: "b3", name: "Ada", expectedRevision: "r" },
+        result: { state: "applied", newTeams: [], bots: [{ id: "b3", name: "Ada", action: "deleted" }] } } }));
+      const wait = render(applied({ tool: "wait_until", subtitle: "Then Scout will: Deploy it.",
+        waitRequest: { waitId: "w1", label: "the build", followUp: "Deploy it." } }));
+      const created = render(routineCard(createRoutineOperation, { name: "Morning digest" }));
+      const removed = render(routineCard({ action: "delete", routineId: "routine-1", expectedUpdatedAt: 1 }, { name: "Morning digest" }));
+      for (const [html, line, clickable] of [
+        [created, "Scout set up an automation: Morning digest", true],
+        [removed, "Scout deleted an automation: Morning digest", false],
+        [skill, "Scout added a skill: file-expense", true],
+        [team, "Scout set up the team: added @Mira", true],
+        [deleted, "Scout deleted @Ada", false],
+        [wait, "Scout is waiting for the build", false],
+      ] as const) {
+        expect(html, line).toContain("data-applied-line");
+        expect(html, line).toContain(line);
+        expect(html, line).not.toMatch(/>(Undo|Cancel|Details)</);
+        expect(html.includes("<button"), line).toBe(clickable);
+      }
+      expect(wait).toContain('title="Then Scout will: Deploy it."');
     } finally {
       fixture.oneChat = false;
     }
