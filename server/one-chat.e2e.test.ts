@@ -91,6 +91,7 @@ it("keeps one chat per bot: a teammate's message, a side job and a webhook's run
     expect(await shown(mira.id)).toEqual(["Main Chat"]);
     const reports = ((await api(`/api/threads/${mira.activeTaskId}/messages`)).messages as any[]).filter((message) => message.automation);
     expect(reports).toEqual([expect.objectContaining({ text: "MAIL: one mail needs your reply.", automation: expect.objectContaining({ trigger: "webhook", name: "Gmail new-mail triage" }) })]);
+    expect((await tasksOf(mira.id)).find((task) => task.threadId === mira.activeTaskId)?.unread, "a report the Inbox lists dots its bot").toBe(true);
     const mailRows = async () => ((await api("/api/inbox")).rows as any[]).filter((row) => row.automation?.id === webhook.id);
     await expect.poll(async () => (await mailRows()).map((row) => [row.kind, row.automation.name]), { timeout: 10_000 }).toEqual([["result", "Gmail new-mail triage"]]);
     const counted = (await api("/api/inbox/count")).count as number;

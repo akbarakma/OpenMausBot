@@ -52,6 +52,8 @@ it("leaves out a muted automation's reports, old names included, and keeps its q
   expect(shaped.mutedAutomations).toEqual(["gmail"]);
 
   expect(createInboxMutes({ dataDir: dir, automations: () => names }).muted()).toEqual(["gmail"]);
+  expect(mutes.dots("gmail"), "a muted automation's report leaves its bot without a dot").toBe(false);
+  expect(mutes.dots("receipts")).toBe(true);
   mutes.set("gmail", false);
   expect(JSON.parse(readFileSync(join(dir, INBOX_MUTES_FILE), "utf8"))).toEqual({ version: 1, muted: [] });
   expect(mutes.shape(view()).rows).toHaveLength(7);
@@ -62,6 +64,7 @@ it("changes nothing with one chat off", () => {
   const mutes = createInboxMutes({ dataDir: dir, automations: () => names });
   mutes.set("gmail", true);
   expect(mutes.shape(view())).toEqual(view());
+  expect(mutes.dots("receipts"), "upstream's rule: a report needs nothing from the person").toBe(false);
 });
 
 it("lets only the owner mute, and answers with the inbox as it lists now", async () => {

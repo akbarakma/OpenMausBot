@@ -5603,7 +5603,7 @@ function isUnattended(botId?: string | null, threadId?: string): boolean {
 
 const reviewAnswerThreads = new Set<string>(); const firstHourHooks = createFirstHourHooks({ dataDir: DATA_DIR, personal: Boolean(CLOUD_PERSONAL) });
 let routines: RoutineManager | null = null;
-const automationReports = createAutomationReports({ store, routines: () => routines, busy: threadBusy, wrote: markTaskContextExternallyUpdated, brief: (run, turnId) => proactive.runSettled(run, turnId), threadLanguage,
+const automationReports = createAutomationReports({ store, routines: () => routines, busy: threadBusy, wrote: markTaskContextExternallyUpdated, brief: (run, turnId) => proactive.runSettled(run, turnId), threadLanguage, dotted: (run) => inboxMutes.dots(run.routineId),
   notify: (kind, bot, threadId, detail) => notify(buildNotification(kind, bot, threadId, detail, { avatarUrl: bot.avatarUrl }), { routine: true }) });
 const proactive = createProactive({ store, cfg, composio, registry, dataDir: DATA_DIR, ideas: (botId) => memoryUpkeep.ideas(botId), ...firstHourHooks.proactive, team: Boolean(HOSTED_WORKSPACE || CLOUD_TEAM), frozen: moveFreeze.frozen, routines: () => routines, mainThread: botMainThread, threadBusy, notify, helpers: { decider, extractor }, cloud: Boolean(CLOUD_HOME || HOSTED_WORKSPACE || CLOUD_TEAM),
   engineName: (instanceId) => engineName(instanceId), hostTimeZone: () => (CLOUD_HOME ? undefined : hostTimeZone()), decide: (row) => appendDecision(DATA_DIR, row), stale: shouldIgnoreProviderEvent, release: (threadId) => watchdog.setWaitingOnHuman(threadId, false),

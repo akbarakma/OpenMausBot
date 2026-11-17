@@ -70,7 +70,7 @@ export function createInboxMutes(deps: { dataDir: string; automations(): Automat
     return { ...view, rows, anchor: view.anchor && rows.some((row) => row.id === view.anchor) ? view.anchor : null, mutedAutomations: [...muted] };
   }
 
-  return { shape, set, muted: () => [...muted] };
+  return { shape, set, muted: () => [...muted], dots: (automationId: string) => oneChatOn() && !muted.has(automationId) };
 }
 
 export type InboxMutes = ReturnType<typeof createInboxMutes>;

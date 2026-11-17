@@ -110,6 +110,8 @@ export interface AutomationReportDeps {
   brief?(run: RoutineRun, turnId?: string): void;
   /** The language a line in this conversation is written in (server/server-lines.ts); absent, English. */
   threadLanguage?(threadId: string): string | undefined;
+  /** A report that also marks its chat unread, as one chat does for one the Inbox lists. */
+  dotted?(run: RoutineRun): boolean;
 }
 
 export function createAutomationReports(deps: AutomationReportDeps) {
@@ -214,7 +216,7 @@ export function createAutomationReports(deps: AutomationReportDeps) {
     });
     deps.routines()?.noteReport(run.id, { state: "posted", threadId: target.threadId, messageId: posted.id });
     deps.wrote(target.bot, target.threadId);
-    if (line.kind === "failure" || reply.question !== undefined || routineRunNeedsReview(run)) store.patchTask(target.bot.id, target.threadId, { unread: true });
+    if (line.kind === "failure" || reply.question !== undefined || routineRunNeedsReview(run) || (line.kind === "reply" && !recovered && deps.dotted?.(run) === true)) store.patchTask(target.bot.id, target.threadId, { unread: true });
     if (line.kind === "reply" && !recovered) deps.notify(reply.question ? "question" : "done", target.bot, target.threadId, `${run.routineName}: ${reply.question ?? reply.text}`);
     return true;
   };

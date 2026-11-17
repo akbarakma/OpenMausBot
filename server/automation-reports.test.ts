@@ -81,7 +81,7 @@ describe("what the chat's own session reads", () => {
 });
 
 /** A real Store; the routine runs live in a stand-in for the RoutineManager, which keeps their report states. */
-function fixture(options: { threadLanguage?: (threadId: string) => string | undefined } = {}) {
+function fixture(options: { threadLanguage?: (threadId: string) => string | undefined; dotted?: (run: RoutineRun) => boolean } = {}) {
   const store = new Store(selection);
   const bot = store.createBot({ name: "Pepper" });
   const main = bot.threadId;
@@ -109,6 +109,7 @@ function fixture(options: { threadLanguage?: (threadId: string) => string | unde
     wrote: (_bot: BotRecord, threadId) => wrote.push(threadId),
     notify: (kind, _bot, threadId, detail) => notified.push({ kind, threadId, detail }),
     ...(options.threadLanguage ? { threadLanguage: options.threadLanguage } : {}),
+    ...(options.dotted ? { dotted: options.dotted } : {}),
   });
   const reports = create();
   let serial = 0;
@@ -139,6 +140,18 @@ function fixture(options: { threadLanguage?: (threadId: string) => string | unde
 describe("automation reports", () => {
   beforeEach(() => {
     rmSync(DATA_DIR, { recursive: true, force: true });
+  });
+
+  it("marks the chat unread for a report only when the host says that automation's reports do", () => {
+    const f = fixture({ dotted: (run) => run.routineName !== "Muted digest" });
+    const listed = f.finished("Acme replied about the order.");
+    f.store.patchTask(f.bot.id, f.main, { unread: false });
+    f.reports.runSettled(listed, `turn-${listed.id}`);
+    expect(f.store.taskByThread(f.bot.id, f.main)?.unread).toBe(true);
+    const muted = f.finished("Three new leads.", "Muted digest");
+    f.store.patchTask(f.bot.id, f.main, { unread: false });
+    f.reports.runSettled(muted, `turn-${muted.id}`);
+    expect(f.store.taskByThread(f.bot.id, f.main)?.unread).toBe(false);
   });
 
   it("writes a run's reply into the chat it reports to as one bot line named after the automation", () => {
