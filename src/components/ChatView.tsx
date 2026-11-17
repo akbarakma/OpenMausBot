@@ -86,7 +86,7 @@ import { ReplyQuote } from "./ReplyQuote";
 import { ConnectorCard } from "./ConnectorCard";
 import { SecretRequestCard } from "./SecretRequestCard";
 import { SignInRequestCard } from "./SignInRequestCard";
-import { AutomationCaption, RoutineRunRow } from "./RoutineRunCard"; import { InboxAnswers, InboxCaption, RelayLabel } from "./InboxLine"; import { InboxCardSlot } from "./inbox/InboxCard";
+import { AutomationCaption, RoutineRunRow } from "./RoutineRunCard"; import { AUTOMATION_EDGE, AutomationHead, automationTone } from "./AutomationHead"; import { InboxAnswers, InboxCaption, RelayLabel } from "./InboxLine"; import { InboxCardSlot } from "./inbox/InboxCard";
 import { CallRecordRow } from "./CallRecordRow";
 import { AttachmentGallery, collectMessageFiles, replyAttachmentGroup, splitMessageAttachments } from "./AttachmentGallery";
 import { ScreenFrame } from "./ScreenFrame";
@@ -370,10 +370,12 @@ const Bubble = memo(function Bubble({
     [message.attachments],
   );
   const join: BubbleJoin = { above: joinAbove, below: joinBelow };
-  const reply = useReplySegments(conversational && !user && !peer && !viewRaw && !replyTarget && message.kind === "text", text, message.at, openedAt, message.id);
+  // One chat draws a run's report as one post that starts with the automation's line, so it is never split.
+  const automation = ONE_CHAT && !user ? message.automation : undefined, automationEdge = automation ? automationTone(message, automation, bots.find((one) => one.id === botId)) : null;
+  const reply = useReplySegments(conversational && !user && !peer && !viewRaw && !replyTarget && !automation && message.kind === "text", text, message.at, openedAt, message.id);
   const split = reply.segments.length > 1;
   // Simple mode draws each table of a reply as its own card between the reply's prose bubbles.
-  const blocks = useMemo(() => simple && !user && !peer && !viewRaw && !split && text ? splitReplyBlocks(text) : null, [simple, user, peer, viewRaw, split, text]);
+  const blocks = useMemo(() => simple && !user && !peer && !viewRaw && !split && !automation && text ? splitReplyBlocks(text) : null, [simple, user, peer, viewRaw, split, automation, text]);
   const tabled = Boolean(blocks?.some((block) => block.kind === "table"));
   const formatted = !simple && !user && !split && isFormattedReply(text);
   const webhookView = user ? webhookMessageView(text) : null;
@@ -456,11 +458,12 @@ const Bubble = memo(function Bubble({
                   : formatted
                     ? cn(formattedReplyWidth(text), "px-1 text-ink")
                     : simple ? SIMPLE_BOT_BUBBLE : "bg-card px-4 py-2.5 text-ink",
-            simple && join && !split && !attachmentsOnly && !tabled && joinedCorners(user ? "end" : "start", join),
+            simple && join && !split && !attachmentsOnly && !tabled && joinedCorners(user ? "end" : "start", join), automationEdge && AUTOMATION_EDGE[automationEdge],
           )}
           style={user && !webhookView && !attachmentsOnly ? ownBubbleStyle : undefined}
           title={workedFor === undefined ? new Date(message.at).toLocaleString(intlLocale()) : `${workedLabel(workedFor)} · ${new Date(message.at).toLocaleString(intlLocale())}`}
         >
+          {automation && <AutomationHead message={message} line={automation} botId={botId} tone={automationEdge} className={automation.quiet ? undefined : "mb-0.5"} />}
           {replyTarget && (
             <div className="mb-2">
               <ReplyQuote
@@ -527,7 +530,7 @@ const Bubble = memo(function Bubble({
                 </button>
               )}
             </>
-          ) : (
+          ) : automation?.quiet ? null : (
             <MessageBoundary key={viewRaw ? "raw" : "rendered"} fallbackText={text || t("chat.generatedImage")}>
               {voiceNotes.length > 0 && (
                 <div className={cn("flex flex-col", (text || generatedPaths.length > 0 || linkedFiles.length > 0) && "mb-2")}>
@@ -552,7 +555,7 @@ const Bubble = memo(function Bubble({
             </MessageBoundary>
           )}
         </div>
-        {!tabled && botActions}
+        {!tabled && !automation?.quiet && botActions}
         <span
           className={cn(
             "self-end pb-1 text-[11px] tabular-nums text-ink-tertiary opacity-0 transition-opacity group-hover:opacity-100",
@@ -785,7 +788,8 @@ const MessagesList = memo(function MessagesList({
           <div key={m.id} className="contents" data-mid={m.id} data-tuck={layout?.tucks[i] ? "" : undefined}>
             {newDay && <DaySeparator at={m.at} today={today} simple={simple} />}
             {divider}
-            {m.automation && <AutomationCaption message={m} line={m.automation} botId={botId} />}{m.inbox && <InboxCaption message={m} />}
+            {m.automation && (!ONE_CHAT ? <AutomationCaption message={m} line={m.automation} botId={botId} />
+              : m.kind !== "text" && <AutomationHead message={m} line={m.automation} botId={botId} tone={automationTone(m, m.automation, bots.find((one) => one.id === botId))} className="-mb-2 ml-0" />)}{m.inbox && <InboxCaption message={m} />}
             {isLiveReply(m) ? <StreamingReplyContext value>{row}</StreamingReplyContext> : row}{m.inbox?.answers && <InboxAnswers message={m} />}{m.inbox && <InboxCardSlot threadId={threadId} messageId={m.id} />}{m.setupOffer && <SetupOffer botId={botId} threadId={threadId} message={m} transcript={transcript} />}{m.savedSteps && <SavedStepsChip botId={botId} message={m} />}
           </div>
         );

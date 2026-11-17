@@ -10,6 +10,10 @@ below.
 - **Automations.** A routine's, webhook's or app event's run still happens in
   upstream's hidden run thread. Its report goes to the main chat. Upstream
   sent a webhook's and an app event's report to a "<name> · Results" chat.
+  A run that ends on `NOTHING NEW` leaves one post anyway, with the text
+  "Nothing new" and `automation.quiet`, so the person sees that it ran. The
+  bot's own session never reads that post, and it marks nothing unread and
+  sends no notification. Upstream writes nothing for such a run.
 - **Bot to bot.** A message from another bot runs in one hidden thread per
   sender, upstream's "@sender · work" thread. The receiving bot's main chat
   gets one row for the message and one for its answer: "Message from Kara: …"
@@ -27,7 +31,10 @@ below.
 - **Tools.** A bot does not see `list_threads`, `close_thread` or
   `rename_thread`. `start_thread`, `post_to_thread` and the threads paragraph
   of the prompt describe hidden work. `post_to_thread` takes `thread_id`
-  `"main"` for the bot's main chat.
+  `"main"` for the bot's main chat. The `trigger` tool's `instructions`
+  field tells a bot to write "reply only NOTHING NEW" for a run with nothing
+  to tell. Without it, a bot wrote its own empty reply, such as "nothing to
+  report", and every such run posted it as a report.
 - **Recall.** A teammate's message and a scheduled or manual routine run
   recall the bot's other conversations, as a person's message does. A side
   job or Burst part the bot started itself does not: its best match was the
@@ -80,6 +87,10 @@ exchange route. The rows' words are `server.oneChat.*` in `en.json`,
 | `server/agents-turn.ts` | `OMB_ONE_CHAT` in the tool process's environment |
 | `server/drivers/agents-catalog.ts` | `oneChatTools` in `availableTools` |
 | `scripts/control-omb.ts` | the launcher's `oneChat` option |
+| `scripts/testing/control-omb-ui.ts` | `ui launch --one-chat`: a one-chat fixture whose fake engine reads `room-plan.json` in its data folder |
+| `server/automation-reports.ts` | with `oneChatOn()`, a quiet run is held like any report, and `write` appends its "Nothing new" post; `newestAutomationLines` skips a quiet post |
+| `server/delta-context.ts` | `isContextMessage` leaves out a post with `automation.quiet` |
+| `packages/phone-protocol/src/routine-run.ts` | `AutomationLine.quiet` |
 
 `server/index.ts` and `server/store.ts` are at their size limit in
 `scripts/testing/file-size-ratchet.test.ts`, so each line above joins an
@@ -108,8 +119,16 @@ existing line.
   and an app setting are plain text. A running wait shows its follow-up on
   hover; a person stops it by asking the bot, which has `cancel_wait`.
 - No centered line has a chevron.
+- A run's post starts with the automation's line inside the post: an icon
+  for what started it (webhook, clock, plug for an app event, hourglass for
+  a wait, play for Run now), its name and its time. The whole line opens the
+  run, so there is no "See run". A failed run says "didn't finish" in red
+  with a red left edge, and one that waits on the person says "needs you" in
+  amber with an amber edge. A quiet run is the line alone. The post is never
+  split into several bubbles or table cards. A copied card keeps the line
+  above it. `AutomationHead` in `src/components/AutomationHead.tsx` draws it.
 - A click on anything that names hidden work opens it read only in the same
-  modal: a "See run" link, a side job row, an Inbox line, a notification, a
+  modal: an automation post's first line, a side job row, an Inbox line, a notification, a
   `#Title` link. `openThread` in
   `src/state/thread-navigation.ts` decides it for all of them, by the
   thread's `routineRunId`, and opens upstream's fork panel state, which
@@ -131,7 +150,7 @@ existing line.
 | `src/components/ApprovalCard.tsx` | `AppliedLine` for any change that applied on its own, a new automation included, before upstream's `TriggerCard` |
 | `src/components/bot-panel/panel-link.ts`, `page-registry.ts`, `PanelShell.tsx` | a panel link may name one item (`detail`), so the panel opens on that skill |
 | `src/components/ThreadChip.tsx` | `oneChatRow` draws a bot exchange or side job row as `OneChatLine` |
-| `src/components/ChatView.tsx` | no message box and no note for hidden work in the fork panel; no Fork on a message |
+| `src/components/ChatView.tsx` | no message box and no note for hidden work in the fork panel; no Fork on a message; `AutomationHead` inside an automation's post, or above its copied card, in place of `AutomationCaption` |
 | `src/components/ChatMoreMenu.tsx` | no `new-thread`, `threads` and `start-fresh` items |
 | `src/components/SidebarBotMenu.tsx` | no thread items in Simple's bot menu |
 | `src/components/Sidebar.tsx` | no "New conversation with" in the + menu |
@@ -149,6 +168,6 @@ that fails on a missing thread item.
 2. If upstream adds a place that calls `store.createTask` for a bot, decide
    where it leads: the main chat, or a hidden thread with `hideWorkSession`.
    List it here.
-3. Run `corepack pnpm exec vitest run server/one-chat src/lib/bot-exchange ThreadChip thread-navigation ChatMoreMenu ApprovalCard TriggerCard panel-link ChatView.controls ChatView.automation SidebarBotRead Sidebar.simple-mode Sidebar.plus-menu Sidebar.working-folder file-size-ratchet`,
+3. Run `corepack pnpm exec vitest run server/one-chat src/lib/bot-exchange ThreadChip thread-navigation ChatMoreMenu ApprovalCard TriggerCard panel-link ChatView.controls ChatView.automation ChatView.one-chat-automation server/automation-reports SidebarBotRead Sidebar.simple-mode Sidebar.plus-menu Sidebar.working-folder file-size-ratchet`,
    then upstream's tests named after each server file above, with the
    setting off.
