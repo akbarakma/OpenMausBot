@@ -73,7 +73,7 @@ export function AutomationsPage({ bot }: PageContext) {
                       aria-label={t(quiet ? "botPanel.automations.unmuteInInbox" : "botPanel.automations.muteInInbox", { name })}
                       title={t(quiet ? "botPanel.automations.unmuteInInbox" : "botPanel.automations.muteInInbox", { name })}
                       onClick={() => void muteInboxAutomation(automation.id, !quiet)}
-                      className={cn("relative z-[1] flex size-[30px] shrink-0 cursor-pointer items-center justify-center rounded-lg transition-colors",
+                      className={cn("relative z-[1] flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-lg transition-colors after:absolute after:-inset-1",
                         quiet ? "bg-warning/10 text-warning ring-[1.5px] ring-inset ring-warning hover:bg-warning/20" : "text-ink-tertiary hover:bg-ink/[0.06] hover:text-ink")}
                     >
                       {quiet ? <BellOff size={15} aria-hidden="true" /> : <Bell size={15} aria-hidden="true" />}

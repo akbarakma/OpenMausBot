@@ -2,7 +2,9 @@ import { Check, CornerUpLeft, ExternalLink, Split, X, type LucideIcon } from "lu
 import type { InboxRow } from "../../../shared/inbox";
 import { cn } from "@/lib/cn";
 import { ONE_CHAT } from "@/lib/one-chat";
+import { formatTime } from "@/lib/clock-time";
 import { t } from "@/lib/i18n";
+import { localDay } from "@/lib/transcript-derivations";
 import type { LocaleKey } from "@/locales";
 import { InboxSender } from "../InboxLine";
 import { threadUpdatedLabel } from "../SidebarThreadRow";
@@ -20,7 +22,13 @@ const ACTION_LOOK: Record<QuickAction, { Icon: LucideIcon; label: LocaleKey }> =
 
 const ROW_ACTION = "flex size-7 shrink-0 items-center justify-center rounded-full text-ink-secondary transition-colors hover:bg-ink/[0.07] hover:text-ink active:bg-ink/[0.11] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus pointer-coarse:size-9";
 
-const PANEL_ACTION = "flex size-[30px] shrink-0 cursor-pointer items-center justify-center rounded-lg bg-raised-hover text-ink transition-colors hover:bg-ink/[0.14] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus";
+const PANEL_ACTION = "relative flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-lg bg-raised-hover text-ink transition-colors after:absolute after:-inset-1 hover:bg-ink/[0.14] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus";
+
+/** Today's lines say how long ago; an older one sits under its day's header, so it says the time of day. */
+function panelTime(at: number, now: number): string {
+  if (localDay(at) === localDay(now)) return threadUpdatedLabel(at, now);
+  return formatTime(at);
+}
 
 /** What a row says under its sender: an ask's headline and choices, or the line's words on up to two lines. */
 function PanelBody({ row }: { row: InboxRow }) {
@@ -63,13 +71,13 @@ export function InboxRowItem({ row, now, onOpen, onAction, inCard = false, lastR
           <span className="shrink-0" aria-hidden="true"><InboxSender from={row.from} size={32} /></span>
           <span className={cn("min-w-0 flex-1", strong ? "text-ink-secondary" : "text-ink-tertiary")}>
             <span className="flex h-[18px] min-w-0 items-center gap-1.5">
-              <span data-inbox-from className={cn("min-w-0 shrink truncate text-[14px]", strong ? "font-semibold text-ink" : "font-medium text-ink-secondary")}>{sender}</span>
+              <span data-inbox-from className={cn("max-w-[55%] shrink-0 truncate text-[14px]", strong ? "font-semibold text-ink" : "font-medium text-ink-secondary")}>{sender}</span>
               {chip && (
                 <span data-inbox-place className={cn("min-w-0 truncate rounded-md px-1.5 py-px text-[11px] font-medium",
                   waits && !row.automation ? "bg-warning/15 text-warning" : "bg-ink/[0.07] text-ink-secondary")}>{chip}</span>
               )}
               <span className="ms-auto flex shrink-0 items-center gap-1.5 ps-1 text-[11px] tabular-nums text-ink-tertiary group-focus-within:invisible group-hover:invisible">
-                {threadUpdatedLabel(row.at, now)}
+                {panelTime(row.at, now)}
                 {waits ? <span data-inbox-waits role="img" aria-label={t("inbox.waitsOnYou")} className="size-[7px] rounded-full bg-warning" />
                   : row.unread && <span data-inbox-unread-dot aria-hidden="true" className="size-[7px] rounded-full bg-accent" />}
               </span>
@@ -77,7 +85,7 @@ export function InboxRowItem({ row, now, onOpen, onAction, inCard = false, lastR
             <PanelBody row={row} />
           </span>
         </button>
-        <span className="absolute right-2 top-2 hidden items-center gap-1 group-focus-within:flex group-hover:flex">
+        <span className="absolute right-1 top-1 hidden items-center gap-2 rounded-xl bg-raised p-1 group-focus-within:flex group-hover:flex">
           {actions.map((action) => {
             const { Icon, label } = ACTION_LOOK[action];
             return (

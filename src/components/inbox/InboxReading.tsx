@@ -32,7 +32,7 @@ function ownWords(row: InboxRow): string | null {
   return question ? accessRequestWords(row.card)?.question ?? question.question : row.card?.questionRequest ? null : row.card?.subtitle || row.text;
 }
 
-const BAR_BUTTON = "flex h-10 min-w-0 flex-1 cursor-pointer items-center justify-center gap-[7px] rounded-[10px] px-3 text-[13px] font-semibold transition-colors disabled:cursor-not-allowed";
+const BAR_BUTTON = "flex h-10 min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 rounded-[10px] px-3 text-[13px] font-semibold transition-colors disabled:cursor-not-allowed";
 const SECONDARY = cn(BAR_BUTTON, "bg-composer text-ink ring-1 ring-inset ring-ink/[0.1] hover:bg-raised-hover");
 
 export function InboxReading({ view, row, now, onMute }: {
@@ -54,7 +54,7 @@ export function InboxReading({ view, row, now, onMute }: {
   const answers = kind !== "none" || Boolean(row.answers?.length);
   return (
     <article data-inbox-reading={row.id} aria-label={`${senderLabel(row)} · ${headline}`} className="flex min-h-0 flex-1 flex-col">
-      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 pb-4 pt-3.5">
+      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pb-4 pl-4 pr-2 pt-3.5 [scrollbar-gutter:stable]">
         <section aria-label={senderLabel(row)}>
           <div className="flex items-center gap-3">
             <span className="shrink-0" aria-hidden="true"><InboxSender from={row.from} size={40} /></span>
@@ -114,7 +114,7 @@ export function InboxReading({ view, row, now, onMute }: {
           </div>
           {mutes && (
             <button type="button" data-inbox-mute onClick={() => onMute(mutes)}
-              className="flex h-[34px] w-full min-w-0 cursor-pointer items-center justify-center gap-[7px] rounded-lg px-2 text-[12px] text-ink-secondary transition-colors hover:bg-ink/[0.05] hover:text-ink">
+              className="flex h-[34px] w-full min-w-0 cursor-pointer items-center justify-center gap-2 rounded-lg px-2 text-[12px] text-ink-secondary transition-colors hover:bg-ink/[0.05] hover:text-ink">
               <BellOff size={14} aria-hidden="true" className="shrink-0" /><span className="truncate">{t("inbox.mute", { name: mutes.name })}</span>
             </button>
           )}

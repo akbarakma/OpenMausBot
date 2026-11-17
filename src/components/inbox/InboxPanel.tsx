@@ -16,7 +16,7 @@ import { listedRows, waitingCount } from "./inbox-view";
 import { useInboxActions } from "./use-inbox-actions";
 import { roundButtonCls } from "../bot-panel/rows";
 
-const NAV_BUTTON = "flex size-[30px] shrink-0 cursor-pointer items-center justify-center rounded-lg text-ink-secondary hover:bg-raised hover:text-ink disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:bg-transparent";
+const NAV_BUTTON = "relative flex size-[34px] shrink-0 cursor-pointer items-center justify-center rounded-full after:absolute after:-inset-[3px] text-ink-secondary hover:bg-raised hover:text-ink disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:bg-transparent";
 
 
 export function InboxPanel() {
@@ -133,13 +133,13 @@ export function InboxPanel() {
         {reading && view ? (
           <InboxReading view={view} row={reading} now={now} onMute={(automation) => void mute(automation)} />
         ) : (
-          <div ref={listRef} onScroll={(event) => { listTop.current = event.currentTarget.scrollTop; }} className="min-h-0 flex-1 overflow-y-auto">
-            {listedRows(view).length > 0 && <label className="mx-4 mb-2 mt-1.5 flex h-9 items-center gap-2 rounded-[10px] bg-composer px-3 ring-1 ring-inset ring-ink/[0.09] focus-within:ring-ink/30">
+          <div ref={listRef} onScroll={(event) => { listTop.current = event.currentTarget.scrollTop; }} className="min-h-0 flex-1 overflow-y-auto pl-2 [scrollbar-gutter:stable]">
+            {listedRows(view).length > 0 && <label className="mx-2 mb-2 mt-1.5 flex h-9 items-center gap-2 rounded-[10px] bg-composer px-3 ring-1 ring-inset ring-ink/[0.09] focus-within:ring-ink/30">
               <Search size={14} aria-hidden="true" className="shrink-0 text-ink-tertiary" />
               <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t("inbox.search")} aria-label={t("inbox.search")}
                 className="min-w-0 flex-1 bg-transparent text-[13px] text-ink outline-none placeholder:text-ink-tertiary [&::-webkit-search-cancel-button]:hidden" />
             </label>}
-            <div role="list" data-inbox-list aria-label={t("inbox.panel.title")} className="px-2 pb-2">
+            <div role="list" data-inbox-list aria-label={t("inbox.panel.title")} className="pb-2">
               {rows.length === 0
                 ? query.trim() && listedRows(view).length
                   ? <p className="px-2 py-8 text-center text-[13px] text-ink-secondary">{t("inbox.noMatch")}</p>
@@ -155,7 +155,7 @@ export function InboxPanel() {
                   const newDay = index === 0 || localDay(rows[index - 1]!.at) !== day;
                   return (
                     <Fragment key={row.id}>
-                      {newDay && <div data-inbox-day className="px-2 pb-1.5 pt-2.5 text-[11px] font-semibold uppercase tracking-[0.02em] text-ink-tertiary">{dayLabel(row.at, today)}</div>}
+                      {newDay && <div data-inbox-day className="px-2 pb-1 pt-3 text-[12px] font-medium text-ink-tertiary">{dayLabel(row.at, today)}</div>}
                       <InboxRowItem row={row} now={now} onOpen={open} onAction={run} lastRead={row.id === lastRead.current} />
                     </Fragment>
                   );
@@ -167,7 +167,7 @@ export function InboxPanel() {
         {toast && (
           <div role="status" data-inbox-toast className="absolute inset-x-3 bottom-3 flex items-center gap-2.5 rounded-xl bg-raised-hover px-3 py-2.5 text-[13px] text-ink shadow-[0_8px_24px_rgb(0_0_0/0.45)]">
             <BellOff size={15} aria-hidden="true" className="shrink-0 text-ink-secondary" />
-            <span className="min-w-0 flex-1 truncate">{"failed" in toast ? t("inbox.muteFailed") : t("inbox.muted", { name: toast.name })}</span>
+            <span className="min-w-0 flex-1 leading-[18px]">{"failed" in toast ? t("inbox.muteFailed") : t("inbox.muted", { name: toast.name })}</span>
             {!("failed" in toast) && (
               <button type="button" onClick={() => unmute(toast.id)} className="shrink-0 cursor-pointer rounded-md px-1.5 py-1 font-semibold text-accent-text hover:bg-ink/[0.07]">{t("common.undo")}</button>
             )}
