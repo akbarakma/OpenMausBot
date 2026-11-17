@@ -41,8 +41,9 @@ export function AutomationHead({ message, line, botId, tone, className }: {
     <>
       <Icon aria-hidden="true" size={12} className={cn("shrink-0", color ?? (line.quiet ? "text-ink-tertiary" : "text-accent"))} />
       <span className="truncate font-semibold text-ink-secondary">{line.name}</span>
-      <time className="shrink-0" dateTime={new Date(line.scheduledFor).toISOString()}>· {formatTime(line.scheduledFor || message.at)}</time>
-      {status && <span className={cn("shrink-0", color)}>· {status}</span>}
+      <span aria-hidden="true" className="size-0.5 shrink-0 rounded-full bg-current" />
+      <time className="shrink-0" dateTime={new Date(line.scheduledFor).toISOString()}>{formatTime(line.scheduledFor || message.at)}</time>
+      {status && <><span aria-hidden="true" className={cn("size-0.5 shrink-0 rounded-full bg-current", color)} /><span className={cn("shrink-0", color)}>{status}</span></>}
     </>
   );
   const shape = cn("-mx-1.5 flex w-fit max-w-[calc(100%+12px)] min-w-0 items-center gap-1.5 rounded-md px-1.5 py-0.5 text-[12px] leading-4 text-ink-tertiary", className);
