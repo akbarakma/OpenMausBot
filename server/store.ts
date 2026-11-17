@@ -1845,7 +1845,7 @@ export class Store {
   addTaskUsage(
     botId: string,
     threadId: string,
-    turn: { input?: number; output?: number; cachedInput?: number; costUsd: number | null; context?: { tokens?: number; window?: number } },
+    turn: { input?: number; output?: number; cachedInput?: number; costUsd: number | null; context?: { tokens?: number; window?: number; compactAt?: number } },
   ): TaskUsage | null {
     const task = this.taskByThread(botId, threadId);
     if (!task) return null;
@@ -1873,7 +1873,7 @@ export class Store {
         costUsd: cost,
       },
       ...(contextTokens > 0
-        ? { context: { tokens: contextTokens, ...(contextWindow > 0 ? { window: contextWindow } : {}) } }
+        ? { context: { tokens: contextTokens, ...(contextWindow > 0 ? { window: contextWindow } : {}), ...(clean(turn.context?.compactAt) > 0 ? { compactAt: clean(turn.context?.compactAt) } : {}) } }
         : prev.context ? { context: prev.context } : {}),
     };
     saveRegistryFor("bots.json", "the thread's usage", () => this.saveBotsSoon());

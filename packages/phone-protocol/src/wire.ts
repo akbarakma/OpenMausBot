@@ -99,7 +99,8 @@ export interface TaskUsage {
   /** the most recent settled turn on its own */
   lastTurn?: { input: number; output: number; cachedInput?: number; costUsd: number | null };
   /** what filled the model's window on the last model call, and the window's size when known */
-  context?: { tokens: number; window?: number };
+  /** compactAt: the token count where the server compacts this thread on its own; absent with auto-compaction off. */
+  context?: { tokens: number; window?: number; compactAt?: number };
 }
 
 /** Accounting for the currently displayed room thread, across all speakers. */

@@ -6771,13 +6771,13 @@ bus.subscribe((event: RuntimeEvent) => {
         };
         const tokens = event.usage ?? lastReported;
         const routedModel = quickFallback.routedModel(event.threadId);
-        const contextModel = routedModel ?? store.taskByThread(bot.id, event.threadId)?.modelSelection?.model ?? bot.modelSelection.model;
+        const contextModel = routedModel ?? store.taskByThread(bot.id, event.threadId)?.modelSelection?.model ?? bot.modelSelection.model, contextWindow = lastContext?.window ?? modelContextWindow(contextModel);
         store.addTaskUsage(bot.id, event.threadId, {
           input: tokens?.input,
           output: tokens?.output,
           cachedInput: tokens?.cachedInput,
           costUsd: event.cost ?? null,
-          context: { tokens: lastContext?.tokens, window: lastContext?.window ?? modelContextWindow(contextModel) },
+          context: { tokens: lastContext?.tokens, window: contextWindow, compactAt: autoCompactAt((store.taskByThread(bot.id, event.threadId)?.modelSelection ?? bot.modelSelection).instanceId, contextWindow) },
         });
         const settledTask = store.taskByThread(bot.id, event.threadId);
         const selection = settledTask?.modelSelection ?? bot.modelSelection;
@@ -7096,7 +7096,7 @@ const handoffs = new Handoffs({
     .filter((m) => m.role === "bot" && m.kind === "text" && !m.from && m.turnId === turnId).map((m) => m.id),
 });
 const roomSessions = createRoomSessions({ settings: () => cfg.context, messagesFor: (threadId) => store.messagesFor(threadId) });
-const nativeCompactTokens = (instance: { driverKind: string; instanceId: string }) => instance.driverKind === "claudeAgent" ? Number(autoCompactWindow({ ...process.env, ...cfg.instances?.[instance.instanceId]?.environment })) : undefined;
+const nativeCompactTokens = (instance: { driverKind: string; instanceId: string }) => instance.driverKind === "claudeAgent" ? Number(autoCompactWindow({ ...process.env, ...cfg.instances?.[instance.instanceId]?.environment })) : undefined; const autoCompactAt = (instanceId: string, window: number | undefined) => { const instance = registry.get(instanceId); return cfg.context?.autoCompact === false || !instance || !window || window <= 0 ? undefined : compactBudget(window, cfg.context?.compactAt, nativeCompactTokens(instance)); };
 
 const loopingEngine = (threadId: string, bot = store.botByThread(threadId)) => bot ? runningTurnInstance(botForThread(bot.id, threadId), threadId)?.adapter : undefined;
 const canSteerThread = (threadId: string) => {

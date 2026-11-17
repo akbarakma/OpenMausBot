@@ -883,6 +883,10 @@ describe("Store", () => {
     const kept = store.addTaskUsage(bot.id, bot.threadId, { input: 5, output: 1, costUsd: null, context: { tokens: 0 } });
     expect(kept).toMatchObject({ lastTurn: { input: 5, output: 1, costUsd: null }, context: { tokens: 142_000, window: 272_000 } });
     expect(kept?.lastTurn).not.toHaveProperty("cachedInput");
+    expect(store.addTaskUsage(bot.id, bot.threadId, { input: 1, output: 1, costUsd: null, context: { tokens: 150_000, window: 1_000_000, compactAt: 180_000 } })?.context)
+      .toEqual({ tokens: 150_000, window: 1_000_000, compactAt: 180_000 });
+    expect(store.addTaskUsage(bot.id, bot.threadId, { input: 1, output: 1, costUsd: null, context: { tokens: 160_000, window: 1_000_000 } })?.context)
+      .toEqual({ tokens: 160_000, window: 1_000_000 });
   });
 
   it("chain-inserts a late turn artifact after its anchor without stealing the leaf", () => {
