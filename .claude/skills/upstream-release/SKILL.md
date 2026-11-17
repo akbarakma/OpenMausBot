@@ -144,7 +144,9 @@ answers. Stop only at step 4, for Akbar's OK.
 3. **Verify:** run the doc's test list and `i18n:check`, plus the tests named
    after any other conflicted file, then `corepack pnpm typecheck` and
    `corepack pnpm lint`. Run the tests named after the fork's own server
-   files too. Then run `python3 -I .claude/skills/upstream-release/lost-lines.py <OLD>`:
+   files too. Run the push guards yourself, because the fork's CI does not run:
+   `node_modules/.bin/vitest run scripts/testing/file-size-ratchet.test.ts src/locales/vocabulary.test.ts`.
+   Then run `python3 -I .claude/skills/upstream-release/lost-lines.py <OLD>`:
    it lists fork lines the merge no longer holds verbatim. Account for each
    one, as a line you merged on purpose or a fork change to put back.
 4. **Show it:** run `corepack pnpm dev:personal` and wait for Akbar's OK on
