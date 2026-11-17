@@ -144,7 +144,9 @@ answers. Stop only at step 4, for Akbar's OK.
 3. **Verify:** run the doc's test list and `i18n:check`, plus the tests named
    after any other conflicted file, then `corepack pnpm typecheck` and
    `corepack pnpm lint`. Run the tests named after the fork's own server
-   files too.
+   files too. Then run `python3 -I .claude/skills/upstream-release/lost-lines.py <OLD>`:
+   it lists fork lines the merge no longer holds verbatim. Account for each
+   one, as a line you merged on purpose or a fork change to put back.
 4. **Show it:** run `corepack pnpm dev:personal` and wait for Akbar's OK on
    the changed screens. `dev:personal` talks to bb-1's current server, so a
    screen that needs the new server shows only after step 7.
