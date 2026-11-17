@@ -2401,7 +2401,7 @@
   "inbox.muteFailed": "The automation couldn't be muted. Try again.",
   "botPanel.automations.muteInInbox": "Mute {name} in Inbox",
   "botPanel.automations.unmuteInInbox": "Unmute {name} in Inbox",
-  "botPanel.automations.mutedInInbox": "Muted in Inbox",
+  "inbox.dayAt": "{day} at {time}",
   "sidebar.people.mention": "Write to {name}",
   "sidebar.people.mentionHere": "Write to {name}. Here now",
   "sidebar.people.loading": "Loading people…",

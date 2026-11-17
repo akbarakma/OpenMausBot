@@ -4,7 +4,8 @@ import { cn } from "@/lib/cn";
 import { t } from "@/lib/i18n";
 import { ChatMarkdown } from "../ChatMarkdown";
 import { InboxSender } from "../InboxLine";
-import { threadUpdatedLabel } from "../SidebarThreadRow";
+import { formatTime } from "@/lib/clock-time";
+import { dayLabel, localDay } from "@/lib/transcript-derivations";
 import { accessRequestWords } from "../bot-access/access-card";
 import { InboxAnswer } from "./InboxAnswer";
 import { answerKindOf, headlineOf, singleQuestion } from "./inbox-answer";
@@ -56,15 +57,13 @@ export function InboxReading({ view, row, now, onMute }: {
     <article data-inbox-reading={row.id} aria-label={`${senderLabel(row)} · ${headline}`} className="flex min-h-0 flex-1 flex-col">
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pb-4 pl-4 pr-2 pt-3.5 [scrollbar-gutter:stable]">
         <section aria-label={senderLabel(row)}>
-          <div className="flex items-center gap-3">
+          <div className="flex items-start gap-3">
             <span className="shrink-0" aria-hidden="true"><InboxSender from={row.from} size={40} /></span>
             <div className="min-w-0 flex-1">
               <div className="truncate text-[15px] font-semibold text-ink">{senderLabel(row)}</div>
-              <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[12px] text-ink-tertiary">
-                {row.automation && <span data-inbox-automation className="min-w-0 truncate rounded-md bg-ink/[0.07] px-1.5 py-px text-[11px] font-medium text-ink-secondary">{row.automation.name}</span>}
-                <span className="shrink-0 tabular-nums">{threadUpdatedLabel(row.at, now)}</span>
-              </div>
+              {row.automation && <div data-inbox-automation className="mt-0.5 break-words text-[13px] leading-[18px] text-ink-secondary">{row.automation.name}</div>}
               {row.via && <div className="truncate text-[12px] text-ink-tertiary">{t("inbox.via", { name: row.via.name })}</div>}
+              <div className="mt-0.5 text-[12px] tabular-nums text-ink-tertiary">{t("inbox.dayAt", { day: dayLabel(row.at, localDay(now)), time: formatTime(row.at) })}</div>
             </div>
           </div>
           <div data-inbox-words className="mt-3.5 space-y-2 text-[14px] leading-[22px] text-ink">

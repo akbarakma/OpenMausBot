@@ -219,13 +219,14 @@ describe("a line read in full", () => {
     expect(currentInboxPanel().reading, "news was last in the list: the line above it opens").toBe("q2");
   });
 
-  it("names a report's automation once, and mutes it from the line read in full until Undo", async () => {
+  it("names a report's automation only when read in full, and mutes it from there until Undo", async () => {
     const digest: InboxRow = { ...news, automation: { id: "digest", name: "Daily digest" } };
     setInboxView({ ...placeView([hoster, why, digest]), mutedAutomations: [] });
     await mount();
     const row = document.querySelector('[data-inbox-row="n1"]')!;
-    expect(row.querySelector("[data-inbox-place]")!.textContent).toBe("Daily digest");
-    expect(row.querySelector("[data-inbox-subject]")!.textContent, "the name is not repeated in the words").toBe("3 new leads.");
+    expect(row.textContent, "a long name would crowd the row").not.toContain("Daily digest");
+    expect(row.querySelector("button")!.title, "the row's tooltip still names it").toContain("Daily digest");
+    expect(row.querySelector("[data-inbox-subject]")!.textContent).toBe("3 new leads.");
     await click('[data-inbox-row="n1"] > button');
     expect(document.querySelector("[data-inbox-automation]")!.textContent).toBe("Daily digest");
     server.muted = { ...placeView([hoster, why]), mutedAutomations: ["digest"] };

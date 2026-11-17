@@ -48,8 +48,7 @@ export function AutomationsPage({ bot }: PageContext) {
               const status = automationStatus(automation);
               const name = automation.name.trim() || t("automations.title");
               const quiet = muted?.includes(automation.id) === true;
-              const told = status.state === "needs-you" ? t("automations.needsYou", { reason: status.reason ?? "" }) : statusLine(automation);
-              const hint = quiet ? `${t("botPanel.automations.mutedInInbox")} · ${told}` : told;
+              const hint = status.state === "needs-you" ? t("automations.needsYou", { reason: status.reason ?? "" }) : statusLine(automation);
               return (
                 <div key={automation.id} className={openRowCls}>
                   <button
@@ -73,10 +72,10 @@ export function AutomationsPage({ bot }: PageContext) {
                       aria-label={t(quiet ? "botPanel.automations.unmuteInInbox" : "botPanel.automations.muteInInbox", { name })}
                       title={t(quiet ? "botPanel.automations.unmuteInInbox" : "botPanel.automations.muteInInbox", { name })}
                       onClick={() => void muteInboxAutomation(automation.id, !quiet)}
-                      className={cn("relative z-[1] flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-lg transition-colors after:absolute after:-inset-1",
-                        quiet ? "bg-warning/10 text-warning ring-[1.5px] ring-inset ring-warning hover:bg-warning/20" : "text-ink-tertiary hover:bg-ink/[0.06] hover:text-ink")}
+                      className={cn("relative z-[1] flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-lg transition-colors after:absolute after:-inset-1.5",
+                        quiet ? "bg-ink/[0.08] text-ink-secondary hover:bg-ink/[0.12] hover:text-ink" : "text-ink-tertiary hover:bg-ink/[0.06] hover:text-ink")}
                     >
-                      {quiet ? <BellOff size={15} aria-hidden="true" /> : <Bell size={15} aria-hidden="true" />}
+                      {quiet ? <BellOff size={14} aria-hidden="true" /> : <Bell size={14} aria-hidden="true" />}
                     </button>
                   )}
                   {status.state !== "done" && (

@@ -181,12 +181,12 @@ describe("a place's inbox in the panel", () => {
     expect([...document.querySelectorAll("[data-inbox-waits]")].map((dot) => dot.closest<HTMLElement>("[data-inbox-row]")!.dataset.inboxRow)).toEqual(["card-a"]);
   });
 
-  it("answers an ask from its row where it was asked, since there is no copy", async () => {
+  it("answers an ask read in full where it was asked, since there is no copy, and keeps its row to one click", async () => {
     await panel([approval, question]);
-    await click('[data-inbox-row="card-a"] [data-inbox-action="allow"]');
+    expect(document.querySelector("[data-inbox-row] [data-inbox-action]"), "an ask's row has no quick answers").toBeNull();
+    await click('[data-inbox-row="card-a"] > button');
+    await click('[data-inbox-reading] [data-inbox-action="allow"]');
     expect(dispatch).toHaveBeenCalledWith(expect.objectContaining({ type: "decideRequest", threadId: "eli-pricing", requestId: "req-a", behavior: "allow" }));
-    await click('[data-inbox-row="card-q"] [data-inbox-action="close"]');
-    expect(dispatch).toHaveBeenCalledWith(expect.objectContaining({ type: "decideRequest", threadId: "eli-launch", requestId: "req-q", behavior: "answer" }));
   });
 
   it("answers a question from the line read in full, where it was asked", async () => {
@@ -216,11 +216,12 @@ describe("a place's inbox in the panel", () => {
     }
   });
 
-  it("opens a line where it came from: that bot, that thread and that message, from its row or read in full", async () => {
+  it("opens a line where it came from: that bot, that thread and that message, read in full", async () => {
     const eli = bot({ tasks: [{ threadId: "eli-pricing", title: "Pricing work", createdAt: 1 }, { threadId: "eli-launch", title: "Launch work", createdAt: 2 }] as Bot["tasks"] });
     const noa = bot({ id: "noa", name: "Noa", threadId: "noa-main", tasks: [{ threadId: "noa-main", title: "Noa", createdAt: 1 }] as Bot["tasks"] });
     await panel([question, news], [eli, noa]);
-    await click('[data-inbox-row="line-n"] [data-inbox-action="open"]');
+    await click('[data-inbox-row="line-n"] > button');
+    await click('[data-inbox-reading] [data-inbox-action="open"]');
     expect(dispatch).toHaveBeenCalledWith({ type: "revealThread", threadId: "noa-main" });
     expect(dispatch).toHaveBeenCalledWith({ type: "focusMessage", threadId: "noa-main", messageId: "line-n" });
     dispatch.mockClear();

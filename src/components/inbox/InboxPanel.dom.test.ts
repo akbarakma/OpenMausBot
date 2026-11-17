@@ -67,13 +67,17 @@ describe("the inbox panel", () => {
     expect(listed()).toEqual([approvalRow.id, questionRow.id, messageRow.id, reportRow.id]);
   });
 
-  it("answers an ask from its row through the copy's own card, as the chat's buttons do, and marks news done", async () => {
+  it("gives news one Mark done check on its row, and answers an ask through the copy's own card once read in full", async () => {
     openInbox();
     await mount(createElement(InboxPanel));
-    await click(`[data-inbox-row="${approvalRow.id}"] [data-inbox-action="allow"]`);
+    const actions = (id: string) => [...document.querySelectorAll<HTMLElement>(`[data-inbox-row="${id}"] [data-inbox-action]`)].map((one) => one.dataset.inboxAction);
+    expect(actions(approvalRow.id)).toEqual([]);
+    expect(actions(questionRow.id)).toEqual([]);
+    expect(actions(reportRow.id)).toEqual(["done"]);
+    await click(`[data-inbox-row="${approvalRow.id}"] button`);
+    await click('[data-inbox-reading] [data-inbox-action="allow"]');
     expect(dispatch).toHaveBeenCalledWith(expect.objectContaining({ type: "decideRequest", threadId: "inbox", requestId: "req-approval", behavior: "allow" }));
-    await click(`[data-inbox-row="${questionRow.id}"] [data-inbox-action="close"]`);
-    expect(dispatch).toHaveBeenCalledWith(expect.objectContaining({ type: "decideRequest", threadId: "inbox", requestId: "req-question", behavior: "answer" }));
+    await click('[aria-label="Back to the list"]');
     await click(`[data-inbox-row="${reportRow.id}"] [data-inbox-action="done"]`);
     expect(server.calls).toContainEqual({ path: `/api/inbox/${reportRow.id}/done`, method: "POST" });
     expect(document.querySelector(`[data-inbox-row="${reportRow.id}"]`), "it leaves the list at once").toBeNull();
@@ -90,7 +94,7 @@ describe("the inbox panel", () => {
     expect(server.calls).toContainEqual({ path: "/api/inbox/read-all", method: "POST" });
     expect(unreadIds()).toEqual([]);
     expect(rowIds(), "every row is still listed").toEqual([approvalRow.id, questionRow.id, messageRow.id, reportRow.id]);
-    expect(document.querySelector(`[data-inbox-row="${approvalRow.id}"] [data-inbox-action="allow"]`), "the ask still waits on its answer").not.toBeNull();
+    expect(document.querySelector(`[data-inbox-row="${approvalRow.id}"] [data-inbox-waits]`), "the ask still waits on its answer").not.toBeNull();
     expect(dispatch).not.toHaveBeenCalledWith(expect.objectContaining({ type: "decideRequest" }));
     expect(server.calls.filter((call) => /\/(done)$/.test(call.path))).toEqual([]);
     expect(currentInbox()!.rows.map((row) => [row.id, row.tab])).toEqual(inboxView().rows.map((row) => [row.id, row.tab]));

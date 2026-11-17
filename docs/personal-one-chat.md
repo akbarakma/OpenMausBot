@@ -94,7 +94,8 @@ exchange route. The rows' words are `server.oneChat.*` in `en.json`,
 | `packages/phone-protocol/src/routine-run.ts` | `AutomationLine.quiet` |
 | `server/index.ts` | `autoCompactAt` after `nativeCompactTokens`: a turn's context reading carries `compactAt`, the point `compactBudget` gives, so the app can mark it. It is absent with `context.autoCompact` off |
 | `server/store.ts`, `packages/phone-protocol/src/wire.ts` | `TaskUsage.context.compactAt` |
-| `server/index.ts` | `createInboxMutes` before `createTeamMessages`, its `shape` passed to `createPlaceInbox`, and `inboxMuteRoutes` after `createInboxRoutes` |
+| `server/index.ts` | `createInboxMutes` before `createTeamMessages`, its `shape` passed to `createPlaceInbox`, `inboxMuteRoutes` after `createInboxRoutes`, and `dotted` passed to `createAutomationReports` |
+| `server/automation-reports.ts` | the optional `dotted` dep: a report it allows also marks its chat unread |
 | `server/host/place-inbox.ts` | the optional `shape` dep, applied to the list `view` returns, so `count` follows it |
 | `packages/phone-protocol/src/inbox.ts` | `InboxRow.automation` and `InboxView.mutedAutomations` |
 
@@ -109,6 +110,12 @@ busy automation can fill the Inbox. "Mute in Inbox" takes one automation's
 reports out of it, old ones included. Its questions, approvals and failures
 still show, and its Main Chat post and notification are unchanged.
 
+Upstream marks a chat unread for a report only when it failed, asked a
+question or needs review. One chat also marks the bot's Main Chat unread for
+any other report the Inbox lists, so the sidebar shows a dot. A muted
+automation's report and a "Nothing new" post leave it read. `inboxMutes.dots`
+decides this through `createAutomationReports`'s `dotted` dep.
+
 `server/inbox-mutes.ts` keeps the muted automation ids in `inbox-mutes.json`
 in the data folder. A report's line in `place-inbox.json` names no
 automation, so `automationOf` matches the "<name>: " its text starts with
@@ -119,8 +126,9 @@ row with `automation` and drops a muted automation's `result` rows.
 list, for the place's owner only.
 
 The desktop app mutes from a report read in full (`InboxReading.tsx`), with
-Undo on a toast, and from a bell beside each switch on the bot panel's
-Automations page (`AutomationsPage.tsx`). The Inbox and the bot panel share
+Undo on a toast, and from a grey bell beside each switch on the bot panel's
+Automations page (`AutomationsPage.tsx`). The bell is always shown in the same
+place, and a muted one has a filled background. The Inbox and the bot panel share
 one slot: `slotGivesWay` in `simple-side-panel.ts` closes the one open
 before, and a bot panel closed that way stays wanted, so it returns when the
 Inbox closes.
@@ -221,7 +229,7 @@ Inbox closes.
 | `src/components/bot-panel/PanelHome.tsx`, `src/components/ModelPicker.tsx` | no Reasoning row; the Setup card's Model row (`row`) carries Thinking and the level (`reasoningElsewhere`) |
 | `src/components/FirstReplyRescueRow.tsx` | Switch AI opens bot settings in Advanced mode |
 | `src/lib/simple-model-menu.ts` | `bareModelLabel` drops the provider from a model's name |
-| `src/components/inbox/InboxPanel.tsx`, `InboxRow.tsx`, `InboxReading.tsx` | rows with 32px faces, the automation as a chip and day headers; the list keeps its scroll and marks the line just read; the reading view has no breadcrumb or menu, and Open in chat, Mark done and Mute in Inbox as buttons |
+| `src/components/inbox/InboxPanel.tsx`, `InboxRow.tsx`, `InboxReading.tsx` | rows with 32px faces and day headers, a "Needs you" pill on asks and one round Mark done check on hover for news; rows leave out the automation's name, which the reading view shows in full on its own line; the list keeps its scroll and marks the line just read; the reading view has no breadcrumb or menu, and Open in chat, Mark done and Mute in Inbox as buttons |
 | `src/components/inbox/inbox-view.ts` | `textOf` drops the automation's name a report starts with |
 | `src/components/bot-panel/AutomationsPage.tsx` | the Mute in Inbox bell beside each switch |
 | `src/components/bot-panel/simple-side-panel.ts` | `slotGivesWay`: the Inbox and the bot panel share one slot |

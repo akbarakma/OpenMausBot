@@ -1,7 +1,6 @@
 import { Check, CornerUpLeft, ExternalLink, Split, X, type LucideIcon } from "lucide-react";
 import type { InboxRow } from "../../../shared/inbox";
 import { cn } from "@/lib/cn";
-import { ONE_CHAT } from "@/lib/one-chat";
 import { formatTime } from "@/lib/clock-time";
 import { t } from "@/lib/i18n";
 import { localDay } from "@/lib/transcript-derivations";
@@ -21,8 +20,6 @@ const ACTION_LOOK: Record<QuickAction, { Icon: LucideIcon; label: LocaleKey }> =
 };
 
 const ROW_ACTION = "flex size-7 shrink-0 items-center justify-center rounded-full text-ink-secondary transition-colors hover:bg-ink/[0.07] hover:text-ink active:bg-ink/[0.11] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus pointer-coarse:size-9";
-
-const PANEL_ACTION = "relative flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-lg bg-raised-hover text-ink transition-colors after:absolute after:-inset-1 hover:bg-ink/[0.14] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus";
 
 /** Today's lines say how long ago; an older one sits under its day's header, so it says the time of day. */
 function panelTime(at: number, now: number): string {
@@ -61,22 +58,19 @@ export function InboxRowItem({ row, now, onOpen, onAction, inCard = false, lastR
   const sender = senderLabel(row);
   if (!inCard) {
     const waits = row.tab === "needs-you";
-    const chip = row.automation?.name ?? (waits ? t("inbox.needsYou") : ONE_CHAT ? null : placeOf(row));
+    const doneable = actions.includes("done");
     const strong = row.unread || waits;
     return (
       <div data-inbox-row={row.id} data-tab={row.tab} data-unread={row.unread ? "" : undefined} data-last-read={lastRead ? "" : undefined}
         className={cn("group relative rounded-[10px] focus-within:bg-raised hover:bg-raised", lastRead && "bg-accent/10 ring-1 ring-inset ring-accent/35")}>
-        <button type="button" onClick={() => onOpen(row)} title={[sender, chip, placeOf(row), headlineOf(row)].filter(Boolean).join(" · ")}
+        <button type="button" onClick={() => onOpen(row)} title={[sender, row.automation?.name ?? placeOf(row), headlineOf(row)].filter(Boolean).join(" · ")}
           className="flex w-full min-w-0 cursor-pointer items-start gap-3 rounded-[10px] px-2 py-2.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/60">
           <span className="shrink-0" aria-hidden="true"><InboxSender from={row.from} size={32} /></span>
-          <span className={cn("min-w-0 flex-1", strong ? "text-ink-secondary" : "text-ink-tertiary")}>
+          <span className={cn("min-w-0 flex-1", strong ? "text-ink-secondary" : "text-ink-tertiary", doneable && "group-focus-within:pe-10 group-hover:pe-10")}>
             <span className="flex h-[18px] min-w-0 items-center gap-1.5">
-              <span data-inbox-from className={cn("max-w-[55%] shrink-0 truncate text-[14px]", strong ? "font-semibold text-ink" : "font-medium text-ink-secondary")}>{sender}</span>
-              {chip && (
-                <span data-inbox-place className={cn("min-w-0 truncate rounded-md px-1.5 py-px text-[11px] font-medium",
-                  waits && !row.automation ? "bg-warning/15 text-warning" : "bg-ink/[0.07] text-ink-secondary")}>{chip}</span>
-              )}
-              <span className="ms-auto flex shrink-0 items-center gap-1.5 ps-1 text-[11px] tabular-nums text-ink-tertiary group-focus-within:invisible group-hover:invisible">
+              <span data-inbox-from className={cn("min-w-0 truncate text-[14px]", strong ? "font-semibold text-ink" : "font-medium text-ink-secondary")}>{sender}</span>
+              {waits && <span data-inbox-place className="shrink-0 rounded-md bg-warning/15 px-1.5 py-px text-[11px] font-medium text-warning">{t("inbox.needsYou")}</span>}
+              <span className="ms-auto flex shrink-0 items-center gap-1.5 ps-1 text-[11px] tabular-nums text-ink-tertiary">
                 {panelTime(row.at, now)}
                 {waits ? <span data-inbox-waits role="img" aria-label={t("inbox.waitsOnYou")} className="size-[7px] rounded-full bg-warning" />
                   : row.unread && <span data-inbox-unread-dot aria-hidden="true" className="size-[7px] rounded-full bg-accent" />}
@@ -85,16 +79,12 @@ export function InboxRowItem({ row, now, onOpen, onAction, inCard = false, lastR
             <PanelBody row={row} />
           </span>
         </button>
-        <span className="absolute right-1 top-1 hidden items-center gap-2 rounded-xl bg-raised p-1 group-focus-within:flex group-hover:flex">
-          {actions.map((action) => {
-            const { Icon, label } = ACTION_LOOK[action];
-            return (
-              <button key={action} type="button" data-inbox-action={action} aria-label={t(label)} title={t(label)} onClick={() => onAction(row, action)} className={PANEL_ACTION}>
-                <Icon size={15} aria-hidden="true" />
-              </button>
-            );
-          })}
-        </span>
+        {doneable && (
+          <button type="button" data-inbox-action="done" aria-label={t("inbox.action.markDone")} title={t("inbox.action.markDone")} onClick={() => onAction(row, "done")}
+            className="absolute right-2 top-1/2 hidden size-7 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full text-ink-secondary ring-[1.5px] ring-inset ring-ink/25 transition-colors after:absolute after:-inset-1.5 hover:bg-ink/[0.1] hover:text-ink hover:ring-ink/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus group-focus-within:flex group-hover:flex">
+            <Check size={14} aria-hidden="true" />
+          </button>
+        )}
       </div>
     );
   }
