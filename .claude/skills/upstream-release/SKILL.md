@@ -29,20 +29,37 @@ Change nothing in this part: no merge, no checkout, no service restart.
    The first line is the result tree; the `CONFLICT` lines name the files.
    Count hunks per file with
    `git cat-file -p <tree>:<file> | grep -c '^<<<<<<<'`.
-6. Find the risks a clean merge can hide:
-   - files changed on both sides: `comm -12` of
-     `git diff --name-only $OLD main` and `git diff --name-only $OLD $NEW`;
-   - exports removed from `shared/` and `src/lib/` between the tags, then
-     `git grep` the result tree for any the fork still uses outside
-     conflict hunks;
-   - `package.json`, `pnpm-lock.yaml`, `electron/` and `shared/` wire changes.
+6. Audit every fork commit, not only the conflicts. A clean merge can still
+   undo a fork change.
+   - List the fork's commits:
+     `git log --no-merges --format='%h %s' main --not --remotes=upstream --tags`.
+     Mark each one whose files upstream also changed between `OLD` and `NEW`.
+   - For each marked commit, judge from the result tree whether its purpose
+     still holds. Read upstream's deleted lines in its files: a fork change
+     can rely on an upstream line that upstream now deletes, with no conflict.
+   - In each conflict hunk, name the values the fork's own code reads from
+     the fork's side, such as a returned field or a prop. Taking upstream's
+     side drops them.
+   - Search upstream's new files and new code for anything the docs' "no …"
+     lines removed: a way to start a thread, a model picker, Start fresh, a
+     percent, a Usage item.
+   - Check exports removed from `shared/` and `src/lib/` that the fork still
+     uses, and `package.json`, `pnpm-lock.yaml`, `electron/` and `shared/`
+     wire changes.
+   - With more than 20 marked commits, split them by area (server, sidebar,
+     chat and composer, bot panel and Electron) across parallel Sonnet
+     subagents. Give each one its area's doc and the result tree. Check every
+     risk they report with git yourself.
+   - Done when every marked commit has a verdict: intact, mechanical
+     conflict, at risk, or cannot apply.
 7. Sort the commits into features, contract changes and touched UI areas.
    Under 100 non-merge commits (`git rev-list --count --no-merges $OLD..$NEW`),
    or when the release notes already explain each change, do it inline
    from the notes and `git log --first-parent`. Above that, send the sorting
    to a Haiku subagent and verify any claim you report as a risk with git.
-8. Read [`docs/personal-bot-panel.md`](../../../docs/personal-bot-panel.md)
-   and [`docs/personal-sidebar.md`](../../../docs/personal-sidebar.md), their
+8. Read [`docs/personal-bot-panel.md`](../../../docs/personal-bot-panel.md),
+   [`docs/personal-sidebar.md`](../../../docs/personal-sidebar.md) and
+   [`docs/personal-one-chat.md`](../../../docs/personal-one-chat.md), their
    file tables and their "Merging an upstream release" sections, then sort
    each conflict hunk:
    - **Mechanical:** the doc already decides it (the fork's tiles, one page
@@ -85,6 +102,11 @@ and its row in the doc. Then decide:
 - Upstream adds something new: place it the way the fork placed similar
   things (labelled cards, rare items in Advanced or their own page, debug
   tools off the panel).
+
+Before you tell Akbar a fact about his data, such as which bots are in a
+department, read the field's name from the code's type. Then print one
+record's keys on bb-1. Treat an empty result as a wrong query until a
+second read confirms it.
 
 Ask Akbar only when no fork choice or doc line points either way, and the
 choice changes what his bots do, not just where a row sits. Even then,

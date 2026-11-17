@@ -11,6 +11,7 @@ Before starting Personal development or packaging, read
 - Keep mb-0 as a client; do not start a local agent server during normal use.
 - bb-1 runs this fork's server package. Build it with `corepack pnpm package:personal-server` and install it with the steps in the `upstream-release` skill. Nothing updates by itself: Akbar asks for each update.
 - Do not change bb-1's other services: the Gmail relay and its tunnel, the watch timers and `otp-cleaner`.
+- When Akbar corrects work done under a skill in `.claude/skills/`, or you find your own miss, add the step that would have caught it to that skill in the same run. Commit only that file, and say so in your report. This edit needs no go.
 - Put a server change in a new file and call it from upstream's file in one line. Every such line is listed in [`docs/personal-one-chat.md`](docs/personal-one-chat.md); read that doc before changing the server or merging a tag that touches a file it lists.
 - Keep each server change behind the one-chat setting (`oneChatOn()` in `server/one-chat.ts`), so upstream's tests pass with it off.
 - A change to saved data only adds fields. An official package must still read the data folder.
