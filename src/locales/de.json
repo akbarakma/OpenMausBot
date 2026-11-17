@@ -253,6 +253,7 @@
   "server.oneChat.repliedTo": "{bot} geantwortet",
   "server.oneChat.sideJobStarted": "Nebenaufgabe gestartet: {title}",
   "server.oneChat.sideJobFinished": "Nebenaufgabe erledigt: {title}",
+  "server.oneChat.nothingNew": "Nichts Neues",
   "server.rooms.held": "{bot} ist angehalten (von dir gestoppt). Erwähne ihn mit @ oder schreib „resume“",
   "server.rooms.finishedNoSummary": "{bot} ist ohne Zusammenfassung fertig geworden",
   "server.rooms.finishedNoSummaryAsking": "{bot} ist ohne Zusammenfassung fertig geworden, ich frage nach einem kurzen Ergebnis",

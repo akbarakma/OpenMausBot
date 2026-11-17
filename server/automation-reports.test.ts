@@ -6,6 +6,8 @@ import "./server-line-packs.ts";
 import { clipRunOutput } from "./routine-lines.ts";
 import { automationContextText, createAutomationReports, newestAutomationLines, readRunReply, recoveredText, routineRunNeedsReview } from "./automation-reports.ts";
 import { DATA_DIR } from "./config.ts";
+import { isContextMessage } from "./delta-context.ts";
+import { ONE_CHAT_ENV } from "./one-chat.ts";
 import type { RoutineRun } from "./routines.ts";
 import { Store, type BotRecord, type Message } from "./store.ts";
 
@@ -165,6 +167,28 @@ describe("automation reports", () => {
     expect(f.runs.get(run.id)!.report).toEqual({ state: "quiet" });
     expect(f.wrote).toEqual([]);
     expect(f.notified).toEqual([]);
+  });
+
+  it("with one chat, leaves one quiet line for a run with nothing new that the chat's session never reads", () => {
+    process.env[ONE_CHAT_ENV] = "1";
+    try {
+      const f = fixture();
+      f.store.appendMessage(f.main, { role: "bot", kind: "text", text: "Acme replied.", automation: { routineId: "routine-Inbox brief", runId: "before", name: "Inbox brief", trigger: "schedule", executionThreadId: "x", scheduledFor: 0 } });
+      const run = f.finished("Checked 14 emails.\nNOTHING NEW");
+      f.store.patchTask(f.bot.id, f.main, { unread: false });
+      f.reports.runSettled(run, `turn-${run.id}`);
+      f.reports.runSettled(run, `turn-${run.id}`);
+      const quiet = f.lines().filter((line) => line.automation?.quiet);
+      expect(quiet).toEqual([expect.objectContaining({ role: "bot", kind: "text", text: "Nothing new", automation: expect.objectContaining({ runId: run.id, quiet: true }) })]);
+      expect(isContextMessage(quiet[0]!)).toBe(false);
+      expect([...newestAutomationLines(f.lines())]).toEqual([f.lines()[0]!.id]);
+      expect(f.store.taskByThread(f.bot.id, f.main)?.unread).toBe(false);
+      expect(f.runs.get(run.id)!.report).toEqual({ state: "quiet" });
+      expect(f.wrote).toEqual([]);
+      expect(f.notified).toEqual([]);
+    } finally {
+      delete process.env[ONE_CHAT_ENV];
+    }
   });
 
   it("asks the person in the chat, as a normal line they can answer, when the run needs them", () => {

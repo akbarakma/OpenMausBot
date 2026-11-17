@@ -15,6 +15,7 @@ import { serverLine } from "./server-lines.ts";
 import type { BotRecord, Message, Store } from "./store.ts";
 import { hostTimeZone } from "./turn-clock.ts";
 import { AUTHORITY, fromNote, routineWho } from "./provenance-label.ts";
+import { oneChatOn } from "./one-chat.ts";
 
 const QUIET = /^[\s*_`"'.!-]*nothing new[\s*_`"'.!-]*$/i;
 const NEEDS_INPUT = /^\s*needs input:\s*/i;
@@ -83,7 +84,7 @@ export function waitingCardText(message: Pick<Message, "kind" | "signIn" | "conn
 /** The newest line of each automation: whatever else is dropped for room, the chat's session always gets these. */
 export function newestAutomationLines(messages: readonly Pick<Message, "id" | "automation">[]): Set<string> {
   const newest = new Map<string, string>();
-  for (const message of messages) if (message.automation) newest.set(message.automation.routineId, message.id);
+  for (const message of messages) if (message.automation && !message.automation.quiet) newest.set(message.automation.routineId, message.id);
   return new Set(newest.values());
 }
 
@@ -123,7 +124,7 @@ export function createAutomationReports(deps: AutomationReportDeps) {
     return bot && task && !task.routineRunId ? { bot, threadId: task.threadId } : null;
   };
 
-  const lineOf = (run: RoutineRun, extra: Pick<AutomationLine, "needsYou" | "failed" | "partial" | "recovered" | "copyOf">): AutomationLine => ({
+  const lineOf = (run: RoutineRun, extra: Pick<AutomationLine, "needsYou" | "failed" | "partial" | "recovered" | "copyOf" | "quiet">): AutomationLine => ({
     routineId: run.routineId, runId: run.id, name: run.routineName, trigger: run.eventSource ?? run.triggerSource ?? (run.manual ? "manual" : "schedule"),
     executionThreadId: run.threadId!, scheduledFor: run.scheduledFor, ...extra,
   });
@@ -191,7 +192,7 @@ export function createAutomationReports(deps: AutomationReportDeps) {
     const written = store.messagesFor(target.threadId).find((message) =>
       (message.automation?.runId === run.id && message.kind === "text" && !message.automation.copyOf) || message.routineRun?.runId === run.id);
     if (written) {
-      deps.routines()?.noteReport(run.id, { state: "posted", threadId: target.threadId, messageId: written.id });
+      deps.routines()?.noteReport(run.id, written.automation?.quiet ? { state: "quiet" } : { state: "posted", threadId: target.threadId, messageId: written.id });
       return true;
     }
     const source = line.kind === "reply" ? replyOf(run, line.messageId) : undefined;
@@ -200,6 +201,7 @@ export function createAutomationReports(deps: AutomationReportDeps) {
       : { quiet: false, text: line.detail ? serverLine(language, run.partial ? "server.runs.partlyDoneWhy" : "server.runs.didNotFinishWhy", { detail: line.detail }) : serverLine(language, "server.runs.didNotFinish") };
     const recovered = said.quiet && lastSaidFailed(run, target.threadId);
     if (said.quiet && !recovered) {
+      if (oneChatOn()) store.appendMessage(target.threadId, { role: "bot", kind: "text", text: serverLine(language, "server.oneChat.nothingNew"), automation: lineOf(run, { quiet: true }) });
       deps.routines()?.noteReport(run.id, { state: "quiet" });
       return true;
     }
@@ -276,7 +278,7 @@ export function createAutomationReports(deps: AutomationReportDeps) {
       const reply = read(run, said);
       const bot = store.bot(run.botId);
       const target = destination(run);
-      if (target && (!reply.quiet || lastSaidFailed(run, target.threadId))) hold(run.id, { kind: "reply", run, messageId: said?.id ?? null });
+      if (target && (!reply.quiet || oneChatOn() || lastSaidFailed(run, target.threadId))) hold(run.id, { kind: "reply", run, messageId: said?.id ?? null });
       else if (reply.quiet) deps.routines()?.noteReport(run.id, { state: "quiet" });
       else if (bot) deps.notify("done", bot, run.threadId, reply.text);
     },

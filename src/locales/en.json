@@ -396,6 +396,7 @@
   "server.oneChat.repliedTo": "Replied to {bot}",
   "server.oneChat.sideJobStarted": "Started a side job: {title}",
   "server.oneChat.sideJobFinished": "Side job finished: {title}",
+  "server.oneChat.nothingNew": "Nothing new",
   "server.rooms.held": "{bot} is held (stopped by you) — @mention it or say resume",
   "server.rooms.finishedNoSummary": "{bot} finished without a summary",
   "server.rooms.finishedNoSummaryAsking": "{bot} finished without a summary — asking for a short result",

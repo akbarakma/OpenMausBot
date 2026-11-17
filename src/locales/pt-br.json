@@ -379,6 +379,7 @@
   "server.oneChat.repliedTo": "Respondeu a {bot}",
   "server.oneChat.sideJobStarted": "Começou uma tarefa paralela: {title}",
   "server.oneChat.sideJobFinished": "Tarefa paralela concluída: {title}",
+  "server.oneChat.nothingNew": "Nada de novo",
   "server.rooms.held": "O bot {bot} está pausado (você o interrompeu) — mencione-o com @ ou diga retomar",
   "server.rooms.finishedNoSummary": "{bot} terminou sem um resumo",
   "server.rooms.finishedNoSummaryAsking": "{bot} terminou sem um resumo — estamos pedindo um resultado breve",

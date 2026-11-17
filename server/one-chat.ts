@@ -114,13 +114,24 @@ const TOOL_DESCRIPTIONS: Record<string, string> = {
     `Write one message to the person in your main chat, from background work: thread_id "${MAIN_THREAD_ALIAS}" is your one chat with them. Use it only when they need to know or decide something now; a routine's final reply already reaches the main chat by itself. It shows as from you. wake true also starts a run there; default false.`,
 };
 
-interface CatalogTool { name: string; description: string }
+// A run's own system prompt says NOTHING NEW too, but instructions that name another empty reply win over it.
+const QUIET_RUN = " When a run may find nothing worth telling the person, say to reply only NOTHING NEW then: the chat shows that run as the automation's name and time alone. Any other words, such as \"nothing to report\" or \"OK\", are posted as a report.";
 
-/** The tool list a bot with one chat sees: nothing that lists, closes or renames threads, and side jobs described as hidden work. */
+interface CatalogTool { name: string; description: string; inputSchema?: unknown }
+
+function withQuietRuns<Tool extends CatalogTool>(tool: Tool): Tool {
+  const schema = tool.inputSchema as { properties?: { instructions?: { description?: string } } } | undefined;
+  const instructions = tool.name === "trigger" ? schema?.properties?.instructions : undefined;
+  if (!schema || !instructions) return tool;
+  return { ...tool, inputSchema: { ...schema, properties: { ...schema.properties, instructions: { ...instructions, description: `${instructions.description ?? ""}${QUIET_RUN}` } } } };
+}
+
+/** The tool list a bot with one chat sees: nothing that lists, closes or renames threads, side jobs described as hidden
+ * work, and automations that say NOTHING NEW for a run with nothing to tell. */
 export function oneChatTools<Tool extends CatalogTool>(tools: readonly Tool[], env: Env = process.env): Tool[] {
   if (!oneChatOn(env)) return [...tools];
   return tools.filter((tool) => !HIDDEN_TOOLS.has(tool.name))
-    .map((tool) => (TOOL_DESCRIPTIONS[tool.name] ? { ...tool, description: TOOL_DESCRIPTIONS[tool.name]! } : tool));
+    .map((tool) => withQuietRuns(TOOL_DESCRIPTIONS[tool.name] ? { ...tool, description: TOOL_DESCRIPTIONS[tool.name]! } : tool));
 }
 
 /** A teammate's message and a scheduled run recall the bot's other conversations. A side job or Burst part the bot

@@ -27,6 +27,7 @@ it("keeps one chat per bot: a teammate's message, a side job and a webhook's run
         { key: "SIDE-SELF", match: ["SIDE-SELF"], reply: "SIDE-SELF: ledger A balances." },
         { key: "SIDE", match: ["SIDE-JOB"], steps: [{ tool: "start_thread", arguments: { title: "Ledger A", message: "SIDE-SELF: check ledger A" }, expectError: false }], reply: "SIDE: started the check." },
         { key: "MAIL", match: ["Triage the new mail"], reply: "MAIL: one mail needs your reply.", repeat: true },
+        { key: "RECEIPTS", match: ["Check the stale receipts"], reply: "Checked 3 receipts.\nNOTHING NEW", repeat: true },
       ] },
     }));
     const evidence = (): any[] => existsSync(`${planPath}.evidence.jsonl`)
@@ -90,6 +91,13 @@ it("keeps one chat per bot: a teammate's message, a side job and a webhook's run
     expect(await shown(mira.id)).toEqual(["Main Chat"]);
     const reports = ((await api(`/api/threads/${mira.activeTaskId}/messages`)).messages as any[]).filter((message) => message.automation);
     expect(reports).toEqual([expect.objectContaining({ text: "MAIL: one mail needs your reply.", automation: expect.objectContaining({ trigger: "webhook", name: "Gmail new-mail triage" }) })]);
+
+    const receipts = await api("/api/webhooks", { name: "Stale receipt check", prompt: "Check the stale receipts.", botId: mira.id });
+    const quietFire = await fetch(receipts.credential.url, { method: "POST", headers: { "content-type": "application/json", "idempotency-key": "receipts-1" }, body: "{}" });
+    const quietRunId = (await quietFire.json() as { runId: string }).runId;
+    await expect.poll(async () => ((await api("/api/routines")).runs as any[]).find((candidate) => candidate.id === quietRunId)?.report?.state, { timeout: 30_000 }).toBe("quiet");
+    const quiet = ((await api(`/api/threads/${mira.activeTaskId}/messages`)).messages as any[]).filter((message) => message.automation?.runId === quietRunId);
+    expect(quiet).toEqual([expect.objectContaining({ role: "bot", kind: "text", text: "Nothing new", automation: expect.objectContaining({ quiet: true, name: "Stale receipt check" }) })]);
     expect(evidence().some((turn) => turn.planKey === undefined)).toBe(false);
   } finally {
     await session.close();
