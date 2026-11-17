@@ -979,7 +979,7 @@ export const ChatView = memo(function ChatView({ bot: profile, inForkPanel = fal
 
   const routineRun = useThreadRoutineRun(bot.id, bot.threadId);
   // A run inside its own results conversation (a wait finishing in this chat) is no execution thread: no banner.
-  const routineExecution = routineRun && (routineRun.resultsThreadId ?? routineRun.sourceThreadId) !== bot.threadId ? routineRun : undefined;
+  const routineExecution = !ONE_CHAT && routineRun && (routineRun.resultsThreadId ?? routineRun.sourceThreadId) !== bot.threadId ? routineRun : undefined;
   const resultsThreadId = routineExecution?.resultsThreadId ?? routineExecution?.sourceThreadId;
   const canOpenResults = useStoreSelector((s) => Boolean(resultsThreadId) && [...s.bots, ...s.groups].some((owner) => owner.threadId === resultsThreadId || owner.tasks?.some((task) => task.threadId === resultsThreadId)));
 

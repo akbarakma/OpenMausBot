@@ -7,7 +7,7 @@ import type { Routine, RoutineRun } from "@/lib/routines";
 const fixture = vi.hoisted(() => {
   vi.stubGlobal("window", {});
   vi.stubGlobal("localStorage", { getItem: () => null, setItem: () => {} });
-  return { state: undefined as AppState | undefined, dispatch: vi.fn(), showThreads: true };
+  return { state: undefined as AppState | undefined, dispatch: vi.fn(), showThreads: true, oneChat: false };
 });
 vi.mock("@/lib/thread-preferences", () => ({ useShowThreads: () => fixture.showThreads }));
 vi.mock("@/state/store", async (importOriginal) => {
@@ -20,6 +20,7 @@ vi.mock("./DesktopCapabilities", async (importOriginal) => ({
   useDesktopCapabilities: () => ({ capabilities: { host: {}, dictation: { available: false } }, ready: true }),
 }));
 vi.mock("@/lib/analytics", () => ({ track: vi.fn() }));
+vi.mock("@/lib/one-chat", () => ({ get ONE_CHAT() { return fixture.oneChat; }, hiddenWork: () => false }));
 
 const { initialState } = await import("@/state/store");
 const { EventDetails } = await import("./RoutineCalendarPage");
@@ -89,6 +90,7 @@ function details(receipt: RoutineRun | null = run, definition: Routine | null = 
 beforeEach(() => {
   fixture.dispatch.mockClear();
   fixture.showThreads = true;
+  fixture.oneChat = false;
   fixture.state = { ...initialState, bots: [bot], groups: [group], routines: [routine], routineRuns: [run] };
 });
 afterAll(() => vi.unstubAllGlobals());
@@ -170,6 +172,13 @@ describe("routine results navigation", () => {
 
   it("shows no run banner when the run worked inside the conversation its results go to", () => {
     fixture.state!.routineRuns = [{ ...run, resultsThreadId: "execution", sourceThreadId: "execution" }];
+    const buttons = buttonsFrom(() => drawChatView({ bot }));
+    expect(buttons.has("Back to results")).toBe(false);
+    expect(buttons.has("Run logs")).toBe(false);
+  });
+
+  it("shows no run banner in the one-chat app, where a run opens over the chat its report went to", () => {
+    fixture.oneChat = true;
     const buttons = buttonsFrom(() => drawChatView({ bot }));
     expect(buttons.has("Back to results")).toBe(false);
     expect(buttons.has("Run logs")).toBe(false);

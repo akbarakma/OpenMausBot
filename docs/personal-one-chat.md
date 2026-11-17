@@ -135,6 +135,9 @@ existing line.
   thread's `routineRunId`, and opens upstream's fork panel state, which
   `WorkModal` shows instead of the side panel. With no chat on screen it
   shows that bot's chat first.
+- A run shows no "Run details" bar. Its "Back to results" led to the main
+  chat behind the modal, and the Automations page has each automation's
+  Logs.
 - Hidden work has no message box and no note in its place. A bot reads its
   own hidden sessions with `session_search` when asked why something failed.
 - Nothing starts or switches threads: the chat ⋯ menu has no New thread and
@@ -151,14 +154,14 @@ existing line.
 | `src/components/ApprovalCard.tsx` | `AppliedLine` for any change that applied on its own, a new automation included, before upstream's `TriggerCard` |
 | `src/components/bot-panel/panel-link.ts`, `page-registry.ts`, `PanelShell.tsx` | a panel link may name one item (`detail`), so the panel opens on that skill |
 | `src/components/ThreadChip.tsx` | `oneChatRow` draws a bot exchange or side job row as `OneChatLine` |
-| `src/components/ChatView.tsx` | no message box and no note for hidden work in the fork panel; no Fork on a message; `AutomationHead` inside an automation's post, or above its copied card, in place of `AutomationCaption` |
+| `src/components/ChatView.tsx` | no message box and no note for hidden work in the fork panel; no Fork on a message; `AutomationHead` inside an automation's post, or above its copied card, in place of `AutomationCaption`; no run details bar |
 | `src/components/ChatMoreMenu.tsx` | no `new-thread`, `threads` and `start-fresh` items |
 | `src/components/SidebarBotMenu.tsx` | no thread items in Simple's bot menu |
 | `src/components/Sidebar.tsx` | no "New conversation with" in the + menu |
 | `src/App.tsx` | ⌘⇧N starts no thread; `WorkModal` in place of `ForkPanel`, which neither collapses the sidebar nor closes on a narrow window |
 | `src/components/bot-panel/PanelHome.tsx` | no `BotConversations` and no Start fresh row |
 
-Upstream's tests for those menus and for the applied-change line mock `@/lib/one-chat` with `ONE_CHAT: false`,
+Upstream's tests for those menus, the applied-change line and the run details bar mock `@/lib/one-chat` with `ONE_CHAT: false`,
 so they still test upstream's paths. Add that mock to a new upstream test
 that fails on a missing thread item.
 
@@ -169,6 +172,6 @@ that fails on a missing thread item.
 2. If upstream adds a place that calls `store.createTask` for a bot, decide
    where it leads: the main chat, or a hidden thread with `hideWorkSession`.
    List it here.
-3. Run `corepack pnpm exec vitest run server/one-chat src/lib/bot-exchange ThreadChip thread-navigation ChatMoreMenu ApprovalCard TriggerCard panel-link ChatView.controls ChatView.automation ChatView.one-chat-automation server/automation-reports SidebarBotRead Sidebar.simple-mode Sidebar.plus-menu Sidebar.working-folder file-size-ratchet`,
+3. Run `corepack pnpm exec vitest run server/one-chat src/lib/bot-exchange ThreadChip thread-navigation ChatMoreMenu ApprovalCard TriggerCard panel-link ChatView.controls ChatView.automation ChatView.one-chat-automation RoutineResultsNavigation server/automation-reports SidebarBotRead Sidebar.simple-mode Sidebar.plus-menu Sidebar.working-folder file-size-ratchet`,
    then upstream's tests named after each server file above, with the
    setting off.
