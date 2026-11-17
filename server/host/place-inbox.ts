@@ -79,6 +79,8 @@ export interface PlaceInboxDeps {
   /** Conversations resting on the person for a card a running turn does not hold open: a password, a sign-in, an app to
    * connect, or an ask left open after its turn ended. */
   waiting?(): Array<PersonWait & { threadId: string }>;
+  /** The list as it leaves this inbox: rows labelled or left out by a setting outside it. */
+  shape?(view: InboxView): InboxView;
   now?: () => number;
 }
 
@@ -183,7 +185,8 @@ export function createPlaceInbox(deps: PlaceInboxDeps) {
 
   function view(auth: RequestAuth): InboxView {
     const rows = [...askRows(auth), ...lines.filter((line) => lineFor(auth, line)).map(lineRow)].sort((a, b) => b.at - a.at).slice(0, VIEW_ROWS);
-    return { botId: null, threadId: null, rows, anchor: null };
+    const listed: InboxView = { botId: null, threadId: null, rows, anchor: null };
+    return deps.shape ? deps.shape(listed) : listed;
   }
 
   function addLine(line: Line): Line {

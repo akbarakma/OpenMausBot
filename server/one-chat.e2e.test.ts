@@ -91,6 +91,15 @@ it("keeps one chat per bot: a teammate's message, a side job and a webhook's run
     expect(await shown(mira.id)).toEqual(["Main Chat"]);
     const reports = ((await api(`/api/threads/${mira.activeTaskId}/messages`)).messages as any[]).filter((message) => message.automation);
     expect(reports).toEqual([expect.objectContaining({ text: "MAIL: one mail needs your reply.", automation: expect.objectContaining({ trigger: "webhook", name: "Gmail new-mail triage" }) })]);
+    const mailRows = async () => ((await api("/api/inbox")).rows as any[]).filter((row) => row.automation?.id === webhook.id);
+    await expect.poll(async () => (await mailRows()).map((row) => [row.kind, row.automation.name]), { timeout: 10_000 }).toEqual([["result", "Gmail new-mail triage"]]);
+    const counted = (await api("/api/inbox/count")).count as number;
+    expect((await api(`/api/inbox/automations/${webhook.id}/mute`, {})).mutedAutomations).toEqual([webhook.id]);
+    expect(await mailRows(), "muted: its report leaves the Inbox").toEqual([]);
+    expect((await api("/api/inbox/count")).count).toBe(counted - 1);
+    expect(((await api(`/api/threads/${mira.activeTaskId}/messages`)).messages as any[]).filter((message) => message.automation?.name === "Gmail new-mail triage"), "Main Chat keeps it").toHaveLength(1);
+    expect((await api(`/api/inbox/automations/${webhook.id}/unmute`, {})).mutedAutomations).toEqual([]);
+    expect(await mailRows()).toHaveLength(1);
 
     const receipts = await api("/api/webhooks", { name: "Stale receipt check", prompt: "Check the stale receipts.", botId: mira.id });
     const quietFire = await fetch(receipts.credential.url, { method: "POST", headers: { "content-type": "application/json", "idempotency-key": "receipts-1" }, body: "{}" });

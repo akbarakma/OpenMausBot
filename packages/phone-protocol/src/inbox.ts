@@ -52,6 +52,8 @@ export interface InboxRow {
   /** On someone's Cloud: a guest's conversation asks this, not its owner's; `name` is empty when it isn't known. */
   askedBy?: { name: string };
   origin?: InboxItem["origin"];
+  /** The automation whose report this is, when the server can tell; `text` still starts with its name. */
+  automation?: { id: string; name: string };
   text: string;
   at: number;
   unread: boolean;
@@ -75,4 +77,7 @@ export interface InboxView {
   threadId: string | null;
   rows: InboxRow[];
   anchor: string | null;
+  /** Automations whose reports the person keeps out of this list; their questions and failures still show. Absent on a
+   * server that cannot mute. */
+  mutedAutomations?: string[];
 }
