@@ -92,10 +92,8 @@ it("shows a bot no tool that lists, closes or renames threads, and describes a s
   expect(shown[1]!.description).toContain(`"${MAIN_THREAD_ALIAS}"`);
   expect(shown[2]!.description).toBe("upstream coordinate_bots");
   expect(oneChatTools(tools, {})).toEqual(tools);
-  const trigger = { name: "trigger", description: "upstream trigger", inputSchema: { type: "object", properties: { action: { type: "string" }, instructions: { type: "string", description: "Complete steps." } } } };
-  const [quiet] = oneChatTools([trigger]);
-  expect(quiet!.inputSchema.properties.instructions.description).toMatch(/^Complete steps\. When a run may find nothing .*reply only NOTHING NEW/);
-  expect(quiet!.inputSchema.properties.action).toBe(trigger.inputSchema.properties.action);
+  const trigger = { name: "trigger", description: "Set up an automation." };
+  expect(oneChatTools([trigger])[0]!.description).toMatch(/^Set up an automation\. When a run may find nothing .*must say to reply only NOTHING NEW/);
   expect(oneChatTools([trigger], {})).toEqual([trigger]);
   expect(threadsPrompt("upstream")).toContain("one chat");
   process.env[ONE_CHAT_ENV] = "0";

@@ -31,9 +31,10 @@ below.
 - **Tools.** A bot does not see `list_threads`, `close_thread` or
   `rename_thread`. `start_thread`, `post_to_thread` and the threads paragraph
   of the prompt describe hidden work. `post_to_thread` takes `thread_id`
-  `"main"` for the bot's main chat. The `trigger` tool's `instructions`
-  field tells a bot to write "reply only NOTHING NEW" for a run with nothing
-  to tell. Without it, a bot wrote its own empty reply, such as "nothing to
+  `"main"` for the bot's main chat. The `trigger` tool's description tells
+  a bot to write "reply only NOTHING NEW" for a run with nothing to tell. A
+  note on its `instructions` field was not enough: a bot read it and still
+  wrote "end quietly". Without it, a bot wrote its own empty reply, such as "nothing to
   report", and every such run posted it as a report.
 - **Recall.** A teammate's message and a scheduled or manual routine run
   recall the bot's other conversations, as a person's message does. A side
