@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { Bot } from "@/state/store";
-import { botPanelWanted, browsingNow, computerRoute, setBotPanelWanted } from "./simple-side-panel";
+import { botPanelWanted, browsingNow, computerRoute, setBotPanelWanted, slotGivesWay } from "./simple-side-panel";
 
 const memory = () => {
   const items = new Map<string, string>();
@@ -20,6 +20,16 @@ describe("the Simple bot panel's open state", () => {
 
   it("counts as open when storage cannot be read", () => {
     expect(botPanelWanted({ getItem: () => { throw new Error("blocked"); } })).toBe(true);
+  });
+});
+
+describe("the one slot the Inbox and the bot panel share", () => {
+  it("keeps the one opened last", () => {
+    expect(slotGivesWay({ inbox: false, panel: true }, { inbox: true, panel: true }), "the Inbox opens over the panel").toBe("panel");
+    expect(slotGivesWay({ inbox: true, panel: false }, { inbox: true, panel: true }), "the panel opens over the Inbox").toBe("inbox");
+    expect(slotGivesWay({ inbox: false, panel: false }, { inbox: true, panel: true }), "both at once: the Inbox stays").toBe("panel");
+    expect(slotGivesWay({ inbox: false, panel: true }, { inbox: true, panel: false })).toBeNull();
+    expect(slotGivesWay({ inbox: true, panel: false }, { inbox: false, panel: true }), "the panel coming back after the Inbox").toBeNull();
   });
 });
 

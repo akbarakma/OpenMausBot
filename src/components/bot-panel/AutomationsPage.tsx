@@ -1,9 +1,11 @@
 import { useMemo } from "react";
-import { ArrowUpRight, Plus } from "lucide-react";
+import { ArrowUpRight, Bell, BellOff, Plus } from "lucide-react";
 
 import { useAppTriggers } from "@/lib/app-triggers";
 import { automationsFrom, automationStatus, orderAutomations, statusLine, type Automation, type AutomationKind } from "@/lib/automations";
+import { cn } from "@/lib/cn";
 import { t } from "@/lib/i18n";
+import { muteInboxAutomation, useInboxView } from "@/state/inbox";
 import type { LocaleKey } from "@/locales";
 import { useStore } from "@/state/store";
 import { useAllAutomationActions } from "../automations/app-actions";
@@ -33,6 +35,7 @@ export function AutomationsPage({ bot }: PageContext) {
   const { state, dispatch } = useStore();
   const actions = useAllAutomationActions();
   const { automations, loading } = useBotAutomations(bot.id);
+  const muted = useInboxView()?.mutedAutomations;
 
   return (
     <>
@@ -44,7 +47,9 @@ export function AutomationsPage({ bot }: PageContext) {
             {items.map((automation) => {
               const status = automationStatus(automation);
               const name = automation.name.trim() || t("automations.title");
-              const hint = status.state === "needs-you" ? t("automations.needsYou", { reason: status.reason ?? "" }) : statusLine(automation);
+              const quiet = muted?.includes(automation.id) === true;
+              const told = status.state === "needs-you" ? t("automations.needsYou", { reason: status.reason ?? "" }) : statusLine(automation);
+              const hint = quiet ? `${t("botPanel.automations.mutedInInbox")} · ${told}` : told;
               return (
                 <div key={automation.id} className={openRowCls}>
                   <button
@@ -60,6 +65,20 @@ export function AutomationsPage({ bot }: PageContext) {
                       hint={<span className="block truncate">{hint}</span>}
                     />
                   </button>
+                  {muted && (
+                    <button
+                      type="button"
+                      data-panel-inbox-mute={automation.id}
+                      aria-pressed={quiet}
+                      aria-label={t(quiet ? "botPanel.automations.unmuteInInbox" : "botPanel.automations.muteInInbox", { name })}
+                      title={t(quiet ? "botPanel.automations.unmuteInInbox" : "botPanel.automations.muteInInbox", { name })}
+                      onClick={() => void muteInboxAutomation(automation.id, !quiet)}
+                      className={cn("relative z-[1] flex size-[30px] shrink-0 cursor-pointer items-center justify-center rounded-lg transition-colors",
+                        quiet ? "bg-warning/10 text-warning ring-[1.5px] ring-inset ring-warning hover:bg-warning/20" : "text-ink-tertiary hover:bg-ink/[0.06] hover:text-ink")}
+                    >
+                      {quiet ? <BellOff size={15} aria-hidden="true" /> : <Bell size={15} aria-hidden="true" />}
+                    </button>
+                  )}
                   {status.state !== "done" && (
                     <BotSwitch
                       color={bot.color}

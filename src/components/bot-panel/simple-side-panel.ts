@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { readComputerPanelView, writeComputerPanelView, type ComputerPanelView } from "@/lib/computer-panel-view";
 import { currentTaskBot, type Action, type AppState, type Bot } from "@/state/store";
+import { closeInbox, useInboxPanel } from "@/state/inbox";
 import { toolSurfaceKind } from "../../../shared/tool-surface";
 import type { Surface } from "../../../shared/wire";
 import { openBrowserWindow, useBrowserWindow } from "./browser-window";
@@ -99,6 +100,14 @@ export function simpleComputerRoute(state: AppState, bot: Bot): ComputerRoute {
   return computerRoute(bot, readComputerPanelView(bot.id), { data, ...(signIn ? { signInPlace: signIn.place } : {}) });
 }
 
+type SlotState = { inbox: boolean; panel: boolean };
+
+/** The Inbox and the bot panel share one slot: when both are open, the one that was open before gives way. */
+export function slotGivesWay(was: SlotState, now: SlotState): "inbox" | "panel" | null {
+  if (!now.inbox || !now.panel) return null;
+  return was.inbox ? "inbox" : "panel";
+}
+
 /**
  * Simple mode's one side panel: the bot panel stays open until the person closes it, and comes back on the page it
  * showed once whatever covered it (a full page, another side panel, the browser) goes. Requests for the computer popup
@@ -121,6 +130,17 @@ export function useSimpleSidePanel({ active, bot, state, dispatch, inline, cover
   useEffect(() => {
     if (active && state.settingsOpen) setBotPanelWanted(true);
   }, [active, state.settingsOpen]);
+
+  const inboxOpen = useInboxPanel().open;
+  const shown = useRef<SlotState>({ inbox: inboxOpen, panel: state.settingsOpen });
+  useEffect(() => {
+    const now = { inbox: inboxOpen, panel: state.settingsOpen };
+    const gives = active ? slotGivesWay(shown.current, now) : null;
+    shown.current = now;
+    if (gives === "inbox") closeInbox();
+    // Closed here, not by its ✕, the bot panel stays wanted and comes back when the Inbox closes.
+    else if (gives === "panel") dispatch({ type: "toggleSettings", open: false });
+  }, [active, inboxOpen, state.settingsOpen, dispatch]);
 
   useEffect(() => {
     if (!active || !botId || !state.activityOpen) return;

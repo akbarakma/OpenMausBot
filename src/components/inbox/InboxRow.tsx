@@ -1,11 +1,12 @@
 import { Check, CornerUpLeft, ExternalLink, Split, X, type LucideIcon } from "lucide-react";
 import type { InboxRow } from "../../../shared/inbox";
 import { cn } from "@/lib/cn";
+import { ONE_CHAT } from "@/lib/one-chat";
 import { t } from "@/lib/i18n";
 import type { LocaleKey } from "@/locales";
 import { InboxSender } from "../InboxLine";
 import { threadUpdatedLabel } from "../SidebarThreadRow";
-import { choicesLine, headlineOf, snippetOf } from "./inbox-answer";
+import { choicesLine, headlineOf } from "./inbox-answer";
 import { placeOf, quickActions, senderLabel, subjectOf, textOf, type QuickAction } from "./inbox-view";
 
 const ACTION_LOOK: Record<QuickAction, { Icon: LucideIcon; label: LocaleKey }> = {
@@ -13,65 +14,99 @@ const ACTION_LOOK: Record<QuickAction, { Icon: LucideIcon; label: LocaleKey }> =
   deny: { Icon: X, label: "approval.action.deny" },
   reply: { Icon: CornerUpLeft, label: "chat.reply" },
   close: { Icon: Check, label: "common.done" },
-  done: { Icon: Check, label: "common.done" },
+  done: { Icon: Check, label: "inbox.action.markDone" },
   open: { Icon: ExternalLink, label: "inbox.action.openInChat" },
 };
 
 const ROW_ACTION = "flex size-7 shrink-0 items-center justify-center rounded-full text-ink-secondary transition-colors hover:bg-ink/[0.07] hover:text-ink active:bg-ink/[0.11] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus pointer-coarse:size-9";
 
-export function InboxRowItem({ row, now, onOpen, onAction, inCard = false }: {
+const PANEL_ACTION = "flex size-[30px] shrink-0 cursor-pointer items-center justify-center rounded-lg bg-raised-hover text-ink transition-colors hover:bg-ink/[0.14] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus";
+
+/** What a row says under its sender: an ask's headline and choices, or the line's words on up to two lines. */
+function PanelBody({ row }: { row: InboxRow }) {
+  const choices = choicesLine(row);
+  if (row.kind !== "ask") return <span data-inbox-subject className="mt-0.5 line-clamp-2 text-[13px] leading-[18px]">{textOf(row).replace(/\s+/g, " ").trim()}</span>;
+  return (
+    <>
+      <span data-inbox-subject className="mt-0.5 block truncate text-[13px] leading-[18px]">{headlineOf(row)}</span>
+      {choices ? (
+        <span data-inbox-choices className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[12px] text-ink-secondary">
+          <Split size={12} aria-hidden="true" className="shrink-0 rotate-180 text-warning" />
+          <span className="min-w-0 truncate">{choices}</span>
+        </span>
+      ) : null}
+    </>
+  );
+}
+
+export function InboxRowItem({ row, now, onOpen, onAction, inCard = false, lastRead = false }: {
   row: InboxRow;
   now: number;
   onOpen(row: InboxRow): void;
   onAction(row: InboxRow, action: QuickAction): void;
   /** On the inbox's card in the chat, which is wider than the panel and draws its own dividers. */
   inCard?: boolean;
+  /** The line the person just came back from. */
+  lastRead?: boolean;
 }) {
-  const subject = subjectOf(row);
   const actions = quickActions(row);
   const sender = senderLabel(row);
-  const place = placeOf(row);
-  const headline = inCard ? "" : headlineOf(row);
-  const choices = inCard ? null : choicesLine(row);
-  const snippet = inCard || choices ? null : snippetOf(row);
-  const unreadish = row.unread || row.tab === "needs-you";
+  if (!inCard) {
+    const waits = row.tab === "needs-you";
+    const chip = row.automation?.name ?? (waits ? t("inbox.needsYou") : ONE_CHAT ? null : placeOf(row));
+    const strong = row.unread || waits;
+    return (
+      <div data-inbox-row={row.id} data-tab={row.tab} data-unread={row.unread ? "" : undefined} data-last-read={lastRead ? "" : undefined}
+        className={cn("group relative rounded-[10px] focus-within:bg-raised hover:bg-raised", lastRead && "bg-accent/10 ring-1 ring-inset ring-accent/35")}>
+        <button type="button" onClick={() => onOpen(row)} title={[sender, chip, placeOf(row), headlineOf(row)].filter(Boolean).join(" · ")}
+          className="flex w-full min-w-0 cursor-pointer items-start gap-3 rounded-[10px] px-2 py-2.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/60">
+          <span className="shrink-0" aria-hidden="true"><InboxSender from={row.from} size={32} /></span>
+          <span className={cn("min-w-0 flex-1", strong ? "text-ink-secondary" : "text-ink-tertiary")}>
+            <span className="flex h-[18px] min-w-0 items-center gap-1.5">
+              <span data-inbox-from className={cn("min-w-0 shrink truncate text-[14px]", strong ? "font-semibold text-ink" : "font-medium text-ink-secondary")}>{sender}</span>
+              {chip && (
+                <span data-inbox-place className={cn("min-w-0 truncate rounded-md px-1.5 py-px text-[11px] font-medium",
+                  waits && !row.automation ? "bg-warning/15 text-warning" : "bg-ink/[0.07] text-ink-secondary")}>{chip}</span>
+              )}
+              <span className="ms-auto flex shrink-0 items-center gap-1.5 ps-1 text-[11px] tabular-nums text-ink-tertiary group-focus-within:invisible group-hover:invisible">
+                {threadUpdatedLabel(row.at, now)}
+                {waits ? <span data-inbox-waits role="img" aria-label={t("inbox.waitsOnYou")} className="size-[7px] rounded-full bg-warning" />
+                  : row.unread && <span data-inbox-unread-dot aria-hidden="true" className="size-[7px] rounded-full bg-accent" />}
+              </span>
+            </span>
+            <PanelBody row={row} />
+          </span>
+        </button>
+        <span className="absolute right-2 top-2 hidden items-center gap-1 group-focus-within:flex group-hover:flex">
+          {actions.map((action) => {
+            const { Icon, label } = ACTION_LOOK[action];
+            return (
+              <button key={action} type="button" data-inbox-action={action} aria-label={t(label)} title={t(label)} onClick={() => onAction(row, action)} className={PANEL_ACTION}>
+                <Icon size={15} aria-hidden="true" />
+              </button>
+            );
+          })}
+        </span>
+      </div>
+    );
+  }
+  const subject = subjectOf(row);
   return (
     <div data-inbox-row={row.id} data-tab={row.tab} data-unread={row.unread ? "" : undefined}
-      className={cn("group relative flex min-w-0 items-center gap-2 pr-1.5 focus-within:bg-raised/70 hover:bg-raised/70",
-        inCard ? (row.unread ? "bg-raised/45" : "bg-transparent") : "rounded-lg")}>
-      <button type="button" onClick={() => onOpen(row)} title={[sender, inCard ? subject : headline, place].filter(Boolean).join(" · ")}
-        className={cn("flex min-w-0 flex-1 gap-2 pl-2.5 text-left text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/60", inCard ? "items-center py-1.5" : "items-start py-2",
+      className={cn("group relative flex min-w-0 items-center gap-2 pr-1.5 focus-within:bg-raised/70 hover:bg-raised/70", row.unread ? "bg-raised/45" : "bg-transparent")}>
+      <button type="button" onClick={() => onOpen(row)} title={[sender, subject, placeOf(row)].filter(Boolean).join(" · ")}
+        className={cn("flex min-w-0 flex-1 items-center gap-2 py-1.5 pl-2.5 text-left text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/60",
           row.unread ? "font-semibold text-ink" : "font-normal text-ink-secondary")}>
-        {row.tab === "needs-you" ? <span data-inbox-waits className={cn("size-1.5 shrink-0 rounded-full", inCard ? "bg-warning" : "mt-[7px] bg-accent")} role="img" aria-label={t("inbox.waitsOnYou")} />
-          : !inCard && <span data-inbox-unread-dot={row.unread ? "" : undefined} aria-hidden="true" className={cn("mt-[7px] size-1.5 shrink-0 rounded-full", row.unread ? "bg-accent" : "bg-transparent")} />}
-        <span className={cn("shrink-0", !inCard && "mt-px")} aria-hidden="true"><InboxSender from={row.from} size={inCard ? 20 : 18} /></span>
-        {inCard ? (
-          <>
-            <span className="w-[7.5rem] shrink-0 truncate">{row.from.name}</span>
-            <span className="flex min-w-0 flex-1 items-baseline gap-1.5">
-              <span className="max-w-[45%] shrink-0 truncate">{subject}</span>
-              <span className="min-w-0 truncate font-normal text-ink-tertiary">{textOf(row)}</span>
-            </span>
-            <span className="shrink-0 text-[11px] font-normal tabular-nums text-ink-tertiary group-focus-within:invisible group-hover:invisible">{threadUpdatedLabel(row.at, now)}</span>
-          </>
-        ) : (
-          <span className="min-w-0 flex-1 space-y-px">
-            <span className="flex items-baseline gap-1.5">
-              <span data-inbox-from className="min-w-0 shrink truncate font-semibold">{sender}</span>
-              {place && <span data-inbox-place className="min-w-0 flex-1 truncate text-[12px] font-normal text-ink-tertiary">{place}</span>}
-              <span className="ms-auto shrink-0 ps-1 text-[11px] font-normal tabular-nums text-ink-tertiary group-focus-within:invisible group-hover:invisible">{threadUpdatedLabel(row.at, now)}</span>
-            </span>
-            <span data-inbox-subject className={cn("block truncate text-[13px] font-semibold", unreadish ? "text-ink" : "text-ink-secondary")}>{headline}</span>
-            {choices ? (
-              <span data-inbox-choices className="flex min-w-0 items-center gap-1.5 text-[12px] font-normal text-ink-secondary">
-                <Split size={12} aria-hidden="true" className="shrink-0 rotate-180 text-warning" />
-                <span className="min-w-0 truncate">{choices}</span>
-              </span>
-            ) : snippet && <span className="block truncate text-[12px] font-normal text-ink-tertiary">{snippet}</span>}
-          </span>
-        )}
+        {row.tab === "needs-you" && <span data-inbox-waits className="size-1.5 shrink-0 rounded-full bg-warning" role="img" aria-label={t("inbox.waitsOnYou")} />}
+        <span className="shrink-0" aria-hidden="true"><InboxSender from={row.from} size={20} /></span>
+        <span className="w-[7.5rem] shrink-0 truncate">{row.from.name}</span>
+        <span className="flex min-w-0 flex-1 items-baseline gap-1.5">
+          <span className="max-w-[45%] shrink-0 truncate">{subject}</span>
+          <span className="min-w-0 truncate font-normal text-ink-tertiary">{textOf(row)}</span>
+        </span>
+        <span className="shrink-0 text-[11px] font-normal tabular-nums text-ink-tertiary group-focus-within:invisible group-hover:invisible">{threadUpdatedLabel(row.at, now)}</span>
       </button>
-      <span className={cn("absolute right-1.5 hidden items-center gap-0.5 rounded-md bg-raised group-focus-within:flex group-hover:flex", inCard ? "top-1/2 -translate-y-1/2" : "top-1.5")}>
+      <span className="absolute right-1.5 top-1/2 hidden -translate-y-1/2 items-center gap-0.5 rounded-md bg-raised group-focus-within:flex group-hover:flex">
         {actions.map((action) => {
           const { Icon, label } = ACTION_LOOK[action];
           return (

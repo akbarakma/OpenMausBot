@@ -5,12 +5,13 @@ import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const server = vi.hoisted(() => ({ calls: [] as Array<{ path: string; method: string; body?: unknown }>, context: [] as unknown[] }));
+const server = vi.hoisted(() => ({ calls: [] as Array<{ path: string; method: string; body?: unknown }>, context: [] as unknown[], muted: null as unknown }));
 vi.mock("@/lib/use-owner-or-admin", () => ({ useOwnerOrAdmin: () => true }));
 vi.mock("../../state/api", () => ({
   api: vi.fn(async (path: string, init?: RequestInit) => {
     server.calls.push({ path, method: init?.method ?? "GET", ...(init?.body ? { body: JSON.parse(String(init.body)) } : {}) });
     if (/^\/api\/threads\/[\w-]+\/messages\?/.test(path)) return { messages: server.context };
+    if (path.startsWith("/api/inbox/automations/")) return server.muted;
     return null;
   }),
 }));
@@ -64,6 +65,7 @@ beforeEach(() => {
   root = createRoot(document.body.appendChild(document.createElement("div")));
   server.calls.length = 0;
   server.context = [];
+  server.muted = null;
   dispatch.mockClear();
   setInboxView(placeView([hoster, why, news]));
   openInbox();
@@ -136,8 +138,7 @@ describe("a line read in full", () => {
     await mount();
     await click('[data-inbox-row="q1"] > button');
     expect(document.querySelector("[data-inbox-position]")!.textContent).toBe("1 of 3");
-    expect(document.querySelector("nav")!.textContent).toContain("Self-hosting setup");
-    expect(document.querySelector("nav")!.textContent).toContain("Q1: who is the self-hoster");
+    expect(document.querySelector('[aria-label="More"]'), "every action is a button of its own").toBeNull();
     expect(server.calls).toContainEqual({ path: "/api/threads/plan-thread/messages?limit=8&before=q1", method: "GET" });
     const words = document.querySelector("[data-inbox-words]")!;
     expect(words.textContent).toContain("Grilling round 1.");
@@ -210,10 +211,44 @@ describe("a line read in full", () => {
   it("reads news with Done, which moves on to what is left", async () => {
     await act(async () => { readInboxLine("n1"); });
     await mount();
-    expect(document.querySelector("[data-inbox-answer-kind]")!.getAttribute("data-inbox-answer-kind")).toBe("none");
+    expect(document.querySelector("[data-inbox-you]"), "news waits on no answer").toBeNull();
     expect(document.querySelector("[data-inbox-words]")!.textContent).toContain("Daily digest: 3 new leads.");
+    expect(document.querySelector("[data-inbox-mute]"), "a report no automation is named for has nothing to mute").toBeNull();
     await click('[data-inbox-reading] [data-inbox-action="done"]');
     expect(server.calls).toContainEqual({ path: "/api/inbox/n1/done", method: "POST" });
     expect(currentInboxPanel().reading, "news was last in the list: the line above it opens").toBe("q2");
+  });
+
+  it("names a report's automation once, and mutes it from the line read in full until Undo", async () => {
+    const digest: InboxRow = { ...news, automation: { id: "digest", name: "Daily digest" } };
+    setInboxView({ ...placeView([hoster, why, digest]), mutedAutomations: [] });
+    await mount();
+    const row = document.querySelector('[data-inbox-row="n1"]')!;
+    expect(row.querySelector("[data-inbox-place]")!.textContent).toBe("Daily digest");
+    expect(row.querySelector("[data-inbox-subject]")!.textContent, "the name is not repeated in the words").toBe("3 new leads.");
+    await click('[data-inbox-row="n1"] > button');
+    expect(document.querySelector("[data-inbox-automation]")!.textContent).toBe("Daily digest");
+    server.muted = { ...placeView([hoster, why]), mutedAutomations: ["digest"] };
+    await click("[data-inbox-mute]");
+    expect(server.calls).toContainEqual({ path: "/api/inbox/automations/digest/mute", method: "POST" });
+    expect(currentInboxPanel().reading, "back on the list").toBeNull();
+    expect(listed()).toEqual(["q1", "q2"]);
+    expect(document.querySelector("[data-inbox-toast]")!.textContent).toContain("Daily digest muted in Inbox");
+    server.muted = { ...placeView([hoster, why, digest]), mutedAutomations: [] };
+    await click("[data-inbox-toast] button");
+    expect(server.calls).toContainEqual({ path: "/api/inbox/automations/digest/unmute", method: "POST" });
+    expect(listed()).toEqual(["q1", "q2", "n1"]);
+    expect(document.querySelector("[data-inbox-toast]")).toBeNull();
+  });
+
+  it("comes back to the list where it was, with the line just read marked", async () => {
+    await mount();
+    const list = document.querySelector<HTMLElement>("[data-inbox-list]")!.parentElement!;
+    list.scrollTop = 120;
+    await act(async () => { list.dispatchEvent(new Event("scroll")); });
+    await click('[data-inbox-row="q2"] > button');
+    await click('[aria-label="Back to the list"]');
+    expect(document.querySelector<HTMLElement>("[data-inbox-list]")!.parentElement!.scrollTop).toBe(120);
+    expect(document.querySelector("[data-last-read]")?.getAttribute("data-inbox-row")).toBe("q2");
   });
 });

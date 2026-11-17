@@ -168,9 +168,10 @@ describe("a place's inbox in the panel", () => {
     await panel([approval, question, news]);
     const line = (id: string) => document.querySelector(`[data-inbox-row="${id}"]`)!;
     expect(line("card-a").querySelector("[data-inbox-from]")!.textContent).toBe("Eli, working for Mira");
-    expect(line("card-a").querySelector("[data-inbox-place]")!.textContent).toContain("in Pricing work");
+    expect(line("card-a").querySelector("[data-inbox-place]")!.textContent, "one chat: an ask's chip says it waits").toBe("Needs you");
+    expect(line("card-a").querySelector("button")!.title).toContain("in Pricing work");
     expect(line("card-q").querySelector("[data-inbox-from]")!.textContent).toBe("Eli");
-    expect(line("card-q").querySelector("[data-inbox-place]")!.textContent).toContain("in Launch work");
+    expect(line("card-q").querySelector("button")!.title).toContain("in Launch work");
     expect(senderLabel({ from: { name: "Eli" }, askedBy: { name: "Sam" } })).toBe("Eli, asked by Sam");
     expect(senderLabel({ from: { name: "Eli" }, askedBy: { name: "" } })).toBe("Eli, asked by someone else");
   });

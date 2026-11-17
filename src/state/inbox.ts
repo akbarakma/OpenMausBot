@@ -136,6 +136,15 @@ export function doneInboxRow(row: Pick<InboxRow, "id">): void {
   void mark(row.id, "done", before ? { tab: before.tab, unread: before.unread } : {});
 }
 
+/** An automation's reports leave the list (`muted`) or come back; false when the server refused. */
+export async function muteInboxAutomation(id: string, muted: boolean): Promise<boolean> {
+  const seq = ++sent;
+  const view = await api<InboxView>(`/api/inbox/automations/${encodeURIComponent(id)}/${muted ? "mute" : "unmute"}`, { method: "POST", background: true }).catch(() => null);
+  if (view && Array.isArray(view.rows)) { show(seq, view); return true; }
+  void refreshInbox();
+  return false;
+}
+
 /** A reply to a line of news that waits on one: it goes back where the line came from, as a Reply in the chat does. */
 export async function replyToInboxRow(view: Pick<InboxView, "botId" | "threadId">, row: Pick<InboxRow, "id" | "origin">, text: string): Promise<void> {
   const origin = view.threadId ? null : row.origin;

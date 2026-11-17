@@ -81,7 +81,7 @@ export function snippetOf(row: InboxRow): string | null {
 export function matchesSearch(row: InboxRow, query: string): boolean {
   const words = query.toLowerCase().split(/\s+/).filter(Boolean);
   if (!words.length) return true;
-  const hay = [senderLabel(row), row.origin?.title ?? "", headlineOf(row), textOf(row), choicesLine(row) ?? ""].join(" ").toLowerCase();
+  const hay = [senderLabel(row), row.automation?.name ?? "", row.origin?.title ?? "", headlineOf(row), textOf(row), choicesLine(row) ?? ""].join(" ").toLowerCase();
   return words.every((word) => hay.includes(word));
 }
 

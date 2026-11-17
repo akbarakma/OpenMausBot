@@ -62,7 +62,12 @@ export const choicesOf = (row: InboxRow): string[] => {
 };
 
 /** What a line says: an ask for access in this person's language, anything else as it came. */
-export const textOf = (row: InboxRow): string => accessRequestWords(row.card)?.question ?? row.text;
+export function textOf(row: InboxRow): string {
+  const asked = accessRequestWords(row.card)?.question;
+  if (asked) return asked;
+  const named = row.automation ? `${row.automation.name}: ` : null;
+  return named && row.text.startsWith(named) ? row.text.slice(named.length) : row.text;
+}
 
 /** What a tap on one of a question's choices sends. */
 export function choiceResponse(row: InboxRow, label: string): CardResponse {

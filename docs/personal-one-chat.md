@@ -94,10 +94,36 @@ exchange route. The rows' words are `server.oneChat.*` in `en.json`,
 | `packages/phone-protocol/src/routine-run.ts` | `AutomationLine.quiet` |
 | `server/index.ts` | `autoCompactAt` after `nativeCompactTokens`: a turn's context reading carries `compactAt`, the point `compactBudget` gives, so the app can mark it. It is absent with `context.autoCompact` off |
 | `server/store.ts`, `packages/phone-protocol/src/wire.ts` | `TaskUsage.context.compactAt` |
+| `server/index.ts` | `createInboxMutes` before `createTeamMessages`, its `shape` passed to `createPlaceInbox`, and `inboxMuteRoutes` after `createInboxRoutes` |
+| `server/host/place-inbox.ts` | the optional `shape` dep, applied to the list `view` returns, so `count` follows it |
+| `packages/phone-protocol/src/inbox.ts` | `InboxRow.automation` and `InboxView.mutedAutomations` |
 
 `server/index.ts` and `server/store.ts` are at their size limit in
 `scripts/testing/file-size-ratchet.test.ts`, so each line above joins an
 existing line.
+
+## Inbox
+
+A routine's report lands in the bot's Main Chat and in the Inbox, so one
+busy automation can fill the Inbox. "Mute in Inbox" takes one automation's
+reports out of it, old ones included. Its questions, approvals and failures
+still show, and its Main Chat post and notification are unchanged.
+
+`server/inbox-mutes.ts` keeps the muted automation ids in `inbox-mutes.json`
+in the data folder. A report's line in `place-inbox.json` names no
+automation, so `automationOf` matches the "<name>: " its text starts with
+against the bot's routines, webhooks and run names. A run's name covers an
+app event's trigger and a name before a rename. `shape` labels each matched
+row with `automation` and drops a muted automation's `result` rows.
+`POST /api/inbox/automations/<id>/mute` and `/unmute` answer with the new
+list, for the place's owner only.
+
+The desktop app mutes from a report read in full (`InboxReading.tsx`), with
+Undo on a toast, and from a bell beside each switch on the bot panel's
+Automations page (`AutomationsPage.tsx`). The Inbox and the bot panel share
+one slot: `slotGivesWay` in `simple-side-panel.ts` closes the one open
+before, and a bot panel closed that way stays wanted, so it returns when the
+Inbox closes.
 
 ## Desktop app
 
@@ -195,6 +221,10 @@ existing line.
 | `src/components/bot-panel/PanelHome.tsx`, `src/components/ModelPicker.tsx` | no Reasoning row; the Setup card's Model row (`row`) carries Thinking and the level (`reasoningElsewhere`) |
 | `src/components/FirstReplyRescueRow.tsx` | Switch AI opens bot settings in Advanced mode |
 | `src/lib/simple-model-menu.ts` | `bareModelLabel` drops the provider from a model's name |
+| `src/components/inbox/InboxPanel.tsx`, `InboxRow.tsx`, `InboxReading.tsx` | rows with 32px faces, the automation as a chip and day headers; the list keeps its scroll and marks the line just read; the reading view has no breadcrumb or menu, and Open in chat, Mark done and Mute in Inbox as buttons |
+| `src/components/inbox/inbox-view.ts` | `textOf` drops the automation's name a report starts with |
+| `src/components/bot-panel/AutomationsPage.tsx` | the Mute in Inbox bell beside each switch |
+| `src/components/bot-panel/simple-side-panel.ts` | `slotGivesWay`: the Inbox and the bot panel share one slot |
 
 Upstream's tests for those menus, the applied-change line, the run details bar, the compaction rows, the context meter, the model picker, the model menu and the rescue row mock `@/lib/one-chat` with `ONE_CHAT: false`,
 so they still test upstream's paths. Add that mock to a new upstream test
@@ -207,6 +237,6 @@ that fails on a missing thread item.
 2. If upstream adds a place that calls `store.createTask` for a bot, decide
    where it leads: the main chat, or a hidden thread with `hideWorkSession`.
    List it here.
-3. Run `corepack pnpm exec vitest run server/one-chat src/lib/bot-exchange ThreadChip thread-navigation ChatMoreMenu ApprovalCard TriggerCard panel-link ChatView.controls ChatView.automation ChatView.one-chat-automation RoutineResultsNavigation DigestChip ContextCard ComposerContextMeter context-warning ModelPicker simple-model-menu FirstReplyRescueRow server/store server/automation-reports SidebarBotRead Sidebar.simple-mode Sidebar.plus-menu Sidebar.working-folder file-size-ratchet`,
+3. Run `corepack pnpm exec vitest run server/one-chat src/lib/bot-exchange ThreadChip thread-navigation ChatMoreMenu ApprovalCard TriggerCard panel-link ChatView.controls ChatView.automation ChatView.one-chat-automation RoutineResultsNavigation DigestChip ContextCard ComposerContextMeter context-warning ModelPicker simple-model-menu FirstReplyRescueRow server/store server/automation-reports SidebarBotRead Sidebar.simple-mode Sidebar.plus-menu Sidebar.working-folder server/inbox-mutes server/host/place-inbox src/components/inbox simple-side-panel file-size-ratchet`,
    then upstream's tests named after each server file above, with the
    setting off.

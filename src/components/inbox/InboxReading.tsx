@@ -1,10 +1,9 @@
-import { Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, ExternalLink, MoreHorizontal, UserRound, X } from "lucide-react";
+import { BellOff, Check, ExternalLink, UserRound, X } from "lucide-react";
 import type { InboxRow, InboxView } from "../../../shared/inbox";
+import { cn } from "@/lib/cn";
 import { t } from "@/lib/i18n";
-import { readInboxLine } from "@/state/inbox";
 import { ChatMarkdown } from "../ChatMarkdown";
 import { InboxSender } from "../InboxLine";
-import { SidebarPopoverMenu, type SidebarMenuItem } from "../SidebarPopoverMenu";
 import { threadUpdatedLabel } from "../SidebarThreadRow";
 import { accessRequestWords } from "../bot-access/access-card";
 import { InboxAnswer } from "./InboxAnswer";
@@ -12,8 +11,6 @@ import { answerKindOf, headlineOf, singleQuestion } from "./inbox-answer";
 import { askOf, closeResponse, senderLabel, textOf } from "./inbox-view";
 import { useAskContext } from "./use-ask-context";
 import { useInboxActions } from "./use-inbox-actions";
-
-const NAV_BUTTON = "flex size-7 shrink-0 items-center justify-center rounded-md text-ink-secondary hover:bg-raised hover:text-ink disabled:pointer-events-none disabled:opacity-35 pointer-coarse:size-9";
 
 function settledLabel(row: InboxRow): string {
   if (row.kind !== "ask") return t("common.done");
@@ -35,13 +32,14 @@ function ownWords(row: InboxRow): string | null {
   return question ? accessRequestWords(row.card)?.question ?? question.question : row.card?.questionRequest ? null : row.card?.subtitle || row.text;
 }
 
-export function InboxReading({ view, row, now, position, onStep }: {
+const BAR_BUTTON = "flex h-10 min-w-0 flex-1 cursor-pointer items-center justify-center gap-[7px] rounded-[10px] px-3 text-[13px] font-semibold transition-colors disabled:cursor-not-allowed";
+const SECONDARY = cn(BAR_BUTTON, "bg-composer text-ink ring-1 ring-inset ring-ink/[0.1] hover:bg-raised-hover");
+
+export function InboxReading({ view, row, now, onMute }: {
   view: InboxView;
   row: InboxRow;
   now: number;
-  /** Where the line is in the list the person came from; null when it has left it. */
-  position: { index: number; count: number } | null;
-  onStep(by: -1 | 1): void;
+  onMute(automation: { id: string; name: string }): void;
 }) {
   const { answer, openInChat, run, askerOf } = useInboxActions(view);
   const asker = askerOf(row);
@@ -50,51 +48,28 @@ export function InboxReading({ view, row, now, position, onStep }: {
   const headline = headlineOf(row);
   const words = ownWords(row);
   const said = context.filter((message) => message.text?.trim() !== words?.trim());
-  const menu: SidebarMenuItem[] = [
-    ...(row.origin || view.threadId ? [{ key: "open", label: t("inbox.action.openInChat"), icon: <ExternalLink size={16} />, onSelect: () => openInChat(row) }] : []),
-    ...(row.tab === "info" ? [{ key: "done", label: t("common.done"), icon: <Check size={16} />, onSelect: () => run(row, "done") }] : []),
-    ...(askOf(row) === "question" ? [{ key: "close", label: t("inbox.action.closeQuestion"), icon: <X size={16} />, onSelect: () => answer(row, closeResponse(row)) }] : []),
-  ];
-  const place = row.origin?.title || senderLabel(row);
+  const opens = Boolean(row.origin || view.threadId);
+  const closes = askOf(row) === "question";
+  const mutes = row.kind === "result" && row.automation && view.mutedAutomations !== undefined ? row.automation : null;
+  const answers = kind !== "none" || Boolean(row.answers?.length);
   return (
     <article data-inbox-reading={row.id} aria-label={`${senderLabel(row)} · ${headline}`} className="flex min-h-0 flex-1 flex-col">
-      <header className="flex items-center gap-1 px-2 py-1.5">
-        <button type="button" onClick={() => readInboxLine(null)} aria-label={t("inbox.action.back")} title={t("inbox.action.back")}
-          className="flex h-7 shrink-0 items-center gap-0.5 rounded-md pe-2 ps-1 text-[13px] font-medium text-ink hover:bg-raised pointer-coarse:h-9">
-          <ChevronLeft size={16} aria-hidden="true" className="rtl:rotate-180" />{t("inbox.panel.title")}
-        </button>
-        <span className="flex-1" />
-        {position && <span data-inbox-position className="px-1 text-[12px] tabular-nums text-ink-tertiary">{t("inbox.position", { index: position.index + 1, count: position.count })}</span>}
-        <button type="button" onClick={() => onStep(-1)} disabled={!position || position.index === 0} aria-label={t("inbox.action.previous")} title={t("inbox.action.previous")} className={NAV_BUTTON}>
-          <ChevronUp size={16} aria-hidden="true" />
-        </button>
-        <button type="button" onClick={() => onStep(1)} disabled={!position || position.index >= position.count - 1} aria-label={t("inbox.action.next")} title={t("inbox.action.next")} className={NAV_BUTTON}>
-          <ChevronDown size={16} aria-hidden="true" />
-        </button>
-        {menu.length > 0 && (
-          <SidebarPopoverMenu items={menu} ariaLabel={t("inbox.action.more")} placement="below" align="end" triggerClassName="rounded-md" triggerTitle={t("inbox.action.more")}
-            renderTrigger={() => <span className={NAV_BUTTON}><MoreHorizontal size={16} aria-hidden="true" /></span>} />
-        )}
-      </header>
-      <nav aria-label={t("inbox.breadcrumb")} className="flex min-w-0 items-center gap-1 border-b border-hairline/40 px-3.5 pb-2 text-[12px] text-ink-tertiary">
-        <button type="button" data-inbox-action="open" onClick={() => openInChat(row)} title={t("inbox.action.openInChat")}
-          className="min-w-0 max-w-[45%] shrink truncate rounded hover:text-ink hover:underline">{place}</button>
-        <ChevronRight size={12} aria-hidden="true" className="shrink-0 rtl:rotate-180" />
-        <span className="min-w-0 truncate font-medium text-ink-secondary">{headline}</span>
-      </nav>
-      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-3.5 py-3">
-        <section aria-label={senderLabel(row)} className="flex gap-2.5">
-          <span className="mt-0.5 shrink-0" aria-hidden="true"><InboxSender from={row.from} size={22} /></span>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-baseline gap-2">
-              <span className="min-w-0 truncate text-[13px] font-semibold text-ink">{senderLabel(row)}</span>
-              <span className="shrink-0 text-[11px] tabular-nums text-ink-tertiary">{threadUpdatedLabel(row.at, now)}</span>
+      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 pb-4 pt-3.5">
+        <section aria-label={senderLabel(row)}>
+          <div className="flex items-center gap-3">
+            <span className="shrink-0" aria-hidden="true"><InboxSender from={row.from} size={40} /></span>
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-[15px] font-semibold text-ink">{senderLabel(row)}</div>
+              <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[12px] text-ink-tertiary">
+                {row.automation && <span data-inbox-automation className="min-w-0 truncate rounded-md bg-ink/[0.07] px-1.5 py-px text-[11px] font-medium text-ink-secondary">{row.automation.name}</span>}
+                <span className="shrink-0 tabular-nums">{threadUpdatedLabel(row.at, now)}</span>
+              </div>
+              {row.via && <div className="truncate text-[12px] text-ink-tertiary">{t("inbox.via", { name: row.via.name })}</div>}
             </div>
-            {row.via && <div className="truncate text-[12px] text-ink-tertiary">{t("inbox.via", { name: row.via.name })}</div>}
-            <div data-inbox-words className="mt-1 space-y-2 text-[14px] leading-6 text-ink">
-              {said.map((message) => <ChatMarkdown key={message.id} text={message.text!} />)}
-              {words && <ChatMarkdown text={words} />}
-            </div>
+          </div>
+          <div data-inbox-words className="mt-3.5 space-y-2 text-[14px] leading-[22px] text-ink">
+            {said.map((message) => <ChatMarkdown key={message.id} text={message.text!} />)}
+            {words && <ChatMarkdown text={words} />}
           </div>
         </section>
         {row.answers?.map((given) => (
@@ -103,15 +78,48 @@ export function InboxReading({ view, row, now, position, onStep }: {
             <span className="whitespace-pre-wrap break-words">{given.text}</span>
           </p>
         ))}
-        <section data-inbox-you aria-label={t("inbox.you")} className="flex gap-2.5">
-          <span aria-hidden="true" className="mt-0.5 flex size-[22px] shrink-0 items-center justify-center rounded-full bg-ink/[0.08] text-ink-secondary"><UserRound size={13} /></span>
-          <div className="min-w-0 flex-1 space-y-2">
-            <div className="text-[13px] font-semibold text-ink">{t("inbox.you")}</div>
-            {row.tab === "done" && <p className="flex items-center gap-1.5 text-[13px] text-ink-secondary"><Check size={14} aria-hidden="true" />{settledLabel(row)}</p>}
-            <InboxAnswer kind={kind} view={view} row={row} asker={asker} />
-          </div>
-        </section>
+        {answers && (
+          <section data-inbox-you aria-label={t("inbox.you")} className="flex gap-2.5">
+            <span aria-hidden="true" className="mt-0.5 flex size-[22px] shrink-0 items-center justify-center rounded-full bg-ink/[0.08] text-ink-secondary"><UserRound size={13} /></span>
+            <div className="min-w-0 flex-1 space-y-2">
+              <div className="text-[13px] font-semibold text-ink">{t("inbox.you")}</div>
+              <InboxAnswer kind={kind} view={view} row={row} asker={asker} />
+            </div>
+          </section>
+        )}
       </div>
+      {(opens || closes || row.tab !== "needs-you" || mutes) && (
+        <div data-inbox-bar className="shrink-0 space-y-2 border-t border-ink/[0.07] px-4 pb-3.5 pt-3">
+          <div className="flex gap-2">
+            {opens && (
+              <button type="button" data-inbox-action="open" onClick={() => openInChat(row)} className={SECONDARY}>
+                <ExternalLink size={15} aria-hidden="true" className="shrink-0" /><span className="truncate">{t("inbox.action.openInChat")}</span>
+              </button>
+            )}
+            {closes && (
+              <button type="button" data-inbox-action="close" onClick={() => answer(row, closeResponse(row))} className={SECONDARY}>
+                <X size={15} aria-hidden="true" className="shrink-0" /><span className="truncate">{t("inbox.action.closeQuestion")}</span>
+              </button>
+            )}
+            {row.tab === "info" && (
+              <button type="button" data-inbox-action="done" onClick={() => run(row, "done")} className={cn(BAR_BUTTON, "bg-accent text-accent-ink hover:bg-accent-border")}>
+                <Check size={15} aria-hidden="true" className="shrink-0" /><span className="truncate">{t("inbox.action.markDone")}</span>
+              </button>
+            )}
+            {row.tab === "done" && (
+              <button type="button" data-inbox-settled disabled className={cn(BAR_BUTTON, "bg-ink/[0.05] text-ink-secondary")}>
+                <Check size={15} aria-hidden="true" className="shrink-0" /><span className="truncate">{settledLabel(row)}</span>
+              </button>
+            )}
+          </div>
+          {mutes && (
+            <button type="button" data-inbox-mute onClick={() => onMute(mutes)}
+              className="flex h-[34px] w-full min-w-0 cursor-pointer items-center justify-center gap-[7px] rounded-lg px-2 text-[12px] text-ink-secondary transition-colors hover:bg-ink/[0.05] hover:text-ink">
+              <BellOff size={14} aria-hidden="true" className="shrink-0" /><span className="truncate">{t("inbox.mute", { name: mutes.name })}</span>
+            </button>
+          )}
+        </div>
+      )}
     </article>
   );
 }
