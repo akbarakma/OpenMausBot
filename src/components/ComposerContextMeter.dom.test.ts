@@ -82,12 +82,14 @@ describe("ComposerContextMeter", () => {
     ]);
   });
 
-  it("in the one-chat app shows tokens with no percent, marks where compaction starts, and always offers Compact now", () => {
+  it("in the one-chat app shows tokens with no percent, marks where compaction starts, and offers Compact now from half of it", () => {
     fixture.oneChat = true;
     render(botWith(usage(26_000, { context: { tokens: 26_000, window: 200_000, compactAt: 160_000 } })));
     expect(ring()!.getAttribute("aria-label")).toBe("26k context used");
     hover();
     expect(card()!.textContent).toMatch(/^Context26k \/ 200k/);
+    expect([...card()!.querySelectorAll("button")].some((button) => button.textContent === "Compact now")).toBe(false);
+    render(botWith(usage(80_000, { context: { tokens: 80_000, window: 200_000, compactAt: 160_000 } })));
     expect(card()!.textContent).not.toContain("%");
     expect(card()!.querySelector<HTMLElement>("[data-compact-tick]")!.style.left).toBe("80%");
     expect(card()!.querySelector("[data-compact-tick]")!.parentElement!.getAttribute("title")).toBe("Compacts on its own at 160k");
@@ -149,7 +151,7 @@ describe("ComposerContextMeter", () => {
 
   it("in the one-chat app asks before compacting, and a click in that question keeps the card open", () => {
     fixture.oneChat = true;
-    render(botWith(usage(26_000)));
+    render(botWith(usage(176_000)));
     flushSync(() => ring()!.click());
     const compactNow = [...card()!.querySelectorAll("button")].find((button) => button.textContent === "Compact now")!;
     flushSync(() => compactNow.click());

@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { Bot, Message } from "@/state/store";
 import { RoomContextWarningsView, ThreadContextWarningView } from "@/components/ContextWarning";
-import { CONTEXT_WARNING_PERCENT, compactedSinceReading, roomContextWarnings, threadContextWarning } from "./context-warning";
+import { CONTEXT_WARNING_PERCENT, compactOffered, compactedSinceReading, roomContextWarnings, threadContextWarning } from "./context-warning";
 
 const usage = (tokens: number, window?: number) => ({ input: 0, output: 0, costUsd: null, turns: 1, context: { tokens, ...(window ? { window } : {}) } });
 const line = (role: Message["role"], kind: Message["kind"]) => ({ role, kind });
@@ -23,6 +23,16 @@ describe("context warning", () => {
     expect(compactedSinceReading(compacted)).toBe(true);
     expect(threadContextWarning(usage(180_000, 200_000), compacted)).toBeNull();
     expect(compactedSinceReading([...compacted, line("user", "text"), line("bot", "activity"), line("bot", "text")])).toBe(false);
+  });
+
+  it("offers Compact from half the point where the thread compacts on its own, and not again until the bot replies", () => {
+    const history = [line("user", "text"), line("bot", "text")];
+    const at = (tokens: number) => ({ ...usage(tokens, 1_000_000), context: { tokens, window: 1_000_000, compactAt: 180_000 } });
+    expect(compactOffered(at(89_000), history)).toBe(false);
+    expect(compactOffered(at(90_000), history)).toBe(true);
+    expect(compactOffered(at(170_000), [...history, line("bot", "compaction")])).toBe(false);
+    expect(compactOffered(usage(170_000, 200_000), history)).toBe(true);
+    expect(compactOffered(usage(150_000, 200_000), history)).toBe(false);
   });
 
   it("lists room members at 80% or more in roster order, with a pending Compact now", () => {

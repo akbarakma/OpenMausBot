@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 
 import type { CacheKeepWarmStatus } from "../../shared/wire";
 import { cn } from "@/lib/cn";
-import { threadContextWarning } from "@/lib/context-warning";
+import { compactOffered, threadContextWarning } from "@/lib/context-warning";
 import { ONE_CHAT } from "@/lib/one-chat";
 import { contextMeterReading, contextTokenRows, type ContextMeterReading } from "@/lib/context-meter";
 import { t } from "@/lib/i18n";
@@ -105,7 +105,7 @@ export function ContextBar({ reading, className = "mt-2.5" }: { reading: Context
 
 export function CompactButton({ bot, usage }: { bot: Bot; usage: TaskUsage }) {
   const { pending, ask, dialog } = useCompact(bot);
-  if (!ONE_CHAT && threadContextWarning(usage, visibleMessages(bot)) === null) return null;
+  if (ONE_CHAT ? !compactOffered(usage, visibleMessages(bot)) : threadContextWarning(usage, visibleMessages(bot)) === null) return null;
   const busy = Boolean(bot.busy);
   return (
     <>

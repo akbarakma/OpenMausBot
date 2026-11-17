@@ -153,9 +153,12 @@ existing line.
   A tick on the bar marks `compactAt`, and hovering the bar says "Compacts on
   its own at 180k". The percent counted against the whole window, so a 1M bot
   read 12% just before a compaction at 180k. The Advanced composer meter shows
-  the same. Compact now is always on the card, because the 80% rule that
-  showed it is 800k on a 1M window, past the point where the bot compacts.
-  It asks "Compact Mira's conversation?" first, because a compaction can't
+  the same. Compact now shows from half of `compactAt` (90k for Mira),
+  because the 80% rule that showed it is 800k on a 1M window, past the point
+  where the bot compacts, and below half a compaction frees little. Like the
+  old rule, it hides after a compaction until the bot replies, and with no
+  `compactAt` it falls back to 80% of the window (`compactOffered` in
+  `src/lib/context-warning.ts`). It asks "Compact Mira's conversation?" first, because a compaction can't
   be undone. `useCompact` in `src/components/ContextWarning.tsx` asks it for
   the card, the composer meter and the context warning.
 - There is no Start fresh. Its divider cut off the bot's context in its only
@@ -176,7 +179,7 @@ existing line.
 | `src/App.tsx` | ⌘⇧N starts no thread; `WorkModal` in place of `ForkPanel`, which neither collapses the sidebar nor closes on a narrow window |
 | `src/components/bot-panel/PanelHome.tsx` | no `BotConversations` and no Start fresh row |
 | `src/components/DigestChip.tsx` | `CompactionChip` draws the "Context compacted" line |
-| `src/components/bot-panel/ContextCard.tsx`, `src/components/ComposerContextMeter.tsx`, `src/lib/context-meter.ts` | no percent, the `compactAt` tick on `ContextBar`, and Compact now with no 80% rule |
+| `src/components/bot-panel/ContextCard.tsx`, `src/components/ComposerContextMeter.tsx`, `src/lib/context-meter.ts` | no percent, the `compactAt` tick on `ContextBar`, and Compact now from half of `compactAt` |
 | `src/components/ContextWarning.tsx` | `useCompact`: Compact asks first |
 
 Upstream's tests for those menus, the applied-change line, the run details bar, the compaction rows and the context meter mock `@/lib/one-chat` with `ONE_CHAT: false`,
@@ -190,6 +193,6 @@ that fails on a missing thread item.
 2. If upstream adds a place that calls `store.createTask` for a bot, decide
    where it leads: the main chat, or a hidden thread with `hideWorkSession`.
    List it here.
-3. Run `corepack pnpm exec vitest run server/one-chat src/lib/bot-exchange ThreadChip thread-navigation ChatMoreMenu ApprovalCard TriggerCard panel-link ChatView.controls ChatView.automation ChatView.one-chat-automation RoutineResultsNavigation DigestChip ContextCard ComposerContextMeter server/store server/automation-reports SidebarBotRead Sidebar.simple-mode Sidebar.plus-menu Sidebar.working-folder file-size-ratchet`,
+3. Run `corepack pnpm exec vitest run server/one-chat src/lib/bot-exchange ThreadChip thread-navigation ChatMoreMenu ApprovalCard TriggerCard panel-link ChatView.controls ChatView.automation ChatView.one-chat-automation RoutineResultsNavigation DigestChip ContextCard ComposerContextMeter context-warning server/store server/automation-reports SidebarBotRead Sidebar.simple-mode Sidebar.plus-menu Sidebar.working-folder file-size-ratchet`,
    then upstream's tests named after each server file above, with the
    setting off.

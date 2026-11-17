@@ -17,6 +17,13 @@ export function threadContextWarning(usage: TaskUsage | undefined, messages: rea
   return { percent: share.percent };
 }
 
+/** Compacting a chat under half the point where it compacts on its own frees little, so the one-chat app offers it from there. */
+export function compactOffered(usage: TaskUsage | undefined, messages: readonly Pick<Message, "role" | "kind">[]): boolean {
+  const at = usage?.context?.compactAt;
+  if (!at) return threadContextWarning(usage, messages) !== null;
+  return (usage.context?.tokens ?? 0) >= at / 2 && !compactedSinceReading(messages);
+}
+
 export function roomContextWarnings(group: Pick<Group, "memberContext">, members: readonly Bot[]):
   Array<{ bot: Bot; percent: number; requested: boolean }> {
   return members.flatMap((bot) => {
