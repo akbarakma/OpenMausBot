@@ -512,7 +512,9 @@ describe("agents-proxy MCP surface", () => {
         expect(description).toContain("Only a pending result requires ending the turn");
       } else {
         expect(description).toContain("It applies at once, with an Undo where possible: read the result before saying it did.");
-        expect(description).toContain("It never raises another bot's execution permissions.");
+        // A Chief's team setup may set a bot's MCP servers, so it names that instead.
+        if (tool === "propose_team_setup") expect(description).toContain("mcpServers sets an existing bot's MCP servers; no other execution permission changes.");
+        else expect(description).toContain("It never raises another bot's execution permissions.");
       }
     }
     const credential = list.result.tools.find((entry: { name: string }) => entry.name === "request_credential");
@@ -985,6 +987,30 @@ describe("agents-proxy MCP surface", () => {
     expect(start.description).toContain('use coordinate_bots for teammates (thread "new" opens a fresh thread on them)');
     expect(start.description).toContain("do not retry it");
     expect(start.description).not.toMatch(/\b(delegate_bot|ask_bot)\b/);
+  });
+
+  it.each(["bot", "botId", "toBotId", "bot_ids", "reportBack"])("start_thread refuses unknown %s before creating a task", async (key) => {
+    const before = threadCalls;
+    const res = await callTool("start_thread", { title: "Review", message: "Review the patch.", [key]: "Helper" });
+    expect(res.result.isError).toBe(true);
+    expect(res.result.content[0].text).toContain(`unknown arguments "${key}"`);
+    expect(res.result.content[0].text).toContain("coordinate_bots with bot_ids from list_bots");
+    expect(threadCalls).toBe(before);
+  });
+
+  it.each([null, "", "   ", 42, ["bot-helper"], { id: "bot-helper" }])("start_thread refuses an invalid legacy bot_id %j instead of falling back to itself", async (bot_id) => {
+    const before = threadCalls;
+    const res = await callTool("start_thread", { title: "Review", message: "Review the patch.", bot_id });
+    expect(res.result.isError).toBe(true);
+    expect(res.result.content[0].text).toContain("bot_id must be a non-empty bot ID");
+    expect(threadCalls).toBe(before);
+  });
+
+  it("start_thread does not ignore a conflicting recipient alias beside a valid legacy bot_id", async () => {
+    const before = threadCalls;
+    const res = await callTool("start_thread", { title: "Review", message: "Review the patch.", bot_id: "bot-helper", bot: "Another helper" });
+    expect(res.result.isError).toBe(true);
+    expect(threadCalls).toBe(before);
   });
 
   it("start_thread on a teammate is a hand-off into a fresh thread: the receipt's thread and assignment id, no deprecation line", async () => {

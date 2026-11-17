@@ -188,12 +188,12 @@ export const GroupListItem = memo(function GroupListItem({
         "relative flex w-full items-center rounded-md text-left", SIMPLE_ROW_FOCUS,
         density === "icons" ? (railTile ? "h-[54px] justify-center" : "justify-center px-1 py-1.5") : simpleRow
           ? cn("gap-2 rounded-[8px] py-2 pr-2 group-hover:pr-9 group-focus-within:pr-9 max-md:pr-9 touch:pr-9 md:h-[54px] md:py-0", !group.dm && hasThreadList ? "pl-6" : "pl-2") : "gap-2 py-1.5 pl-6 pr-9",
-        selected && !expanded ? (simpleRow ? "bg-raised" : rowSelectedSurface) : "hover:bg-raised/50",
+        selected && !expanded ? rowSelectedSurface : "hover:bg-raised/50",
       )}
       title={density === "icons" && !railTile ? group.name : undefined}
       aria-label={density === "icons" ? group.name : undefined}
     >
-      <span className={cn("rounded-full", selected && !expanded && "ring-2 ring-accent/70 ring-offset-2 ring-offset-panel")}>{group.dm ? <StackedMauses members={members} density={railTile ? "comfortable" : density} large={simpleRow || railTile} /> : <RoomMark density={railTile ? "comfortable" : density} large={simpleRow || railTile} />}</span>
+      {group.dm ? <StackedMauses members={members} density={railTile ? "comfortable" : density} large={simpleRow || railTile} /> : <RoomMark density={railTile ? "comfortable" : density} large={simpleRow || railTile} />}
       <div className={cn("min-w-0 flex-1", density === "icons" && "hidden")}>
         <div className={cn("flex items-baseline justify-between gap-2", simpleRow && "pr-7")}>
           <span className={cn("truncate text-[14px] text-ink", simpleRow ? "font-medium leading-5" : "font-semibold")}>{group.name}</span>
@@ -725,7 +725,7 @@ export const BotListItem = memo(function BotListItem(props: BotRowProps) {
       : simpleRow ? "gap-2 rounded-[8px] py-2 pl-2 pr-2 md:h-[54px] md:py-0"
         : cn(showThreads ? "gap-2 py-2" : "gap-3 py-2", showThreads ? "pl-6 pr-9 group-hover:pr-[5.75rem] group-focus-within:pr-[5.75rem] max-md:pr-9 touch:pr-[5.75rem]" : "pl-2.5 pr-9"),
     !iconOnly && "max-md:rounded-2xl max-md:py-2.5",
-    selected ? (simpleRow ? "bg-raised" : rowSelectedSurface) : "hover:bg-raised/50",
+    selected ? rowSelectedSurface : "hover:bg-raised/50",
     simpleRow && rowSurface(selected),
   );
   const { waiting, working, running, failed, teammateWait, queued } = sidebarBotStatus(bot, pendingQueued, visible);

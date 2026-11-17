@@ -10,9 +10,8 @@ export function rowSurface(selected: boolean): string {
 
 export const TITLE_CHIP = "min-w-0 truncate rounded-[6px] bg-ink/[0.07] px-1.5 py-px text-[11px] font-medium leading-4 text-ink-secondary";
 
-/** The conversation the chat window has open. A tint, a left accent bar and an inset outline,
- * because `raised` sits only a shade away from `panel` on both the dark and the light skins. */
-export const rowSelectedSurface = "bg-accent/15 shadow-[inset_3px_0_0_0_var(--color-accent)] ring-1 ring-inset ring-accent/30 hover:bg-accent/20";
+/** The conversation the chat window has open: the same plain fill as a selected row. */
+export const rowSelectedSurface = "bg-raised";
 
 export type RowActivity = "working" | "failed" | "teammate" | "queued";
 
