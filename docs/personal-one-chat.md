@@ -92,6 +92,8 @@ exchange route. The rows' words are `server.oneChat.*` in `en.json`,
 | `server/automation-reports.ts` | with `oneChatOn()`, a quiet run is held like any report, and `write` appends its "Nothing new" post; `newestAutomationLines` skips a quiet post |
 | `server/delta-context.ts` | `isContextMessage` leaves out a post with `automation.quiet` |
 | `packages/phone-protocol/src/routine-run.ts` | `AutomationLine.quiet` |
+| `server/index.ts` | `autoCompactAt` after `nativeCompactTokens`: a turn's context reading carries `compactAt`, the point `compactBudget` gives, so the app can mark it. It is absent with `context.autoCompact` off |
+| `server/store.ts`, `packages/phone-protocol/src/wire.ts` | `TaskUsage.context.compactAt` |
 
 `server/index.ts` and `server/store.ts` are at their size limit in
 `scripts/testing/file-size-ratchet.test.ts`, so each line above joins an
@@ -143,6 +145,19 @@ existing line.
 - Nothing starts or switches threads: the chat ⋯ menu has no New thread and
   no thread list, the sidebar's bot menu has no thread items, the + menu has
   no "New conversation with", ⌘⇧N does nothing, and a message has no Fork.
+- A compaction is one line across the chat with a rule on each side,
+  "Context compacted", as T3 Code draws it. The engine's own compaction and
+  OpenMausBot's summary draw the same line, with no hint and no summary. The
+  bot can still find older messages with `session_search`.
+- The Context card shows no percent: one row with the bar and "116k / 1M".
+  A tick on the bar marks `compactAt`, and hovering the bar says "Compacts on
+  its own at 180k". The percent counted against the whole window, so a 1M bot
+  read 12% just before a compaction at 180k. The Advanced composer meter shows
+  the same. Compact now is always on the card, because the 80% rule that
+  showed it is 800k on a 1M window, past the point where the bot compacts.
+  It asks "Compact Mira's conversation?" first, because a compaction can't
+  be undone. `useCompact` in `src/components/ContextWarning.tsx` asks it for
+  the card, the composer meter and the context warning.
 - There is no Start fresh. Its divider cut off the bot's context in its only
   chat with one click and no undo. A long chat is summarized by
   auto-compaction, or by Compact on the panel's Context card.
@@ -160,8 +175,11 @@ existing line.
 | `src/components/Sidebar.tsx` | no "New conversation with" in the + menu |
 | `src/App.tsx` | ⌘⇧N starts no thread; `WorkModal` in place of `ForkPanel`, which neither collapses the sidebar nor closes on a narrow window |
 | `src/components/bot-panel/PanelHome.tsx` | no `BotConversations` and no Start fresh row |
+| `src/components/DigestChip.tsx` | `CompactionChip` draws the "Context compacted" line |
+| `src/components/bot-panel/ContextCard.tsx`, `src/components/ComposerContextMeter.tsx`, `src/lib/context-meter.ts` | no percent, the `compactAt` tick on `ContextBar`, and Compact now with no 80% rule |
+| `src/components/ContextWarning.tsx` | `useCompact`: Compact asks first |
 
-Upstream's tests for those menus, the applied-change line and the run details bar mock `@/lib/one-chat` with `ONE_CHAT: false`,
+Upstream's tests for those menus, the applied-change line, the run details bar, the compaction rows and the context meter mock `@/lib/one-chat` with `ONE_CHAT: false`,
 so they still test upstream's paths. Add that mock to a new upstream test
 that fails on a missing thread item.
 
@@ -172,6 +190,6 @@ that fails on a missing thread item.
 2. If upstream adds a place that calls `store.createTask` for a bot, decide
    where it leads: the main chat, or a hidden thread with `hideWorkSession`.
    List it here.
-3. Run `corepack pnpm exec vitest run server/one-chat src/lib/bot-exchange ThreadChip thread-navigation ChatMoreMenu ApprovalCard TriggerCard panel-link ChatView.controls ChatView.automation ChatView.one-chat-automation RoutineResultsNavigation server/automation-reports SidebarBotRead Sidebar.simple-mode Sidebar.plus-menu Sidebar.working-folder file-size-ratchet`,
+3. Run `corepack pnpm exec vitest run server/one-chat src/lib/bot-exchange ThreadChip thread-navigation ChatMoreMenu ApprovalCard TriggerCard panel-link ChatView.controls ChatView.automation ChatView.one-chat-automation RoutineResultsNavigation DigestChip ContextCard ComposerContextMeter server/store server/automation-reports SidebarBotRead Sidebar.simple-mode Sidebar.plus-menu Sidebar.working-folder file-size-ratchet`,
    then upstream's tests named after each server file above, with the
    setting off.

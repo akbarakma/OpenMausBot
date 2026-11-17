@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { ClipboardList } from "lucide-react";
+import { ChevronsDownUp, ClipboardList } from "lucide-react";
 
 import { t } from "@/lib/i18n";
 import type { LocaleKey } from "@/locales";
 import { formatDuration } from "@/lib/usage-trace";
+import { ONE_CHAT } from "@/lib/one-chat";
 import type { Message } from "@/state/store";
 import { traceRootId } from "../../shared/usage-trace";
 import { EXCERPT_SUMMARY_HEADER } from "../../shared/wire";
@@ -47,7 +48,18 @@ export function DigestChip({ message }: { message: Message }) {
 
 const COMPACTION_CHIP = "max-w-[600px] rounded-xl border border-hairline/40 bg-panel px-3 py-2 text-[12px] text-ink-secondary";
 
+const RULE = <span aria-hidden="true" className="h-px flex-1 bg-hairline/70" />;
+
 export function CompactionChip({ message }: { message: Message }) {
+  if (ONE_CHAT && (message.engineCompaction || (message.compaction && !message.compaction.fresh))) {
+    return (
+      <div role="separator" data-testid="compacted-line" className="flex w-full items-center gap-3 py-1 text-[12px] text-ink-tertiary">
+        {RULE}
+        <span className="flex shrink-0 items-center gap-1.5"><ChevronsDownUp aria-hidden="true" size={12} />{t("chat.contextCompacted")}</span>
+        {RULE}
+      </div>
+    );
+  }
   if (!message.compaction) return message.engineCompaction ? (
     <div className={COMPACTION_CHIP} data-testid="engine-compaction-chip">
       <p className="font-medium">{t("chat.engineCompactionTitle")}</p>

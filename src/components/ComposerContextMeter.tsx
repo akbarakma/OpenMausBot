@@ -4,12 +4,13 @@ import { createPortal } from "react-dom";
 import type { CacheKeepWarmStatus } from "../../shared/wire";
 import { cn } from "@/lib/cn";
 import { threadContextWarning } from "@/lib/context-warning";
+import { ONE_CHAT } from "@/lib/one-chat";
 import { contextMeterReading, contextTokenRows, type ContextMeterReading } from "@/lib/context-meter";
 import { t } from "@/lib/i18n";
 import { formatTokens } from "@/lib/usage";
 import { usePopoverDismiss } from "@/hooks/use-popover-dismiss";
 import { visibleMessages, type Bot, type TaskUsage } from "@/state/store";
-import { useContextAction } from "./ContextWarning";
+import { useCompact } from "./ContextWarning";
 import { useMenuMotion } from "./MenuMotion";
 
 const OPEN_DELAY_MS = 150;
@@ -87,31 +88,38 @@ function TokenTable({ usage }: { usage: TaskUsage }) {
   );
 }
 
-export function ContextBar({ reading }: { reading: ContextMeterReading }) {
+export function ContextBar({ reading, className = "mt-2.5" }: { reading: ContextMeterReading; className?: string }) {
+  const { compactAt, window } = reading;
   return (
-    <div className="mt-2.5 h-1 overflow-hidden rounded-full bg-ink/[0.08]" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={reading.fill}>
-      <div
-        className={cn("h-full rounded-full transition-[width,background-color] duration-500 ease-out motion-reduce:transition-none", reading.danger ? "bg-danger" : "bg-ink-secondary")}
-        style={{ width: `${reading.fill}%` }}
-      />
+    <div className={cn("relative", className)} title={compactAt ? t("composer.context.compactsAt", { tokens: formatTokens(compactAt) }) : undefined}>
+      <div className="h-1 overflow-hidden rounded-full bg-ink/[0.08]" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={reading.fill}>
+        <div
+          className={cn("h-full rounded-full transition-[width,background-color] duration-500 ease-out motion-reduce:transition-none", reading.danger ? "bg-danger" : "bg-ink-secondary")}
+          style={{ width: `${reading.fill}%` }}
+        />
+      </div>
+      {compactAt && window && <span data-compact-tick="" aria-hidden="true" className="absolute top-1/2 h-3.5 w-px -translate-y-1/2 rounded-full bg-ink-secondary" style={{ left: `${(compactAt / window) * 100}%` }} />}
     </div>
   );
 }
 
 export function CompactButton({ bot, usage }: { bot: Bot; usage: TaskUsage }) {
-  const { pending, run } = useContextAction();
-  if (threadContextWarning(usage, visibleMessages(bot)) === null) return null;
+  const { pending, ask, dialog } = useCompact(bot);
+  if (!ONE_CHAT && threadContextWarning(usage, visibleMessages(bot)) === null) return null;
   const busy = Boolean(bot.busy);
   return (
-    <button
-      type="button"
-      disabled={busy || pending}
-      title={busy ? t("contextWarning.busy") : undefined}
-      onClick={() => run(`/api/bots/${bot.id}/compact`, { threadId: bot.threadId })}
-      className="mt-3 flex h-[30px] w-full cursor-pointer items-center justify-center rounded-[8px] bg-ink/[0.08] text-[13px] font-medium text-ink hover:bg-ink/[0.12] disabled:cursor-not-allowed disabled:opacity-50"
-    >
-      {pending ? t("contextWarning.compacting") : t("contextWarning.compactNow")}
-    </button>
+    <>
+      <button
+        type="button"
+        disabled={busy || pending}
+        title={busy ? t("contextWarning.busy") : undefined}
+        onClick={ask}
+        className="mt-3 flex h-[30px] w-full cursor-pointer items-center justify-center rounded-[8px] bg-ink/[0.08] text-[13px] font-medium text-ink hover:bg-ink/[0.12] disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {pending ? t("contextWarning.compacting") : t("contextWarning.compactNow")}
+      </button>
+      {dialog}
+    </>
   );
 }
 
@@ -126,7 +134,8 @@ function ContextCard({ bot, usage, reading, keepWarm }: {
       <div className="flex items-baseline justify-between gap-4">
         <span className="text-[13px] font-semibold text-ink">{t("composer.context.title")}</span>
         <span className="text-[12px] tabular-nums text-ink-secondary">
-          {reading.percent !== undefined && reading.window
+          {ONE_CHAT && reading.window ? t("composer.context.ofWindow", { tokens: formatTokens(reading.tokens), window: formatTokens(reading.window) })
+            : reading.percent !== undefined && reading.window
             ? <><span className={cn("font-semibold", reading.danger ? "text-danger" : "text-ink")}>{reading.percent}%</span>{" · "}{t("composer.context.ofWindow", { tokens: formatTokens(reading.tokens), window: formatTokens(reading.window) })}</>
             : t("composer.context.tokens", { tokens: formatTokens(reading.tokens) })}
         </span>
@@ -173,7 +182,8 @@ export function ComposerContextMeter({ bot }: { bot: Bot }) {
   const enter = (event: React.PointerEvent) => { if (event.pointerType !== "touch" && !pinned) later(true, OPEN_DELAY_MS); };
   const leave = (event: React.PointerEvent) => { if (event.pointerType !== "touch" && !pinned) later(false, CLOSE_DELAY_MS); };
 
-  const inside = useRef({ contains: (target: unknown) => [triggerRef.current, cardRef.current].some((node) => node?.contains(target as Node)) });
+  // The Compact confirmation is portalled outside the card; a click in it must not close the card and drop the dialog.
+  const inside = useRef({ contains: (target: unknown) => [triggerRef.current, cardRef.current].some((node) => node?.contains(target as Node)) || Boolean((target as Partial<Element>).closest?.call(target, "[role=alertdialog]")) });
   usePopoverDismiss(open, inside, () => close());
 
   useEffect(() => {
@@ -205,7 +215,7 @@ export function ComposerContextMeter({ bot }: { bot: Bot }) {
   }, [motion.shown]);
 
   if (!reading || !usage) return null;
-  const label = t("chat.usage.contextShort", { value: reading.percent === undefined ? formatTokens(reading.tokens) : `${reading.percent}%` });
+  const label = t("chat.usage.contextShort", { value: ONE_CHAT || reading.percent === undefined ? formatTokens(reading.tokens) : `${reading.percent}%` });
 
   return (
     <>

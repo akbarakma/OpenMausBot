@@ -1,10 +1,12 @@
 import { useState } from "react";
-import { Gauge } from "lucide-react";
+import { ChevronsDownUp, Gauge } from "lucide-react";
 
 import { cn } from "@/lib/cn";
 import { roomContextWarnings, threadContextWarning } from "@/lib/context-warning";
 import { t } from "@/lib/i18n";
+import { ONE_CHAT } from "@/lib/one-chat";
 import { api, useStore, type Bot, type Group, type Message } from "@/state/store";
+import { ConfirmDialog } from "./ConfirmDialog";
 
 const pill = "flex items-center gap-1.5 rounded-full border border-warning/40 bg-warning/10 px-2.5 py-1 text-[13px] text-ink";
 const action = "rounded-full px-1.5 font-medium text-accent hover:underline disabled:cursor-not-allowed disabled:opacity-50 disabled:no-underline";
@@ -20,6 +22,19 @@ export function useContextAction() {
       .finally(() => setPending(false));
   };
   return { pending, run };
+}
+
+/** Compacting can't be undone, so in the one-chat app it asks first. */
+export function useCompact(bot: Pick<Bot, "id" | "name" | "threadId">) {
+  const { pending, run } = useContextAction();
+  const [asking, setAsking] = useState(false);
+  const compact = () => run(`/api/bots/${bot.id}/compact`, { threadId: bot.threadId });
+  const dialog = (
+    <ConfirmDialog open={asking} layer="z-[70]" tone="neutral" icon={<ChevronsDownUp size={18} className="text-ink-secondary" />}
+      title={t("contextWarning.confirmTitle", { name: bot.name })} body={null} confirmLabel={t("contextWarning.confirm")}
+      onCancel={() => setAsking(false)} onConfirm={() => { setAsking(false); compact(); }} />
+  );
+  return { pending, ask: ONE_CHAT ? () => setAsking(true) : compact, dialog };
 }
 
 export function ThreadContextWarningView({ name, percent, busy, pending, onCompact }: {
@@ -41,11 +56,13 @@ export function ThreadContextWarningView({ name, percent, busy, pending, onCompa
 export function ThreadContextWarning({ bot, messages }: { bot: Bot; messages: readonly Message[] }) {
   const usage = bot.tasks?.find((task) => task.threadId === bot.threadId)?.usage;
   const warning = threadContextWarning(usage, messages);
-  const { pending, run } = useContextAction();
+  const { pending, ask, dialog } = useCompact(bot);
   if (!warning) return null;
   return (
-    <ThreadContextWarningView name={bot.name} percent={warning.percent} busy={Boolean(bot.busy)} pending={pending}
-      onCompact={() => run(`/api/bots/${bot.id}/compact`, { threadId: bot.threadId })} />
+    <>
+      <ThreadContextWarningView name={bot.name} percent={warning.percent} busy={Boolean(bot.busy)} pending={pending} onCompact={ask} />
+      {dialog}
+    </>
   );
 }
 

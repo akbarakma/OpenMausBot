@@ -5,7 +5,8 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Bot, Message, TaskUsage } from "@/state/store";
 
-const fixture = vi.hoisted(() => ({ api: vi.fn(), resized: [] as Array<() => void> }));
+const fixture = vi.hoisted(() => ({ api: vi.fn(), resized: [] as Array<() => void>, oneChat: false }));
+vi.mock("@/lib/one-chat", () => ({ get ONE_CHAT() { return fixture.oneChat; }, hiddenWork: () => false }));
 vi.mock("@/state/store", async (importOriginal) => {
   const original = await importOriginal<typeof import("@/state/store")>();
   return {
@@ -40,6 +41,7 @@ const hover = () => {
 beforeEach(() => {
   vi.useFakeTimers();
   fixture.resized = [];
+  fixture.oneChat = false;
   vi.stubGlobal("ResizeObserver", class {
     constructor(private readonly callback: () => void) {}
     observe() { fixture.resized.push(this.callback); }
@@ -78,6 +80,20 @@ describe("ComposerContextMeter", () => {
       ["Cached input", "1.1M", "24.8k"],
       ["Output", "52k", "860"],
     ]);
+  });
+
+  it("in the one-chat app shows tokens with no percent, marks where compaction starts, and always offers Compact now", () => {
+    fixture.oneChat = true;
+    render(botWith(usage(26_000, { context: { tokens: 26_000, window: 200_000, compactAt: 160_000 } })));
+    expect(ring()!.getAttribute("aria-label")).toBe("26k context used");
+    hover();
+    expect(card()!.textContent).toMatch(/^Context26k \/ 200k/);
+    expect(card()!.textContent).not.toContain("%");
+    expect(card()!.querySelector<HTMLElement>("[data-compact-tick]")!.style.left).toBe("80%");
+    expect(card()!.querySelector("[data-compact-tick]")!.parentElement!.getAttribute("title")).toBe("Compacts on its own at 160k");
+    expect([...card()!.querySelectorAll("button")].some((button) => button.textContent === "Compact now")).toBe(true);
+    render(botWith(usage(26_000)));
+    expect(card()!.querySelector("[data-compact-tick]")).toBeNull();
   });
 
   it("offers Compact now from 80% and posts to the bot's compact route", () => {
@@ -129,6 +145,23 @@ describe("ComposerContextMeter", () => {
     flushSync(() => compact.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", bubbles: true })));
     expect(document.activeElement).toBe(ring());
     expect(ring()!.getAttribute("aria-expanded")).toBe("false");
+  });
+
+  it("in the one-chat app asks before compacting, and a click in that question keeps the card open", () => {
+    fixture.oneChat = true;
+    render(botWith(usage(26_000)));
+    flushSync(() => ring()!.click());
+    const compactNow = [...card()!.querySelectorAll("button")].find((button) => button.textContent === "Compact now")!;
+    flushSync(() => compactNow.click());
+    expect(fixture.api).not.toHaveBeenCalled();
+    const dialog = document.querySelector<HTMLElement>("[role=alertdialog]")!;
+    expect(dialog.textContent).toContain("Compact Maus's conversation?");
+    const confirm = [...dialog.querySelectorAll("button")].find((button) => button.textContent === "Compact")!;
+    flushSync(() => confirm.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true })));
+    expect(ring()!.getAttribute("aria-expanded")).toBe("true");
+    flushSync(() => confirm.click());
+    expect(fixture.api).toHaveBeenCalledWith("/api/bots/maus/compact", { method: "POST", body: JSON.stringify({ threadId: "t1" }) });
+    expect(document.querySelector("[role=alertdialog]")).toBeNull();
   });
 
   it("pins the card open on click and closes it on Escape", () => {

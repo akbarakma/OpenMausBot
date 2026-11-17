@@ -40,4 +40,12 @@ describe("the panel's Context card", () => {
     render({ busy: true });
     expect(compact()?.disabled).toBe(true);
   });
+
+  it("shows one row of bar and tokens, with no percent and a tick where compaction starts", () => {
+    const usage = { input: 0, output: 0, costUsd: null, turns: 1, context: { tokens: 116_000, window: 1_000_000, compactAt: 180_000 } };
+    flushSync(() => root.render(createElement(PanelContextCard, { bot: { id: "maus", name: "Maus", threadId: "t1", messages: [reply], tasks: [task("t1", { usage })] } as Bot })));
+    const card = host.querySelector("[data-panel-context]")!;
+    expect(card.textContent).toBe("116k / 1MCompact now");
+    expect(card.querySelector<HTMLElement>("[data-compact-tick]")!.style.left).toBe("18%");
+  });
 });

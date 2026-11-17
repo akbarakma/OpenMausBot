@@ -7,6 +7,7 @@ export interface ContextMeterReading {
   tokens: number;
   window?: number;
   percent?: number;
+  compactAt?: number;
   fill: number;
   danger: boolean;
 }
@@ -14,11 +15,12 @@ export interface ContextMeterReading {
 export function contextMeterReading(usage: TaskUsage | undefined): ContextMeterReading | null {
   const share = usage ? contextShare(usage) : null;
   if (!share) return null;
-  const percent = share.percent;
+  const percent = share.percent, compactAt = usage?.context?.compactAt;
   return {
     tokens: share.tokens,
     window: share.window,
     percent,
+    compactAt: share.window && compactAt && compactAt > 0 && compactAt < share.window ? compactAt : undefined,
     fill: Math.min(100, percent ?? 0),
     danger: percent !== undefined && percent > CONTEXT_METER_DANGER_PERCENT,
   };

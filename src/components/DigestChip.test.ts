@@ -1,9 +1,13 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Message } from "@/state/store";
 import { EXCERPT_SUMMARY_HEADER } from "../../shared/wire";
 import { CompactionChip, DigestChip } from "./DigestChip";
+
+const fixture = vi.hoisted(() => ({ oneChat: false }));
+vi.mock("@/lib/one-chat", () => ({ get ONE_CHAT() { return fixture.oneChat; }, hiddenWork: () => false }));
+beforeEach(() => { fixture.oneChat = false; });
 
 const message: Message = {
   id: "receipt", role: "bot", kind: "digest", at: 1, text: "Observed work, not a completion verdict",
@@ -51,6 +55,19 @@ describe("DigestChip", () => {
     expect(html).toContain("Your full conversation is still here");
     expect(html).toContain("&lt;script&gt;");
     expect(html).not.toContain("<script>");
+  });
+  it("draws both kinds of compaction as one Context compacted line in the one-chat app, with no summary and no hint", () => {
+    fixture.oneChat = true;
+    const compaction = { summary: "The user wants X.", firstKeptId: "", foldedThroughId: "old", tokensBefore: 1, by: "harness" as const };
+    for (const extra of [{ engineCompaction: true as const }, { compaction }]) {
+      const html = renderToStaticMarkup(createElement(CompactionChip, { message: { id: "c", role: "bot", kind: "compaction", at: 1, ...extra } }));
+      expect(html).toContain('role="separator"');
+      expect(html).toContain(">Context compacted<");
+      expect(html).not.toContain("The user wants X.");
+      expect(html).not.toContain("still here");
+    }
+    const fresh = renderToStaticMarkup(createElement(CompactionChip, { message: { id: "f", role: "bot", kind: "compaction", at: 1, compaction: { ...compaction, fresh: true } } }));
+    expect(fresh).toContain("Fresh start");
   });
   it("draws a Start fresh row as a divider, not a summary", () => {
     const html = renderToStaticMarkup(createElement(CompactionChip, { message: {
