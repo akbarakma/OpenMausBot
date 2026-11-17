@@ -161,6 +161,17 @@ existing line.
   `src/lib/context-warning.ts`). It asks "Compact Mira's conversation?" first, because a compaction can't
   be undone. `useCompact` in `src/components/ContextWarning.tsx` asks it for
   the card, the composer meter and the context warning.
+- The model is picked only on the panel's Setup card. The chat header has no
+  model chip, and the card has no Reasoning row. Its Model row reads like
+  "Opus 5.5 · Medium", and its menu has the Thinking row, stays open after a
+  pick so the level can be set next, and opens to the thinking level while
+  the bot works, as the header menu does upstream. In Advanced mode a stalled
+  first reply's Switch AI opens bot settings, since no header chip exists.
+- A model's name has no provider: "Opus 5.5", not "Claude Opus 5.5", and
+  "DeepSeek V4.1 Flash (Juxta)", not "Cliproxy · DeepSeek V4.1 Flash (Juxta)".
+  The menu's headings and the engine icon still tell the engines apart. A
+  one-word name such as Cursor's "Auto" keeps its provider. Only the desktop
+  drops it; a saved pick stores ids, so nothing else changes.
 - There is no Start fresh. Its divider cut off the bot's context in its only
   chat with one click and no undo. A long chat is summarized by
   auto-compaction, or by Compact on the panel's Context card.
@@ -172,7 +183,7 @@ existing line.
 | `src/components/ApprovalCard.tsx` | `AppliedLine` for any change that applied on its own, a new automation included, before upstream's `TriggerCard` |
 | `src/components/bot-panel/panel-link.ts`, `page-registry.ts`, `PanelShell.tsx` | a panel link may name one item (`detail`), so the panel opens on that skill |
 | `src/components/ThreadChip.tsx` | `oneChatRow` draws a bot exchange or side job row as `OneChatLine` |
-| `src/components/ChatView.tsx` | no message box and no note for hidden work in the fork panel; no Fork on a message; `AutomationHead` inside an automation's post, or above its copied card, in place of `AutomationCaption`; no run details bar |
+| `src/components/ChatView.tsx` | no message box and no note for hidden work in the fork panel; no Fork on a message; `AutomationHead` inside an automation's post, or above its copied card, in place of `AutomationCaption`; no run details bar; no model chip |
 | `src/components/ChatMoreMenu.tsx` | no `new-thread`, `threads` and `start-fresh` items |
 | `src/components/SidebarBotMenu.tsx` | no thread items in Simple's bot menu |
 | `src/components/Sidebar.tsx` | no "New conversation with" in the + menu |
@@ -181,8 +192,11 @@ existing line.
 | `src/components/DigestChip.tsx` | `CompactionChip` draws the "Context compacted" line |
 | `src/components/bot-panel/ContextCard.tsx`, `src/components/ComposerContextMeter.tsx`, `src/lib/context-meter.ts` | no percent, the `compactAt` tick on `ContextBar`, and Compact now from half of `compactAt` |
 | `src/components/ContextWarning.tsx` | `useCompact`: Compact asks first |
+| `src/components/bot-panel/PanelHome.tsx`, `src/components/ModelPicker.tsx` | no Reasoning row; the Setup card's Model row (`row`) carries Thinking and the level (`reasoningElsewhere`) |
+| `src/components/FirstReplyRescueRow.tsx` | Switch AI opens bot settings in Advanced mode |
+| `src/lib/simple-model-menu.ts` | `bareModelLabel` drops the provider from a model's name |
 
-Upstream's tests for those menus, the applied-change line, the run details bar, the compaction rows and the context meter mock `@/lib/one-chat` with `ONE_CHAT: false`,
+Upstream's tests for those menus, the applied-change line, the run details bar, the compaction rows, the context meter, the model picker, the model menu and the rescue row mock `@/lib/one-chat` with `ONE_CHAT: false`,
 so they still test upstream's paths. Add that mock to a new upstream test
 that fails on a missing thread item.
 
@@ -193,6 +207,6 @@ that fails on a missing thread item.
 2. If upstream adds a place that calls `store.createTask` for a bot, decide
    where it leads: the main chat, or a hidden thread with `hideWorkSession`.
    List it here.
-3. Run `corepack pnpm exec vitest run server/one-chat src/lib/bot-exchange ThreadChip thread-navigation ChatMoreMenu ApprovalCard TriggerCard panel-link ChatView.controls ChatView.automation ChatView.one-chat-automation RoutineResultsNavigation DigestChip ContextCard ComposerContextMeter context-warning server/store server/automation-reports SidebarBotRead Sidebar.simple-mode Sidebar.plus-menu Sidebar.working-folder file-size-ratchet`,
+3. Run `corepack pnpm exec vitest run server/one-chat src/lib/bot-exchange ThreadChip thread-navigation ChatMoreMenu ApprovalCard TriggerCard panel-link ChatView.controls ChatView.automation ChatView.one-chat-automation RoutineResultsNavigation DigestChip ContextCard ComposerContextMeter context-warning ModelPicker simple-model-menu FirstReplyRescueRow server/store server/automation-reports SidebarBotRead Sidebar.simple-mode Sidebar.plus-menu Sidebar.working-folder file-size-ratchet`,
    then upstream's tests named after each server file above, with the
    setting off.

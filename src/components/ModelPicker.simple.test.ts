@@ -7,6 +7,9 @@ import type { EffortLevel } from "../../shared/wire";
 import type { MenuGroup, SimpleMenu } from "@/lib/simple-model-menu";
 import type { SimpleThinking } from "./SimpleModelMenu";
 import { Select } from "./Select";
+const oneChat = vi.hoisted(() => ({ on: false }));
+vi.mock("@/lib/one-chat", () => ({ get ONE_CHAT() { return oneChat.on; }, hiddenWork: (task?: { routineRunId?: unknown }) => oneChat.on && Boolean(task?.routineRunId) }));
+beforeEach(() => { oneChat.on = false; });
 
 // Hook-by-call-order harness: the picker's own state survives between renders, effects never run, and handlers are read
 // off the element tree.

@@ -1087,8 +1087,8 @@ export const ChatView = memo(function ChatView({ bot: profile, inForkPanel = fal
           )}
           {advanced && <ThreadContextWarning bot={bot} messages={messages} />}
           {phone && <UsageAlert engine={bot.modelSelection?.instanceId} />}
-          {/* The model stays in view in both modes; Simple mode moves the computer and ⋯ into the bot panel. */}
-          {!phone && <ModelPicker key={bot.threadId} bot={bot} threadId={bot.threadId} />}
+          {/* The one-chat app picks the model only in the bot panel; Simple mode moves the computer and ⋯ there too. */}
+          {!phone && !ONE_CHAT && <ModelPicker key={bot.threadId} bot={bot} threadId={bot.threadId} />}
           <LiveCallChip currentBotId={bot.id} onOpen={(botId, threadId) => openThread(dispatch, { botId, threadId }, store.state(), showThreads)} />{!phoneMenu && <WatchScreenButton botId={bot.id} messages={messages} liveTools={liveTools} place={place} />}
           {!phoneMenu && !simpleHead && <button
             data-tour="computer"

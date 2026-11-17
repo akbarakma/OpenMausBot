@@ -5,6 +5,9 @@ import { flushSync } from "react-dom";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Bot, InstanceInfo } from "@/state/store";
+const oneChat = vi.hoisted(() => ({ on: false }));
+vi.mock("@/lib/one-chat", () => ({ get ONE_CHAT() { return oneChat.on; }, hiddenWork: (task?: { routineRunId?: unknown }) => oneChat.on && Boolean(task?.routineRunId) }));
+beforeEach(() => { oneChat.on = false; });
 
 const fixture = vi.hoisted(() => ({
   advanced: false,
@@ -525,5 +528,40 @@ describe("while the bot is working", () => {
     fixture.bots = [busy];
     render(busy);
     expect(chip().disabled).toBe(true);
+  });
+});
+
+describe("the one-chat panel row", () => {
+  const renderRow = (bot: Bot) => flushSync(() => root.render(createElement(ModelPicker, { bot, threadId: bot.threadId, contained: true, row: true, label: "Model" })));
+  const medium = (bot: Bot): Bot => ({ ...bot, modelSelection: { ...bot.modelSelection, effort: "medium" } });
+
+  it("names the model without its provider and with its thinking level, offers Thinking, and stays open after a pick", async () => {
+    oneChat.on = true;
+    renderRow(medium(scout()));
+    expect(chip().textContent).toBe("ModelOpus 5.5 · Medium");
+    await openWith("click");
+    expect(menu()!.querySelector("[data-simple-thinking-toggle]")).not.toBeNull();
+    press("ArrowDown");
+    press("Enter");
+    await settle();
+    expect(fixture.dispatch).toHaveBeenLastCalledWith(expect.objectContaining({ selection: expect.objectContaining({ model: "claude-sonnet-5-5" }) }));
+    expect(menu()).not.toBeNull();
+  });
+
+  it("opens to the thinking level while the bot is working", async () => {
+    oneChat.on = true;
+    const busy = { ...scout(), busy: true };
+    fixture.bots = [busy];
+    renderRow(busy);
+    expect(chip().disabled).toBe(false);
+    await openWith("click");
+    expect(menu()!.querySelector("[data-model-busy]")).not.toBeNull();
+  });
+
+  it("keeps Thinking out of a settings row outside the one-chat app", async () => {
+    renderRow(medium(scout()));
+    expect(chip().textContent).toBe("ModelClaude Opus 5.5");
+    await openWith("click");
+    expect(menu()!.querySelector("[data-simple-thinking-toggle]")).toBeNull();
   });
 });

@@ -12,6 +12,9 @@ import type { FirstReplyRescue } from "../../shared/first-reply-rescue";
 import { PERSON_STOPPED_TURN_NAME, STOPPED_TURN_NAME } from "../../shared/client-cancel";
 import { CancelledTurnRow } from "./CancelledTurnRow";
 import { StatusActivityRow } from "./StatusActivityRow";
+const oneChat = vi.hoisted(() => ({ on: false }));
+vi.mock("@/lib/one-chat", () => ({ get ONE_CHAT() { return oneChat.on; }, hiddenWork: (task?: { routineRunId?: unknown }) => oneChat.on && Boolean(task?.routineRunId) }));
+beforeEach(() => { oneChat.on = false; });
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -118,6 +121,16 @@ describe("first-reply rescue row", () => {
     expect(dispatch).not.toHaveBeenCalled();
     expect(opened.header).toHaveBeenCalledWith(true);
     expect(opened.panel).not.toHaveBeenCalled();
+  });
+
+  it("in Advanced mode in the one-chat app, which has no header chip, opens the model picker in bot settings", () => {
+    oneChat.on = true;
+    setAdvancedMode(true);
+    render(row());
+    act(() => button("Switch AI")!.click());
+    expect(dispatch.mock.calls).toEqual([[expect.objectContaining({ type: "toggleSettings", open: true, section: "model", botId: "bot-1" })]]);
+    expect(opened.panel).toHaveBeenCalledWith(true);
+    expect(opened.header).not.toHaveBeenCalled();
   });
 
   it("hands the picker back to the running turn once the row's own turn is over", () => {

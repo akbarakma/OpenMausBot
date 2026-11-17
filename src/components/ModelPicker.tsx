@@ -30,6 +30,7 @@ import { modelMenuKey, modelMenuPointerMove } from "./model-menu-keys";
 import { lockedWhileBusy, offersReasoning, useRefocusAfterPick, variantChoices, variantLabel } from "./model-picker-reasoning";
 import { BusyModelMenu } from "./ModelPickerBusyMenu";
 import { useAdvancedMode } from "@/lib/interface-mode";
+import { ONE_CHAT } from "@/lib/one-chat";
 import { useOwnerOrAdmin } from "@/lib/use-owner-or-admin";
 
 import { t } from "@/lib/i18n";
@@ -220,8 +221,10 @@ export function ModelPicker({
 }) {
   const { dispatch: storeDispatch, refreshInstances, refreshModels: refreshInstanceModels } = useStoreActions(), state = useStoreSelector((s) => ({ instances: s.instances, modelVariantSessions: s.modelVariantSessions, profile: s.bots.find((candidate) => candidate.id === shown.id) }), sameFields);
   const [open, setOpen] = useState(false);
+  // The one-chat panel row is the bot's only model control, so it carries Thinking like the header menu does.
+  const reasoningElsewhere = contained && !(ONE_CHAT && row);
   const { bot, dispatch } = useAiSwitch({ bot: shown, threadId, contained, dispatch: storeDispatch, setOpen: (next) => (next ? openMenu() : setOpen(false)) });
-  const locked = lockedWhileBusy(state, bot, contained, threadId);
+  const locked = lockedWhileBusy(state, bot, reasoningElsewhere, threadId);
   const motion = useMenuMotion(open && !locked);
   const [railId, setRailId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
@@ -490,11 +493,11 @@ export function ModelPicker({
     if (updateBotDefault && threadId) setChangedBotModel(true);
     // A model with reasoning levels keeps the menu open, so its level can be set next without opening it again;
     // picking a variant row already sets that level.
-    if (variant !== undefined || contained || !offersReasoning(state, instance, nextSelection, threadId ?? bot.threadId)) close(true);
+    if (variant !== undefined || reasoningElsewhere || !offersReasoning(state, instance, nextSelection, threadId ?? bot.threadId)) close(true);
     else refocusAfterPick();
   };
 
-  const resetVariant = contained && selection.variant !== undefined ? () => {
+  const resetVariant = reasoningElsewhere && selection.variant !== undefined ? () => {
     const { variant: _variant, ...nextSelection } = selection;
     dispatch({ type: "setModel", botId: bot.id, threadId: threadId ?? bot.threadId, updateBotDefault: !threadId || simpleUpdatesBotDefault, selection: nextSelection });
     close(true);
@@ -533,7 +536,7 @@ export function ModelPicker({
     dispatch({ type: "setModel", botId: bot.id, threadId, ...(threadId && simpleUpdatesBotDefault ? { updateBotDefault: true } : {}),
       selection: effort ? { ...model, effort } : model });
   };
-  const thinking: SimpleThinking | null = contained ? null
+  const thinking: SimpleThinking | null = reasoningElsewhere ? null
     : variantChoices(state, selection, threadId ?? bot.threadId) ? {
       variants: (
         <ModelVariantRow compact quiet bot={shown} threadId={threadId} updateBotDefault={Boolean(threadId) && simpleUpdatesBotDefault} className="px-2 py-1"
@@ -656,7 +659,8 @@ export function ModelPicker({
       {...triggerProps}
       active={active} attention={attention}
       model={modelName(active, selection.model)} engine={selection.instanceId}
-      variant={selection.variant !== undefined ? variantSuffix(active, selection.model, selection.variant) : undefined}
+      variant={selection.variant !== undefined ? variantSuffix(active, selection.model, selection.variant)
+        : ONE_CHAT && wholeRow && selection.effort ? ` · ${effortLabel(selection.effort)}` : undefined}
       label={wholeRow ? label : undefined} contained={contained}
       className={cn(
         "group flex items-center text-[13px] leading-[18px] text-ink-secondary disabled:cursor-not-allowed disabled:text-ink-tertiary",
@@ -880,7 +884,7 @@ export function ModelPicker({
                 </>
               )}
 
-              {!contained && (
+              {!reasoningElsewhere && (
                 <EffortRow
                   compact
                   bot={shown}

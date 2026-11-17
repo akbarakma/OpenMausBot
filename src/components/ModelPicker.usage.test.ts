@@ -8,6 +8,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { EngineLimit } from "../../shared/limit-reset";
 import type { Bot, InstanceInfo } from "@/state/store";
+const oneChat = vi.hoisted(() => ({ on: false }));
+vi.mock("@/lib/one-chat", () => ({ get ONE_CHAT() { return oneChat.on; }, hiddenWork: (task?: { routineRunId?: unknown }) => oneChat.on && Boolean(task?.routineRunId) }));
+beforeEach(() => { oneChat.on = false; });
 
 const fixture = vi.hoisted(() => ({
   advanced: false,

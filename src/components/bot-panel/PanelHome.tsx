@@ -6,6 +6,7 @@ import { t } from "@/lib/i18n";
 import type { Bot } from "@/state/store";
 import { useChatMoreItems } from "../ChatMoreMenu";
 import { EffortRow, ModelPicker } from "../ModelPicker";
+import { ONE_CHAT } from "@/lib/one-chat";
 import type { SidebarMenuItem } from "../SidebarPopoverMenu";
 import { useBotAutomations } from "./AutomationsPage";
 import { ComputerCard } from "./ComputerTab";
@@ -64,13 +65,13 @@ export function PanelHome({ bot, onOpen }: { bot: Bot; onOpen: (page: SimplePage
             label={<><RowIcon icon={Sparkles} /><span className="shrink-0 text-[14px] font-medium text-ink">{t("model.simple.model")}</span></>}
           />
         </div>
-        <EffortRow
+        {!ONE_CHAT && <EffortRow
           bot={bot}
           threadId={bot.threadId}
           compact
           className={cn(rowCls, REASONING_ROW)}
           label={<span className="flex shrink-0 items-center gap-2.5"><RowIcon icon={Gauge} /><span className="text-[14px] font-medium text-ink">{t("model.simple.reasoning")}</span></span>}
-        />
+        />}
         <NavRow
           data-panel-page="routines"
           icon={Zap}
