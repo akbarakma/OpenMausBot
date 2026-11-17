@@ -37,7 +37,9 @@ export function ModelTrigger({ active, attention, model, variant, engine, label,
         </span>
       )}
       <UsageBars engine={engine} className="ml-1.5" />
-      <ChevronDown size={12} strokeWidth={2} aria-hidden="true" className="ml-1 shrink-0 text-ink-tertiary group-hover:text-ink-secondary" />
+      {/* A panel row's chevron matches NavRow's: the same size and gap, so values and chevrons line up down the card. */}
+      <ChevronDown size={label === undefined ? 12 : 15} strokeWidth={2} aria-hidden="true"
+        className={cn("shrink-0 text-ink-tertiary group-hover:text-ink-secondary", label === undefined ? "ml-1" : "-ml-1.5")} />
     </button>
   );
 }
