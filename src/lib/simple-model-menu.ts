@@ -8,6 +8,7 @@ import { favoriteKey, favoriteModels } from "./favorite-models";
 import { localModelDetail } from "./local-model";
 import { displayModelLabel, shortModelLabel } from "./model-friendly";
 import { choiceIsSelected, modelChoices, takesTypedModels, type ModelChoice } from "./model-choices";
+import { ONE_CHAT } from "./one-chat";
 
 export type ModelOption = InstanceInfo["models"]["options"][number];
 
@@ -106,7 +107,15 @@ export function variantSuffix(instance: InstanceInfo | undefined, model: string,
 export function modelName(instance: InstanceInfo | undefined, model: string, variant?: string): string {
   const option = instance?.models.options.find((candidate) => candidate.id === model);
   if (!instance || !option) return model;
-  return displayModelLabel(modelOptionLabel(option), providerName(instance), option.custom) + variantSuffix(instance, model, variant);
+  const label = ONE_CHAT ? bareModelLabel(instance, option) : modelOptionLabel(option);
+  return displayModelLabel(label, providerName(instance), option.custom) + variantSuffix(instance, model, variant);
+}
+
+export function bareModelLabel(instance: InstanceInfo, option: Pick<ModelOption, "id" | "label">): string {
+  const label = modelOptionLabel(option);
+  // OpenCode labels every model "Provider · Model"; the one-chat app shows the model alone.
+  const named = ONE_CHAT && instance.driverKind === "opencodeGo" ? label.replace(/^[^·]+ · /u, "") : label;
+  return shortModelLabel(named, providerName(instance));
 }
 
 export function repeatedModelLabels(options: readonly ModelOption[]): Set<string> {
@@ -171,7 +180,7 @@ export function simpleModelMenu(input: SimpleMenuInput): SimpleMenu {
   const ordered = [...subscription, ...api, ...custom];
   const current = ordered.find((instance) => instance.instanceId === selection.instanceId);
 
-  function groupBody(instance: InstanceInfo, provider: string): MenuGroupBody | null {
+  function groupBody(instance: InstanceInfo): MenuGroupBody | null {
     if (instance.policy) return query ? null : { kind: "policy", organization: instance.policy.organizationName, ...(instance.policy.team ? { team: true } : {}) };
     if (needsCli(instance)) return query ? null : { kind: "setUp" };
     const { signedOut, own, all } = models.get(instance.instanceId)!;
@@ -185,7 +194,7 @@ export function simpleModelMenu(input: SimpleMenuInput): SimpleMenu {
         option,
         ...(option.nativeModel ? { model: option.nativeModel } : {}),
         ...(option.variant ? { variant: option.variant } : {}),
-        label: shortModelLabel(modelOptionLabel(option), provider),
+        label: bareModelLabel(instance, option),
         ...(repeated.has(option.label) && option.provider ? { route: option.provider } : {}),
         ...(detail ? { detail } : {}),
         current: currentSelection ? choiceIsSelected(option, currentSelection) : false,
@@ -218,7 +227,7 @@ export function simpleModelMenu(input: SimpleMenuInput): SimpleMenu {
 
   const groups = (current ? [current, ...ordered.filter((instance) => instance !== current)] : ordered).flatMap((instance): MenuGroup[] => {
     const named = heading(instance, listed);
-    const body = groupBody(instance, named.provider);
+    const body = groupBody(instance);
     return body ? [{ instance, ...named, body }] : [];
   });
 

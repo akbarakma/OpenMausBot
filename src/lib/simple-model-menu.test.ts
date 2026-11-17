@@ -3,6 +3,10 @@ import type { InstanceInfo, ModelSelection } from "@/state/store";
 import { favoriteKey, favoriteModels, forgetFavoriteModelsForTest, toggleFavoriteModel } from "./favorite-models";
 import { modelName, simpleModelMenu, SIMPLE_SEARCH_AFTER } from "./simple-model-menu";
 
+const oneChat = vi.hoisted(() => ({ on: false }));
+vi.mock("@/lib/one-chat", () => ({ get ONE_CHAT() { return oneChat.on; }, hiddenWork: () => false }));
+beforeEach(() => { oneChat.on = false; });
+
 vi.hoisted(() => {
   vi.stubGlobal("window", {});
   vi.stubGlobal("localStorage", { getItem: () => null, setItem: () => {} });
@@ -242,6 +246,23 @@ describe("the Simple model menu", () => {
     expect(modelName(pi, "llama")).toBe("Llama 4");
     expect(modelName(undefined, "gone-model")).toBe("gone-model");
     expect(modelName(cursor, "gone-model")).toBe("gone-model");
+  });
+
+  it("names a model without its provider in the one-chat app, but keeps a provider before one bare word", () => {
+    oneChat.on = true;
+    const openCode = engine("opencodeGo", "opencodeGo", "OpenCode", "subscription", [
+      { id: "cliproxy/juxta/deepseek-v4.1-flash", label: "Cliproxy · DeepSeek V4.1 Flash (Juxta)" },
+      { id: "opencode/deepseek-v4.1-flash-free", label: "Zen · DeepSeek V4.1 Flash Free" },
+    ]);
+    const fast = engine("codex", "codex", "Codex", "subscription", [{ id: "gpt-6.1-sol-fast", label: "GPT 6.1 Sol · Fast" }]);
+    expect(modelName(claude(), "opus-5-5")).toBe("Opus 5.5");
+    expect(modelName(openCode, "cliproxy/juxta/deepseek-v4.1-flash")).toBe("DeepSeek V4.1 Flash (Juxta)");
+    expect(modelName(fast, "gpt-6.1-sol-fast")).toBe("GPT 6.1 Sol · Fast");
+    expect(modelName(cursor, "auto")).toBe("Cursor Auto");
+    const built = menu([claude(), openCode], { selection: { instanceId: "opencodeGo", model: "cliproxy/juxta/deepseek-v4.1-flash" } });
+    expect(built.current).toMatchObject({ label: "DeepSeek V4.1 Flash (Juxta)" });
+    expect(built.groups.map((group) => group.label)).toEqual(["OpenCode", "Claude"]);
+    expect(rows(built)).toEqual(["DeepSeek V4.1 Flash Free"]);
   });
 
   it("names the picked Antigravity thinking level on the current model, as its row in the list does (#4160)", () => {
