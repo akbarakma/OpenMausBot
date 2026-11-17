@@ -19,6 +19,7 @@ import { MEETING_TOOL_DEFINITIONS, MEETING_TOOL_NAMES } from "./agents-meeting-t
 import { MAUSBOT_TOOL_DEFINITIONS } from "./agents-mausbot-tools.ts";
 import { PERSON_TOOL_DEFINITIONS } from "./agents-person-tools.ts";
 import { RESEARCH_TOOL_DEFINITIONS, RESEARCH_TOOL_NAMES, X_TOOL_NAMES } from "./agents-research-tools.ts";
+import { SHARE_TOOL_DEFINITIONS } from "./agents-share-tool.ts";
 import type { CatalogProfile } from "./agents-catalog-profile.ts";
 import { oneChatTools } from "../one-chat.ts"; import { advertisedSchema } from "./agents-schema.ts"; import { withoutToolsOff } from "./agents-tool-groups.ts";
 export { catalogProfileFromEnv, type CatalogProfile } from "./agents-catalog-profile.ts";
@@ -100,7 +101,7 @@ const TRIGGER_FIELDS_SCHEMA = {
   },
   timeout_minutes: { type: "integer", minimum: 5, maximum: 240, description: "Schedules: optional limit on a run, 5 to 240." },
   clear_timeout: { type: "boolean", description: "Update: true removes the limit." },
-  same_conversation: { type: "boolean", description: "app_event or webhook: each run continues the last run's conversation." },
+  same_conversation: { type: "boolean", description: "app_event, webhook or schedule: each run continues the last run's conversation." },
   continuity: { type: "boolean", description: "Schedules: each run gets the last run's report." },
   overlap: { type: "string", enum: ["skip", "queue"], description: "Schedules: while a run works, skip (default) or queue one." },
   run_on_startup: { type: "boolean", description: "Repeating schedules: also run when OpenMausBot starts." },
@@ -508,7 +509,7 @@ const TOOL_DEFINITIONS = [
       required: ["text"],
     },
   },
-  ...RESEARCH_TOOL_DEFINITIONS, ...HELPER_TOOL_DEFINITIONS, ...IMAGE_TOOL_DEFINITIONS, ...MEETING_TOOL_DEFINITIONS, ...PERSON_TOOL_DEFINITIONS, ...DEVS_TOOL_DEFINITIONS, ...HOSTING_TOOL_DEFINITIONS,
+  ...RESEARCH_TOOL_DEFINITIONS, ...HELPER_TOOL_DEFINITIONS, ...IMAGE_TOOL_DEFINITIONS, ...MEETING_TOOL_DEFINITIONS, ...PERSON_TOOL_DEFINITIONS, ...DEVS_TOOL_DEFINITIONS, ...HOSTING_TOOL_DEFINITIONS, ...SHARE_TOOL_DEFINITIONS,
   {
     name: "memory_update",
     description:
@@ -718,13 +719,13 @@ const TOOL_DEFINITIONS = [
   {
     name: "skill_manage",
     description:
-      "Create or update a reusable skill (SKILL.md), or turn one of your own skills on or off, or delete it. Never change a skill unless the person explicitly asked for that named skill." + APPLIES_OUTCOME,
+      "Create or update a reusable skill (SKILL.md), import one from GitHub or skills.sh (action import with source; same review as create, brings SKILL.md and references/*.md), or turn one of your own skills on or off, or delete it. Never change a skill unless the person explicitly asked for that named skill." + APPLIES_OUTCOME,
     inputSchema: {
       type: "object",
       additionalProperties: false,
       properties: {
-        action: { type: "string", enum: ["create", "update", "enable", "disable", "delete"] },
-        skill_name: { type: "string", description: "Every action but create: the exact name from skills_list." },
+        action: { type: "string", enum: ["create", "update", "import", "enable", "disable", "delete"] },
+        skill_name: { type: "string", description: "Every action but create and import: the exact name from skills_list." },
         skill_md: { type: "string", description: "create or update: the full SKILL.md with its YAML frontmatter." },
         references: {
           type: "array",
@@ -742,7 +743,7 @@ const TOOL_DEFINITIONS = [
         },
         gist: { type: "string", description: "Optional one-line summary of the change." },
         base_revision: { type: "string", description: "To update a skill shared with your team: its revision from skills_list." },
-        source: { type: "string", description: "create or update: the URL, folder or 'conversation' it came from." },
+        source: { type: "string", description: "create or update: the URL, folder or 'conversation' it came from. import: owner/repo, a GitHub link to the skill's folder or SKILL.md, or a skills.sh link." },
       },
       required: ["action"],
     },

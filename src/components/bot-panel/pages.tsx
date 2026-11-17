@@ -85,7 +85,7 @@ export function AppsPage({ bot, derived }: PageContext) {
     if (Object.keys(next).length > 0) patch(next);
   };
   const toggleServer = (name: string) => {
-    if (bot.busy || mcpError) return;
+    if (mcpError) return;
     patch({ mcpServers: mcpSwitch(servers, bot.mcpServers, name) });
   };
   const note = !canUseConnectedApps
@@ -120,6 +120,7 @@ export function AppsPage({ bot, derived }: PageContext) {
       {(servers.length > 0 || mcpError) && (
         <Card label={t("connectors.tab.mcp")}>
           {mcpError && <NoteRow>{t("botAccess.mcpRefreshError")}</NoteRow>}
+          {bot.busy && !mcpError && <NoteRow>{t("botAccess.nextTurn")}</NoteRow>}
           {servers.map((server) => (
             <label key={server.name} data-simple-mcp={server.name} className={switchRowCls}>
               <RowIcon icon={Server} />
@@ -131,7 +132,7 @@ export function AppsPage({ bot, derived }: PageContext) {
                 color={bot.color}
                 checked={mounted.has(server.name)}
                 aria-label={t("botSettings.simple.appToggle", { name: bot.name, app: server.name })}
-                disabled={!server.enabled || Boolean(bot.busy) || mcpError}
+                disabled={!server.enabled || mcpError}
                 onClick={() => toggleServer(server.name)}
                 className="disabled:cursor-not-allowed"
               />

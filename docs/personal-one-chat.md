@@ -45,6 +45,10 @@ below.
   they read text from outside, which could word itself to pull a private
   passage in.
 - **New bots** start with a chat titled "Main Chat".
+- **Titles.** Upstream titles a new thread from its first message, but only one
+  still titled "New thread" or "New task" (`titleTaskFromFirstMessage`), so
+  "Main Chat" keeps its name. Only a person's Regenerate title or Rename in
+  Advanced mode renames it.
 - **Automation turns.** A wait's follow-up runs in the chat that set it, so in one chat it runs in the main
   chat. Upstream treats a chat as an automation's for good once any run used it, which would stop skill
   review, memory capture and cache keep-warm for the bot's only chat. `automatedThread` counts a chat as
@@ -90,6 +94,7 @@ exchange route. The rows' words are `server.oneChat.*` in `en.json`,
 | `server/host/chief-notices.ts` | `deps.mainChat` before the notices thread lookup |
 | `server/default-bot.ts` | the intro goes to the bot's chat when `oneChatOn()` |
 | `server/store.ts` | "Main Chat" as a new bot's first title, and for the chat made when the last one is deleted |
+| `server/host/bot-link-host.ts` | `hideWorkSession` on the "@sender · work" thread `openThread` makes when a bot of the person's other place hands work over |
 | `server/agents-turn.ts` | `OMB_ONE_CHAT` in the tool process's environment |
 | `server/drivers/agents-catalog.ts` | `oneChatTools` in `availableTools` |
 | `scripts/control-omb.ts` | the launcher's `oneChat` option |
@@ -183,10 +188,12 @@ Inbox closes.
   own hidden sessions with `session_search` when asked why something failed.
 - Nothing starts or switches threads: the chat ⋯ menu has no New thread and
   no thread list, the sidebar's bot menu has no thread items, the + menu has
-  no "New conversation with", ⌘⇧N does nothing, and a message has no Fork.
+  no "New conversation with", ⌘⇧N does nothing, a message has no Fork, and
+  hovering a Simple bot row opens no list of its threads.
 - A compaction is one line across the chat with a rule on each side,
   "Context compacted", as T3 Code draws it. The engine's own compaction and
-  OpenMausBot's summary draw the same line, with no hint and no summary. The
+  OpenMausBot's summary draw the same line, with no hint, no summary and no
+  "New chat" offer. The
   bot can still find older messages with `session_search`.
 - The Context card shows no percent: one row with the bar and "116k / 1M".
   A tick on the bar marks `compactAt`, and hovering the bar says "Compacts on
@@ -211,6 +218,9 @@ Inbox closes.
   The menu's headings and the engine icon still tell the engines apart. A
   one-word name such as Cursor's "Auto" keeps its provider. Only the desktop
   drops it; a saved pick stores ids, so nothing else changes.
+- A failed reply that a model change fixes (out of credit, at a limit,
+  overloaded) offers "Switch model", which opens the panel's Model row.
+  Upstream puts a full model picker in the chat there.
 - There is no Start fresh. Its divider cut off the bot's context in its only
   chat with one click and no undo. A long chat is summarized by
   auto-compaction, or by Compact on the panel's Context card.
@@ -235,6 +245,8 @@ Inbox closes.
 | `src/components/FirstReplyRescueRow.tsx` | Switch AI opens bot settings in Advanced mode |
 | `src/lib/simple-model-menu.ts` | `bareModelLabel` drops the provider from a model's name |
 | `src/components/inbox/InboxPanel.tsx`, `InboxRow.tsx`, `InboxReading.tsx` | rows with 32px faces and day headers, a "Needs you" pill on asks and one round Mark done check on hover for news; rows leave out the automation's name, which the reading view shows in full on its own line; the list keeps its scroll and marks the line just read; the reading view has no breadcrumb or menu, and Open in chat, Mark done and Mute in Inbox as buttons |
+| `src/components/FailedTurnFix.tsx` | with `ONE_CHAT`, the model fix is a Switch model button that calls `openBotSettings(dispatch, "model")` |
+| `src/components/DigestChip.tsx` | `CompactionChip` returns the one-chat line before upstream's `onNewChat` hint |
 | `src/components/inbox/inbox-view.ts` | `textOf` drops the automation's name a report starts with |
 | `src/components/bot-panel/AutomationsPage.tsx` | the Mute in Inbox bell beside each switch |
 | `src/components/bot-panel/simple-side-panel.ts` | `slotGivesWay`: the Inbox and the bot panel share one slot |
@@ -250,6 +262,6 @@ that fails on a missing thread item.
 2. If upstream adds a place that calls `store.createTask` for a bot, decide
    where it leads: the main chat, or a hidden thread with `hideWorkSession`.
    List it here.
-3. Run `corepack pnpm exec vitest run server/one-chat src/lib/bot-exchange ThreadChip thread-navigation ChatMoreMenu ApprovalCard TriggerCard panel-link ChatView.controls ChatView.automation ChatView.one-chat-automation RoutineResultsNavigation DigestChip ContextCard ComposerContextMeter context-warning ModelPicker simple-model-menu FirstReplyRescueRow server/store server/automation-reports SidebarBotRead Sidebar.simple-mode Sidebar.plus-menu Sidebar.working-folder server/inbox-mutes server/host/place-inbox src/components/inbox simple-side-panel file-size-ratchet`,
+3. Run `corepack pnpm exec vitest run server/one-chat src/lib/bot-exchange ThreadChip thread-navigation ChatMoreMenu ApprovalCard TriggerCard panel-link ChatView.controls ChatView.automation ChatView.one-chat-automation RoutineResultsNavigation DigestChip ContextCard ComposerContextMeter context-warning ModelPicker simple-model-menu FirstReplyRescueRow FailedTurnRow CompactionChip Sidebar.advanced-back server/store server/automation-reports SidebarBotRead Sidebar.simple-mode Sidebar.plus-menu Sidebar.working-folder server/inbox-mutes server/host/place-inbox src/components/inbox simple-side-panel file-size-ratchet`,
    then upstream's tests named after each server file above, with the
    setting off.

@@ -48,7 +48,7 @@ export function SidebarSectionHeader({
   onContextMenu?: (event: MouseEvent<HTMLDivElement>) => void;
   line?: boolean;
   onMenu?: (button: HTMLButtonElement) => void;
-  /** Keep the ⋯ button's space when this line has none, so counts line up with lines that do (Simple). */
+  /** Keep the ⋯ button's space when this line has none, so chevrons line up with lines that do (Simple). */
   reserveMenu?: boolean;
   menuOpen?: boolean;
   /** How many rows the section holds. A closed Simple section shows it in the ⋯ column. */
@@ -165,13 +165,13 @@ export function SidebarSectionHeader({
             className="flex h-full min-w-0 flex-1 cursor-pointer items-center gap-1.5 px-2 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
           >
             <Chevron size={14} className="shrink-0 text-ink-secondary" aria-hidden="true" />
-            <span className="min-w-0 flex-1 truncate text-[12px] leading-4 text-ink-secondary">{name}</span>
+            <span className="min-w-0 flex-1 truncate text-[13px] leading-[18px] text-ink-secondary">{name}</span>
             {collapsed && <SectionAttention attention={attention} label={attentionLabel} alert={alert} />}
             {(Boolean(onMenu) || reserveMenu || count !== undefined) && countSlot}
           </button>
         ) : (
           <div className="flex min-w-0 flex-1 items-center gap-1.5 px-2">
-            <span className="min-w-0 flex-1 truncate text-[12px] leading-4 text-ink-secondary">{name}</span>
+            <span className="min-w-0 flex-1 truncate text-[13px] leading-[18px] text-ink-secondary">{name}</span>
             {attentionLabel && <span className="sr-only">{attentionLabel}</span>}
             {(Boolean(onMenu) || reserveMenu || count !== undefined) && countSlot}
           </div>
@@ -288,31 +288,29 @@ function SectionNameField({ value, label, onCommit, onCancel }: SectionNaming) {
   );
 }
 
+type SectionMark = "waiting" | "unread" | "working";
+
+const SECTION_MARK: Record<SectionMark, string> = {
+  waiting: "size-2 bg-warning",
+  unread: "size-2 bg-accent",
+  working: "size-1.5 animate-pulse bg-success motion-reduce:animate-none",
+};
+
+function sectionMark(attention: SidebarSectionAttention | undefined): SectionMark | null {
+  if (!attention) return null;
+  if (attention.waiting > 0) return "waiting";
+  if (attention.unread > 0) return "unread";
+  if (attention.working > 0) return "working";
+  return null;
+}
+
 function SectionAttention({ attention, label, alert }: { attention?: SidebarSectionAttention; label: string; alert?: boolean }) {
+  const mark = alert ? null : sectionMark(attention);
   return (
     <>
-      {attention && attention.waiting > 0 && (
-        <span
-          aria-hidden="true"
-          className="min-w-4 rounded-full bg-warning/15 px-1 text-center text-[9px] font-semibold leading-4 text-warning"
-        >
-          {attention.waiting}
-        </span>
-      )}
-      {attention && attention.unread > 0 && (
-        <span
-          aria-hidden="true"
-          className="min-w-4 rounded-full bg-accent/15 px-1 text-center text-[9px] font-semibold leading-4 text-accent"
-        >
-          {attention.unread}
-        </span>
-      )}
-      {attention && attention.working > 0 && (
-        <span
-          aria-hidden="true"
-          className="flex size-4 items-center justify-center"
-        >
-          <span className="size-1.5 animate-pulse rounded-full bg-success" />
+      {mark && (
+        <span aria-hidden="true" title={label} data-section-mark={mark} className="flex size-4 shrink-0 items-center justify-center">
+          <span className={cn("rounded-full", SECTION_MARK[mark])} />
         </span>
       )}
       {label && <span className="sr-only">{label}</span>}

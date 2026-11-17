@@ -23,8 +23,8 @@ import { ForkPanel } from "@/components/ForkPanel"; import { WorkModal } from "@
 import { SIDEBAR_AND_PANEL_FIT, SIDEBAR_INLINE, TWO_SIDE_PANELS_FIT, useMediaQuery } from "@/lib/use-media-query";
 import { preloadConnectedApps } from "@/lib/connected-apps";
 import {
-  ActivityPanel, BotSettingsDialog, CloudAddDialog, ComputerPanel, FilesView, InspectorPanel, KeyboardShortcutsModal, LocalVmWorkspace,
-  PluginsPanel, preloadScreens, PublishedAppsPage, RemoteAgentSettingsPanel, RemoteDesktopPanel, RoomPanel, SettingsModal, TeamMapPage, TriggersPage,
+  ActivityPanel, AnnouncementsPage, BotSettingsDialog, CloudAddDialog, ComputerPanel, FilesView, InspectorPanel, KeyboardShortcutsModal, LocalVmWorkspace,
+  PluginsPanel, preloadScreens, PublishedAppsPage, RemoteAgentSettingsPanel, RemoteDesktopPanel, RoomPanel, SettingsModal, TeamFilesPage, TeamMapPage, TriggersPage,
 } from "@/components/lazy-screens";
 import { useAdvancedMode } from "@/lib/interface-mode";
 import { useRoomPanelShown } from "@/lib/room-panel";
@@ -73,7 +73,8 @@ import { botUnreadCount, showBrowserUnread } from "@/lib/bot-unread";
 import { phonePairingSettingsAction, takePhonePairingRequest } from "@/lib/phone-pairing"; import { useConnectLink } from "@/lib/use-connect-link";
 import { isSettingsPage } from "@/components/settings/settings-index";
 import { useBotListDrawer } from "@/hooks/use-bot-list-drawer";
-import { useDesktopNotificationOpens, useExternalChatLinks } from "@/hooks/use-external-chat-links";
+import { useRememberedSidePanel } from "@/hooks/use-remembered-side-panel";
+import { useDesktopNotificationOpens, useExternalChatLinks } from "@/hooks/use-external-chat-links"; import { useNewBotFromOtherPlace } from "@/lib/places-together";
 import { useUsageSnapshot } from "@/hooks/use-usage-snapshot";
 import { useReadShownChatOnFocus } from "@/hooks/use-read-shown-chat";
 import { usePresence } from "@/hooks/use-presence";
@@ -87,6 +88,7 @@ import { WebPanelPage } from "@/components/WebPanelPage";
 import { useSimpleSidePanel } from "@/components/bot-panel/simple-side-panel";
 import { SimpleBrowserWindow } from "@/components/bot-panel/SimpleBrowserWindow";
 import { AppPreviewPanel } from "@/components/published-apps/AppPreviewPanel";
+import { refreshPublishedApps } from "@/lib/own-published-apps";
 
 function Shell({ viewer }: { viewer: WelcomeViewer | null }) {
   const { state, dispatch } = useStore();
@@ -94,6 +96,7 @@ function Shell({ viewer }: { viewer: WelcomeViewer | null }) {
   const needsYou = needsYouVersion(state.bots, state.groups, state.notifications);
   useTeamPeopleLoader(state.config, needsYou);
   useInboxLoader(`${inboxVersion(state.bots) ?? ""}|${needsYou}`);
+  useEffect(() => { refreshPublishedApps(); }, []);
   const inboxReady = useInboxReady();
   const inboxShown = useInboxPanel().open && inboxReady;
   // A Switch AI pick lands once its stopped turn's chat is idle, wherever the person is by then.
@@ -143,7 +146,7 @@ function Shell({ viewer }: { viewer: WelcomeViewer | null }) {
     dispatch(phonePairingSettingsAction());
   }, [dispatch]);
   useConnectLink(dispatch, Boolean(state.config?.team));
-  useExternalChatLinks(state, dispatch); useDesktopNotificationOpens(state, dispatch);
+  useExternalChatLinks(state, dispatch); useDesktopNotificationOpens(state, dispatch); useNewBotFromOtherPlace(state.hydrated === true, useCallback(() => dispatch({ type: "newBot" }), [dispatch]));
   usePresence(state, dispatch); useTeamPresence(state);
   usePageLanguage(effectiveLanguage(useLanguageChoice(), state.config?.language), true);
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -163,6 +166,7 @@ function Shell({ viewer }: { viewer: WelcomeViewer | null }) {
   const closeDrawer = useCallback(() => { hideDrawer(); menuButtonRef.current?.focus(); }, [hideDrawer]);
   const notificationFeed = useNotificationFeed() && !remoteClient;
   const advanced = useAdvancedMode();
+  useRememberedSidePanel(state, dispatch, { enabled: sidebarInline && (advanced || remoteClient), inspector: !remoteClient });
   const roomPanelOpen = useRoomPanelShown({ group, state, simple: !advanced && !remoteClient });
   const sidePanelOpen = (Boolean(bot) && (state.settingsOpen || state.computerOpen || state.inspectorOpen || state.activityOpen)) || Boolean(state.forkPanel && !ONE_CHAT) || roomPanelOpen || (notificationFeed && state.notificationsOpen) || inboxShown;
   const collapseSidebar = sidePanelOpen && !sidebarAndPanelFit;
@@ -391,6 +395,10 @@ function Shell({ viewer }: { viewer: WelcomeViewer | null }) {
         <WebPanelPage />
       ) : state.activeView === "published-apps" ? (
         <PublishedAppsPage />
+      ) : state.activeView === "announcements" ? (
+        <AnnouncementsPage />
+      ) : state.activeView === "team-files" && state.config?.team ? (
+        <TeamFilesPage />
       ) : state.activeView === "routines" ? (
         <TriggersPage onBack={closeCalendar} onOpenRoom={openCalendarRoom} />
       ) : !remoteClient && localVmWorkspaceBotId ? (

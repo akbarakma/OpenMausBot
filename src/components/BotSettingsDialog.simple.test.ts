@@ -833,10 +833,10 @@ describe("the Bot settings page", () => {
     expect(has(drifted, "data-panel-done", "soul")).toBe(false);
   });
 
-  it("offers Ask me first and Just do it with no hint text, and writes either for every conversation", () => {
+  it("offers Ask for approval and Full access, as Advanced mode names them, with no hint text, and writes either for every conversation", () => {
     const rendered = settingsPage(makeBot());
     const acts = segment(rendered, "data-approval-choice");
-    expect(acts.options.map((option) => [option.value, option.label])).toEqual([["ask", "Ask me first"], ["full", "Just do it"]]);
+    expect(acts.options.map((option) => [option.value, option.label])).toEqual([["ask", "Ask for approval"], ["full", "Full access"]]);
     expect(acts.value).toBe("ask");
     for (const hint of ["Checks before changes", "Acts without checking", "Acts, then tells you"]) expect(rendered.html).not.toContain(`>${hint}<`);
     acts.onChange("ask");
@@ -851,12 +851,12 @@ describe("the Bot settings page", () => {
     expect(patch).not.toHaveBeenCalled();
   });
 
-  it.each([["auto", "Decide for me", undefined], ["edits", "Auto-accept edits", undefined], ["custom", "Custom", "Change this in Advanced mode"]] as const)(
+  it.each([["auto", "Approve for me", undefined], ["edits", "Auto-accept edits", undefined], ["custom", "Custom", "Change this in Advanced mode"]] as const)(
     "shows a bot in %s mode as a third, selected pill it cannot pick again, beside the two choices", (mode, label, tooltip) => {
       fixture.derived.approvalMode = mode;
       const rendered = settingsPage(makeBot());
       const acts = segment(rendered, "data-approval-choice");
-      expect(acts.options.map((option) => [option.value, option.label, Boolean(option.disabled)])).toEqual([["ask", "Ask me first", false], ["full", "Just do it", false], [mode, label, true]]);
+      expect(acts.options.map((option) => [option.value, option.label, Boolean(option.disabled)])).toEqual([["ask", "Ask for approval", false], ["full", "Full access", false], [mode, label, true]]);
       expect((acts.options[2] as { tooltip?: string }).tooltip).toBe(tooltip);
       expect(pressed(rendered.html, "data-approval-choice")).toEqual([mode]);
       acts.onChange(mode);
@@ -1193,7 +1193,7 @@ describe("the drill-in pages", () => {
     expect(patch).toHaveBeenLastCalledWith({ mcpServers: ["linear", "dodopayments-remote"] });
   });
 
-  it("shows a server that is off everywhere or for this bot as a disabled switch with why, and ignores it while busy", () => {
+  it("shows a server that is off everywhere or for this bot as a disabled switch with why, and lets a busy bot's switch change from its next turn", () => {
     fixture.mcp.servers = [{ name: "paused", enabled: false }, { name: "linear", enabled: true, offFor: ["scout"] }];
     const rendered = body("apps");
     expect(find(rendered, "aria-label", "Scout can use paused").props).toMatchObject({ checked: false, disabled: true });
@@ -1202,9 +1202,10 @@ describe("the drill-in pages", () => {
     expect(find(rendered, "aria-label", "Scout can use linear").props.disabled).toBe(false);
 
     const busy = body("apps", makeBot({ busy: true }));
-    expect(find(busy, "aria-label", "Scout can use linear").props.disabled).toBe(true);
+    expect(find(busy, "aria-label", "Scout can use linear").props.disabled).toBe(false);
+    expect(busy.html).toContain("Added access applies from its next turn");
     click(find(busy, "aria-label", "Scout can use linear"));
-    expect(patch).not.toHaveBeenCalled();
+    expect(patch).toHaveBeenCalled();
   });
 
   it("draws no MCP card while loading or when the bot has no server, and says so when the list cannot load", () => {

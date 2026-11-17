@@ -116,11 +116,12 @@ function RailCard({ target, left }: { target: Target; left: number }) {
 function BotCardBody({ bot }: { bot: Bot }) {
   const { state } = useStore();
   const visible = visibleMessages(bot);
-  const { waiting, working, running, teammateWait, queued } = sidebarBotStatus(bot, state.pendingQueued);
+  const { waiting, working, running, failed, teammateWait, queued } = sidebarBotStatus(bot, state.pendingQueued, visible);
   const { unread } = useBotUnread(bot);
   const title = bot.title.trim();
   const status = waiting ? { label: t("sidebar.preview.waiting"), tone: "bg-warning", text: "text-warning" }
     : working ? { label: t("chat.activity.working"), tone: "bg-success", text: "text-ink-secondary" }
+      : failed ? { label: t("sidebar.preview.failed"), tone: "bg-danger", text: "text-danger" }
       : teammateWait ? { label: t("sidebar.preview.waitingOnTeammate"), tone: "bg-accent", text: "text-ink-secondary" }
         : queued ? { label: t("task.queued"), tone: "bg-ink-secondary", text: "text-ink-secondary" }
           : unread ? { label: t("task.unread"), tone: "bg-accent", text: "text-ink-secondary" }

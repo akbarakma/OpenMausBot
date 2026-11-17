@@ -60,9 +60,11 @@ where a chevron's drawn stroke ends, so their right edges line up.
     Compact now from 80%. It shows once the conversation reports usage.
   Usage is not in the chat's ⋯ menu. In Simple mode the composer has no
   context ring and the chat shows no context warning; Advanced keeps both.
-  Since upstream 0.1.151 Simple is the only mode (`SIMPLE_ONLY` in
-  `src/lib/simple-only.ts`), so nothing shows the ring. Its code stays for the
-  day that flag is false again. The first page has no list of conversations
+  Upstream's composer context button (`ComposerContextMenu`) is deleted: its
+  menu showed a percent, compacted without asking and offered Start fresh.
+  The composer keeps the fork's buttons. Call shows only while the box is
+  empty and the bot is idle, never beside Stop during a turn, because Akbar
+  does not use Call. The first page has no list of conversations
   and nothing starts a new thread: a bot has one chat (see
   [`personal-one-chat.md`](personal-one-chat.md)). Upstream's "Try asking" card is removed. The hero
   avatar shows the same face as the sidebar and chat header (see "One face per
@@ -246,7 +248,7 @@ the same state, motion beat and working ring.
 
 | File | Change |
 |---|---|
-| `src/components/bot-panel/rows.tsx` | `RowIcon` is a plain 16px icon; `CardSurface`; `PageHeader` title is optional; a `NavRow` with a value keeps its title on one line, truncates the value and puts both on one baseline; on a row with a hint, the value centers on the row like the chevron |
+| `src/components/bot-panel/rows.tsx` | `RowIcon` is a plain 16px icon; `CardSurface`; `PageHeader` title is optional; a `NavRow` with a value keeps its title on one line, truncates the value and puts both on one baseline; on a row with a hint, the value centers on the row like the chevron; its value keeps that layout over upstream's 45% split, and `rows.test.ts` checks the same two behaviours (the title keeps its room, the ellipsis sits on the value) against it |
 | `src/components/bot-panel/PanelHome.tsx` | New, from upstream's `DetailsTab.tsx`: the one first page |
 | `src/components/bot-panel/simple-side-panel.ts` | New: the open state, the quiet reopen, and the popup and Activity redirects |
 | `src/components/bot-panel/browser-window.ts` | New: which bot's browser fills the window; `browserWindowClosed` and `useHoldGrace` |
@@ -256,7 +258,7 @@ the same state, motion beat and working ring.
 | `src/components/browser/ChromeRow.tsx` | `windowBar`: the 60px first row |
 | `src/components/browser/StreamSurface.tsx` | `passive`: never sends a resize |
 | `src/components/ActivityPanel.tsx` | `ActivityList`, shared with the Activity page |
-| `src/App.tsx` | Calls `useSimpleSidePanel`; draws `SimpleBrowserWindow`; hides the popup and Activity panel it redirects |
+| `src/App.tsx` | Calls `useSimpleSidePanel`; draws `SimpleBrowserWindow`; hides the popup and Activity panel it redirects; upstream's `useRememberedSidePanel` runs only in Advanced or a remote client, because in Simple it could reopen the full-window browser at launch and the bot panel keeps its own memory |
 | `src/components/BotSettingsDialog.tsx` | Simple panel: Escape does not close it, ✕ records the close, a quiet reopen leaves focus alone |
 | `src/lib/guided-tour.ts` | Simple tour steps never open the computer |
 | `src/components/bot-panel/AutomationsPage.tsx` | New: `useBotAutomations` and the grouped Automations page |
@@ -288,10 +290,10 @@ the same state, motion beat and working ring.
 | `src/components/bot-panel/SettingsPage.tsx` | Grouped cards, full-width pickers; upstream's `PackageProvenance` above the Profile card |
 | `src/components/bot-panel/BackupAis.tsx` | Only the list and Add; the page intro holds the explanation |
 | `src/components/bot-panel/PanelShell.tsx` | `detail` state: the note or skill open in place of its list; the body keeps its scrollbar gutter with `pl-4 pr-2` |
-| `src/components/bot-panel/pages.tsx` | Memory note and skill pages, confirm dialogs, Backup AIs and Bot API pages; `routines` renders `AutomationsPage`; Data, Files and Activity pages; the chat's folder on the Folder page; upstream's "Edit as text" (`MemoryTextEditor`) after the note page, and `OrgSkillsCard` after the global skills card |
+| `src/components/bot-panel/pages.tsx` | Memory note and skill pages, confirm dialogs, Backup AIs and Bot API pages; `routines` renders `AutomationsPage`; Data, Files and Activity pages; the chat's folder on the Folder page; upstream's "Edit as text" (`MemoryTextEditor`) after the note page, and `OrgSkillsCard` after the global skills card; the Apps page's MCP switches stay usable while the bot works, with upstream's `botAccess.nextTurn` note, as upstream's server now allows; connected-app switches stay locked while it works, as upstream's do |
 | `src/components/ComposerContextMeter.tsx` | New: the composer's context ring, left of the call and Send slot, with a card on hover or click that always shows the token table, since only Advanced mounts it; Compact now from 80%. `ContextBar` and `CompactButton` are shared with the panel's Context card |
 | `src/lib/context-meter.ts` | New: the ring's reading (red above 90%) and the Advanced card's token rows |
-| `src/components/Composer.tsx` | Renders `ComposerContextMeter` in Advanced one-to-one chats, before Stop so Stop keeps the right-hand slot; stays at 1,000 lines for the size ratchet |
+| `src/components/Composer.tsx` | Renders `ComposerContextMeter` in Advanced one-to-one chats, before Stop so Stop keeps the right-hand slot; no `ComposerContextMenu`; `callShown` keeps Call out of the round button while a turn runs; stays at 1,000 lines for the size ratchet |
 | `src/components/ChatMoreMenu.tsx` | No Usage item |
 | `src/components/ContextWarning.tsx` | `useContextAction` is exported for the ring's card |
 | `electron/window-chrome.mjs` | `TRAFFIC_LIGHTS.unframed` is `{ x: 16, y: 23 }`, so the lights' center is y=30 (upstream: y=16, center y=23) |
@@ -310,7 +312,7 @@ the same state, motion beat and working ring.
 | `electron/main.mjs`, `electron/personal-dev.mjs`, `electron/window-state-file.mjs` | `window:state` returns `focused`; focus and blur send `window:focus-changed` |
 | `src/components/bot-panel/memory-notes.ts` | `memoryNoteParts` splits `YYYY-MM-DD · from <source> · text` and marks struck or expired notes inactive; `panelMemoryNotes` leaves inactive notes out; `memoryNoteKey` includes the text |
 
-`TryAsking.tsx` and its test are deleted, and so is `src/lib/chat-usage-summary.ts`. `SwitchRow` in `rows.tsx`
+`TryAsking.tsx` and its test are deleted, and so are `src/lib/chat-usage-summary.ts`, `ComposerContextMenu.tsx` and their tests. The `contextMenu.*` strings stay in the packs so locale merges stay mechanical. `SwitchRow` in `rows.tsx`
 is a `<label>` with `switchRowCls`, so upstream's callers (Notifications,
 Memory upkeep) keep the whole row as the click target.
 
