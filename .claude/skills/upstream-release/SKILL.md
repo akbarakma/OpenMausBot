@@ -171,7 +171,9 @@ answers. Stop only at step 4, for Akbar's OK.
 7. **Install on bb-1** (read the `device-fleet` skill first). Check it is
    idle: `ssh bb-1 'systemctl --user status openmausbot --no-pager'` shows
    only the two `node` processes. A `claude` or `codex` child means a bot is
-   mid-turn. Wait and check again; after two busy checks, ask Akbar. Then
+   mid-turn. Search only the process tree, because the unit's
+   `claude-auth.conf` drop-in line also says "claude":
+   `systemctl --user status openmausbot --no-pager | sed -n "/CGroup/,/^$/p" | grep -E "[├└]─[0-9]+ .*(claude|codex)"`. Wait and check again; after two busy checks, ask Akbar. Then
    copy the tarball to `~/Documents/OpenMausBot/packages/` as
    `openmausbot-personal-<commit>.tgz` and run on bb-1:
 
