@@ -11,6 +11,16 @@ if [ -z "$TEAM" ]; then
 fi
 APP=DerivedData.noindex/Build/Products/Debug-iphoneos/OpenMausCompanion.app
 
+# Xcode reuses a cached profile until it expires, so a reinstall would keep the
+# old expiry date. Deleting it makes Xcode sign a fresh 7-day profile.
+PROFILES="$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles"
+for f in "$PROFILES"/*.mobileprovision; do
+  [ -e "$f" ] || continue
+  if security cms -D -i "$f" 2>/dev/null | grep -q "<string>$TEAM.com.akbarakma.mausbot</string>"; then
+    rm -f "$f"
+  fi
+done
+
 devices=$(mktemp)
 spec=project.phone.yml
 trap 'rm -f "$devices" "$spec"' EXIT
@@ -36,4 +46,4 @@ xcodebuild -project OpenMausCompanion.xcodeproj -scheme OpenMausCompanion \
   DEVELOPMENT_TEAM="$TEAM" CODE_SIGN_STYLE=Automatic -quiet build
 
 xcrun devicectl device install app --device "$udid" "$APP"
-echo "Installed. A free Apple ID signature lasts 7 days; run this again to renew it."
+echo "Installed. A free Apple ID signature lasts 7 days from now; run this again to renew it."

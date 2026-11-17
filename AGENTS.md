@@ -16,6 +16,7 @@ Before starting Personal development or packaging, read
 - A change to saved data only adds fields. An official package must still read the data folder.
 - Preserve the server's existing API contracts and authentication.
 - Keep the iOS app in `ios-personal/`; install it with `ios-personal/run-sim.sh` on the simulator and `ios-personal/run-device.sh` on Akbar's iPhone. Upstream has no `ios/`, so leave upstream files alone for iOS work.
+- Install on the iPhone only through `ios-personal/run-device.sh`, not from Xcode. On a free Apple ID, Xcode reuses the cached profile until it expires, so a reinstall keeps the old expiry date. The script deletes that profile first, so each install gets 7 days from that moment.
 - Show an iOS change to Akbar on the simulator (`ios-personal/run-sim.sh`) and wait for his OK before `ios-personal/run-device.sh` installs it on his iPhone. State this step in the plan instead of asking about it.
 - Test an iOS change yourself: drive the simulator with the device tools and look at the screens you changed, and run `swift test --filter` on the unit tests named after the changed files. Do not run the XCUITest files in `ios-personal/UITests` unless Akbar asks; each test relaunches the app, and a few files take over 10 minutes.
 - Defer release notifications until Akbar requests them.
