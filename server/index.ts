@@ -459,7 +459,7 @@ import { createScreenFrameSource, rememberTurnFrame, type ScreenCapture } from "
 import { screenFrameHash, screenSurfaceForTool, screenTouchingTool, settledFrameIsNews } from "./screen-frame-gate.ts";
 import { asSchedule, RoutineRequestService } from "./routine-requests.ts"; import { ownerSpokeOnly } from "./cloud-routine-level.ts"; import { routineRunCard, routineRunFallbackText } from "./routine-run-card.ts";
 import { activeRoutinesContext } from "./active-routines-context.ts";
-import { hideWorkSession, isWorkSession, loadOneChat, mainChatPosts, markPairExchange, oneChatOn, pairThread, threadsPrompt, withMainThread, workSessionRecalls } from "./one-chat.ts"; import { exchangeRoute } from "./one-chat-exchange.ts"; import { automationNames, createInboxMutes, inboxMuteRoutes } from "./inbox-mutes.ts"; import { createRefusedHandoffs } from "./host/refused-handoffs.ts"; import { automationContextText, createAutomationReports, newestAutomationLines, routineRunNeedsReview } from "./automation-reports.ts"; import { createAutomationDestinations } from "./automation-destinations.ts"; import { createTeamRoutines } from "./host/team-routines.ts"; import { botOwner } from "../shared/bot-owner.ts"; import { forgetMember } from "./bot-owners.ts"; import { createProactive } from "./host/proactive.ts"; import { createFirstHourHooks, startFirstHour, welcomeDonePatch } from "./host/first-hour-host.ts"; import { greetingMessage } from "./host/first-hour.ts"; import { READ_AND_DRAFT_PARTS, READ_AND_DRAFT_REFUSAL, READ_AND_DRAFT_TOOLS, recordsAnswer } from "./read-and-draft.ts"; import { createPresenceRoutes } from "./routes/presence.ts"; import { needsYouNow } from "./today.ts"; import { createTeamPresenceHost } from "./host/team-presence-host.ts";
+import { automatedThread, hideWorkSession, isWorkSession, loadOneChat, mainChatPosts, markPairExchange, oneChatOn, pairThread, threadsPrompt, withMainThread, workSessionRecalls } from "./one-chat.ts"; import { exchangeRoute } from "./one-chat-exchange.ts"; import { automationNames, createInboxMutes, inboxMuteRoutes } from "./inbox-mutes.ts"; import { createRefusedHandoffs } from "./host/refused-handoffs.ts"; import { automationContextText, createAutomationReports, newestAutomationLines, routineRunNeedsReview } from "./automation-reports.ts"; import { createAutomationDestinations } from "./automation-destinations.ts"; import { createTeamRoutines } from "./host/team-routines.ts"; import { botOwner } from "../shared/bot-owner.ts"; import { forgetMember } from "./bot-owners.ts"; import { createProactive } from "./host/proactive.ts"; import { createFirstHourHooks, startFirstHour, welcomeDonePatch } from "./host/first-hour-host.ts"; import { greetingMessage } from "./host/first-hour.ts"; import { READ_AND_DRAFT_PARTS, READ_AND_DRAFT_REFUSAL, READ_AND_DRAFT_TOOLS, recordsAnswer } from "./read-and-draft.ts"; import { createPresenceRoutes } from "./routes/presence.ts"; import { needsYouNow } from "./today.ts"; import { createTeamPresenceHost } from "./host/team-presence-host.ts";
 import { engineLabel, LimitResetClock, nearLimitNote } from "./limit-resets.ts"; import { loadPlanUsage, planAccountsFromInstances } from "./plan-usage.ts"; import { LimitFailovers, limitBackupAllowed } from "./limit-failover.ts"; import { createLimitResetRoutes } from "./routes/limit-resets.ts";
 import { parseTriggerRequest, triggerTarget } from "./trigger-tools.ts"; import { WebhookRequestError, WebhookRequestService } from "./webhook-requests.ts"; import { createAppTriggerHost } from "./app-trigger-host.ts";
 import { appliesNow, directApply, UNDO_STALE, type DirectApply } from "./direct-apply.ts";
@@ -5150,7 +5150,7 @@ const memoryUpkeep = createMemoryUpkeep({
     return !room || roomCaptureAllowed(room, store.bot(teamHost.baseBotId(botId)));
   },
   restoreTurn: (botId, threadId, turnId) => {
-    if (routines?.runForThread(threadId)) return null;
+    if (automatedThread(routines, store, threadId)) return null;
     const room = store.groupByThread(threadId);
     if (room) return roomCaptureAllowed(room, store.bot(botId)) ? captureRoomTurnFor(threadId, botId, turnId) : null;
     if (store.botByThread(threadId)?.id !== botId) return null;
@@ -5158,7 +5158,7 @@ const memoryUpkeep = createMemoryUpkeep({
     return captureTurnFor(threadId, turnId);
   },
   ...(lendingMemory ? { writing: <T>(botId: string, write: () => T): T => lendingMemory.trustedWrite(botId, write) } : {}),
-  conversations: (botId, since) => CLOUD_TEAM ? [] : dreamConversations(store, teamHost.baseBotId(botId), since, (threadId) => !routines?.runForThread(threadId) && (!CLOUD_PERSONAL || cloudOwnerOnlyThread(threadId)), CLOUD_PERSONAL ? (sender) => cloudProvenOwnerPerson(sender?.id) : undefined),
+  conversations: (botId, since) => CLOUD_TEAM ? [] : dreamConversations(store, teamHost.baseBotId(botId), since, (threadId) => !automatedThread(routines, store, threadId) && (!CLOUD_PERSONAL || cloudOwnerOnlyThread(threadId)), CLOUD_PERSONAL ? (sender) => cloudProvenOwnerPerson(sender?.id) : undefined),
   quietMs: () => captureQuietMs(cfg), tidyHour: () => tidyHour(cfg), dreamer: () => proactive.dreamer(),
   log: (line) => console.log(line),
 });
@@ -5275,7 +5275,7 @@ bus.subscribe((event: RuntimeEvent) => {
       const contextTokens = keepWarmContext.get(event.threadId);
       keepWarmTargets.delete(event.threadId);
       keepWarmContext.delete(event.threadId);
-      if (!target || routines?.runForThread(event.threadId)) return;
+      if (!target || automatedThread(routines, store, event.threadId)) return;
       cacheKeepWarm.noteTurnCompleted(target, { ok: event.ok, stopReason: event.stopReason, contextTokens }); warmSummaries.turnCompleted(target, { ok: event.ok, contextTokens });
     }
   } catch (error) {
@@ -5324,7 +5324,7 @@ bus.subscribe((event: RuntimeEvent) => {
   try {
     const room = store.groupByThread(event.threadId);
     if (room) {
-      if (!roomMemoryCaptureEnabled(cfg) || isInternalTurn(event.threadId) || routines?.runForThread(event.threadId)
+      if (!roomMemoryCaptureEnabled(cfg) || isInternalTurn(event.threadId) || automatedThread(routines, store, event.threadId)
         || goalTurns.count(event.threadId)) return;
       const reply = store.activePath(event.threadId).findLast((message) => message.role === "bot" && message.kind === "text" && message.turnId === event.turnId);
       const member = reply?.from ? store.bot(reply.from.botId) : undefined;
@@ -5335,7 +5335,7 @@ bus.subscribe((event: RuntimeEvent) => {
     }
     const bot = store.botByThread(event.threadId);
     if (!bot || !upkeepEnabled(bot) || isInternalTurn(event.threadId)
-      || isUnattended(bot.id, event.threadId) || routines?.runForThread(event.threadId)) return;
+      || isUnattended(bot.id, event.threadId) || automatedThread(routines, store, event.threadId)) return;
     if (CLOUD_PERSONAL && !cloudOwnerOnlyThread(event.threadId)) return;
     const turn = captureTurnFor(event.threadId, event.turnId);
     if (turn) memoryUpkeep.noteTurn(teamHost.layer(bot.id, event.threadId), event.threadId, teamHost.ownTurn(event.threadId) ? { ...turn, owner: true } : turn);
@@ -5395,7 +5395,7 @@ bus.subscribe((event: RuntimeEvent) => {
     const bot = room ? (reply?.from ? store.bot(reply.from.botId) : undefined) : store.botByThread(event.threadId);
     if (!bot) return;
     const counts = event.ok && Boolean(reply?.text?.trim()) && !isInternalTurn(event.threadId)
-      && !isUnattended(bot.id, event.threadId) && !routines?.runForThread(event.threadId)
+      && !isUnattended(bot.id, event.threadId) && !automatedThread(routines, store, event.threadId)
       && !(CLOUD_HOME && !cloudOwnerOnlyThread(event.threadId));
     if (counts) skillReview.noteTurn(bot.id, event.threadId, turnToolSteps(messages, event.turnId, bot.id, Boolean(room)));
     skillReview.botSettled(bot.id);

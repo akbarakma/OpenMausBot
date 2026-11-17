@@ -30,6 +30,17 @@ export function isWorkSession(task: Pick<TaskRecord, "routineRunId"> | null | un
   return task?.routineRunId?.startsWith(WORK_SESSION) === true;
 }
 
+type RunLookup = { runForThread(threadId: string): unknown; isActiveThread(threadId: string): boolean };
+
+export function automatedThread(routines: RunLookup | null | undefined, store: Pick<Store, "botByThread" | "taskByThread">, threadId: string): boolean {
+  if (!routines) return false;
+  if (!oneChatOn()) return Boolean(routines.runForThread(threadId));
+  if (routines.isActiveThread(threadId)) return true;
+  const bot = store.botByThread(threadId);
+  if (bot && !store.taskByThread(bot.id, threadId)?.routineRunId) return false;
+  return Boolean(routines.runForThread(threadId));
+}
+
 type WorkStore = Pick<Store, "patchTask" | "taskByThread" | "appendMessage" | "bot" | "botByThread">;
 
 export function hideWorkSession(store: Pick<WorkStore, "patchTask" | "taskByThread" | "botByThread">, threadId: string | undefined): void {

@@ -45,6 +45,10 @@ below.
   they read text from outside, which could word itself to pull a private
   passage in.
 - **New bots** start with a chat titled "Main Chat".
+- **Automation turns.** A wait's follow-up runs in the chat that set it, so in one chat it runs in the main
+  chat. Upstream treats a chat as an automation's for good once any run used it, which would stop skill
+  review, memory capture and cache keep-warm for the bot's only chat. `automatedThread` counts a chat as
+  an automation's only while a run works in it, and a run's own thread always.
 
 A hidden thread is a thread whose `routineRunId` starts with `work:`. Every
 client already hides a thread that has a `routineRunId`, and a person who
@@ -79,6 +83,7 @@ exchange route. The rows' words are `server.oneChat.*` in `en.json`,
 | `server/host/handoff-sent.ts` | `sideJobLine` around the two rows a side job leaves: "Started a side job: Title" and "Side job finished: Title" |
 | `server/index.ts` | `mainChatPosts(store, …)` as the store `leaveThreadPost` writes to: a bot's own post into its main chat is stored as its text, so every client shows it |
 | `server/index.ts` | `workSessionRecalls` in the direct turn's `autoRecallPrompt` call |
+| `server/index.ts` | `automatedThread(routines, store, …)` in place of `routines?.runForThread(…)` in the skill review, memory capture, memory restore, dream and cache keep-warm checks |
 | `server/index.ts` | `exchangeRoute` from `server/one-chat-exchange.ts`, before the bot overview route |
 | `server/index.ts` | `threadsPrompt(THREADS_PROMPT)` in the direct turn's prompt |
 | `server/index.ts` | a person's message reveals a run thread only when `!isWorkSession(task)` |

@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import {
-  hideWorkSession, isWorkSession, loadOneChat, mainChatPosts, markPairExchange, sideJobLine, sideJobQuote, MAIN_THREAD_ALIAS, ONE_CHAT_ENV, oneChatOn, oneChatTools,
+  automatedThread, hideWorkSession, isWorkSession, loadOneChat, mainChatPosts, markPairExchange, sideJobLine, sideJobQuote, MAIN_THREAD_ALIAS, ONE_CHAT_ENV, oneChatOn, oneChatTools,
   pairMarkerLine, pairThread, threadsPrompt, withMainThread, workSessionRecalls,
 } from "./one-chat.ts";
 
@@ -140,4 +140,23 @@ it("words a side job's rows as a job, and leaves a teammate's reply as upstream 
   expect(sideJobQuote(false, "ask Mira")).toBe("ask Mira");
   delete process.env[ONE_CHAT_ENV];
   expect(sideJobLine("started", "Review PR 12", "Opened thread #Review PR 12")).toBe("Opened thread #Review PR 12");
+});
+
+it("counts a chat as an automation's only while a run works in it, and a run's own thread always", () => {
+  const store = fakeStore();
+  store.tasks.set("run", { threadId: "run", title: "Daily digest", routineRunId: "run-1" });
+  const past = new Set(["main", "run", "room"]);
+  const active = new Set<string>();
+  const routines = { runForThread: (threadId: string) => (past.has(threadId) ? { id: "run-1" } : null), isActiveThread: (threadId: string) => active.has(threadId) };
+
+  expect(automatedThread(routines, store, "main")).toBe(false);
+  expect(automatedThread(routines, store, "run")).toBe(true);
+  expect(automatedThread(routines, store, "room")).toBe(true);
+  active.add("main");
+  expect(automatedThread(routines, store, "main")).toBe(true);
+  expect(automatedThread(null, store, "main")).toBe(false);
+
+  active.clear();
+  delete process.env[ONE_CHAT_ENV];
+  expect(automatedThread(routines, store, "main")).toBe(true);
 });
