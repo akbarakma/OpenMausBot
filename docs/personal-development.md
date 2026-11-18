@@ -141,8 +141,9 @@ The script builds the UI, server and companion, packages the app as
 `com.akbarakma.openmausbot.personal` with no auto-update and no
 `openmausbot://` link handling, and signs it ad hoc. With `--install` it
 replaces `/Applications/OpenMausBot Personal.app` and moves the previous copy to
-the Trash. Settings and data stay in `OpenMausBot Personal` and
-`OpenMausBot Personal Data` under `~/Library/Application Support`. Without
+the Trash. Settings stay in `OpenMausBot Personal` under
+`~/Library/Application Support`. `OpenMausBot Personal Data` next to it holds
+only the app's lock file, because Personal runs no server. Without
 `--install` it only builds into `release/personal/<commit>/`.
 
 Native resources (`dist-native`) come from an earlier
@@ -167,26 +168,29 @@ contains the change proves nothing if the window shows another UI.
 
 ## Upstream releases
 
-bb-1 runs official builds, and Personal's UI must match bb-1's server version.
-For example, when `v0.1.141` is released:
+bb-1 runs this fork's server package, built from the same commit as
+Personal, so the UI and the server always match. Nothing updates by itself.
+When Akbar says "check upstream", the `upstream-release` skill in
+`.claude/skills/` checks the new tag, merges it on a go, and installs both.
+In short:
 
-1. Notice it from GitHub's **Watch → Custom → Releases** email, or from the
-   update row in the sidebar's profile menu, which asks bb-1.
-2. Update bb-1 with `npm install -g openmausbot@latest`, then restart its service.
-3. Merge the upstream tag: `git fetch upstream --tags && git merge v0.1.141`.
-   Merge tags, not upstream `main`, so the UI matches the server exactly.
-4. Resolve conflicts. The window hook in upstream code is in
+1. Merge the upstream tag, not upstream `main`:
+   `git fetch upstream --tags && git merge <tag>`.
+2. Resolve conflicts. The window hook in upstream code is in
    `electron/main.mjs`: the `personalWindowUi` call in `createWindow`, and the
    remote branch that waits for it before loading the server's origin. Keep
    every `personalClient` line listed in "No local server". For UI
    conflicts, read "Sidebar changes" below and
    [`personal-bot-panel.md`](personal-bot-panel.md).
-5. Run the checks above, then `corepack pnpm package:personal --install`.
+3. Run the checks above.
+4. Build the server with `corepack pnpm package:personal-server` and install
+   it on bb-1 with the skill's steps.
+5. Install Personal with `corepack pnpm package:personal --install`.
 
-Between steps 2 and 5, Personal shows the old UI against the new server. Most
+Between steps 4 and 5, Personal shows the old UI against the new server. Most
 screens keep working, but a new feature can fail until you rebuild. During that
-gap the update row offers **Reload for v0.1.141**. A reload loads the same bundle,
-so rebuild Personal instead.
+gap the update row offers **Reload for** the new version. A reload loads the
+same bundle, so rebuild Personal instead.
 
 Personal never updates itself, so a release cannot overwrite the fork.
 
