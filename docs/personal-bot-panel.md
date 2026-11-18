@@ -329,9 +329,13 @@ decides it. Framed windows, Advanced mode, the icon rail, phones and Windows
 keep upstream's row. Advanced's top row is 60px tall, twice
 `MAC_TRAFFIC_LIGHT_CENTER_Y`.
 
-In the top band, the chat header's and the sidebar head's glass layer
-(`data-glass-band` in `src/styles.css`) is a 40% tint of the surface with no
-blur, so what scrolls under it stays sharp and dimmed.
+In the top band, the sidebar head's glass layer (`data-glass-band` in
+`src/styles.css`) is a 40% tint of the surface with no blur, so what scrolls
+under it stays sharp and dimmed. The chat header's fade rule
+(`.glass-bar[data-glass-fade]::before`) overrides that tint. The fork keeps
+that fade fully clear at the header's bottom edge, as upstream had it before
+v0.1.166, which stops at 90% solid there and makes the header read as a tall
+dark band. `GlassScrollFrame.test.ts` checks the value.
 
 ## Simple icon rail
 
