@@ -8,7 +8,7 @@ server bb-1 runs. The upstream repository is `milind-soni/OpenMausBot`.
 Before starting Personal development or packaging, read
 [`docs/personal-development.md`](docs/personal-development.md) for profile isolation and the authenticated client workflow.
 
-- Keep mb-0 as a client; do not start a local agent server during normal use.
+- mb-0 is only a client: Personal starts no local server or updater. Keep the `personalClient` hooks listed in `docs/personal-development.md` under "No local server".
 - bb-1 runs this fork's server package. Build it with `corepack pnpm package:personal-server` and install it with the steps in the `upstream-release` skill. Nothing updates by itself: Akbar asks for each update.
 - Do not change bb-1's other services: the Gmail relay and its tunnel, the watch timers and `otp-cleaner`.
 - When Akbar corrects work done under a skill in `.claude/skills/`, or you find your own miss, add the step that would have caught it to that skill in the same run. Commit only that file, and say so in your report. This edit needs no go.

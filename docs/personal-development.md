@@ -104,6 +104,30 @@ If interception cannot start, Personal logs
 `personal ui: interception unavailable` in its `server.log` and shows the
 server's UI.
 
+### No local server
+
+Personal is only a client of a saved server. It starts no local server and no
+updater, and it has no **This computer** place. `electron/personal-client.mjs`
+holds the logic, and `electron/main.mjs` calls it from these lines:
+
+| Line in `main.mjs` | What it does in Personal |
+|---|---|
+| `else if (app.isPackaged && !personalClient(app))` before `startServerPackaged()` | skips the server at launch |
+| `if (!personalClient(app)) startUpdater(...)` | skips the hourly update check, which has no feed |
+| `if (personalClient(app)) blockLocalServer(...)` after `installServerSessions` | cancels requests to ports 8799, 18799 and 28799, which the official app can own |
+| `if (personalClient(app)) return void personalPageFailed(...)` in `did-fail-load` | sends a failed local page to the saved server, and shows a retrying page when the server is unreachable |
+| `serverReady \|\| personalClient(app)` in `createWindow` | with no saved server, loads the blocked local page, so the window shows "No server saved" |
+| `personalMenu(app, ...)` around both server menus | hides This computer, Connect to a server and local workspaces |
+| `!app.isPackaged \|\| personalClient(app)` in `switchLocalEnvironmentTo` | refuses to start a server for a local workspace |
+
+`electron/personal-client.node-test.mjs` checks the logic. After a merge,
+confirm that no `NodeService` helper runs and nothing listens on 8799 or 18800:
+
+```sh
+ps -axo command | grep 'OpenMausBot Personal Helper.*NodeService' | grep -v grep
+lsof -nP -iTCP:8799 -iTCP:18800 -sTCP:LISTEN
+```
+
 ### Build and install
 
 Commit your changes first, because the app records its source commit. Quit
@@ -153,7 +177,8 @@ For example, when `v0.1.141` is released:
    Merge tags, not upstream `main`, so the UI matches the server exactly.
 4. Resolve conflicts. The window hook in upstream code is in
    `electron/main.mjs`: the `personalWindowUi` call in `createWindow`, and the
-   remote branch that waits for it before loading the server's origin. For UI
+   remote branch that waits for it before loading the server's origin. Keep
+   every `personalClient` line listed in "No local server". For UI
    conflicts, read "Sidebar changes" below and
    [`personal-bot-panel.md`](personal-bot-panel.md).
 5. Run the checks above, then `corepack pnpm package:personal --install`.

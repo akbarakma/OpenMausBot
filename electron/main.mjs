@@ -110,7 +110,7 @@ import { askForMicrophone, openPrivacySettings } from "./privacy-settings.mjs";
 import { createHomeWindow, installHomeWindowIpc, HOME_SCREEN_PATH } from "./home-window.mjs";
 import { createTeamProfileSeeds } from "./team-profile-seed.mjs";
 import { createHomePlaces } from "./home-places.mjs"; import { openStartPlace } from "./start-place.mjs"; import { createDesktopRing, installAccounts } from "./accounts-main.mjs"; import { createAddedCloudNotice, installCloudRail, railPlaces } from "./cloud-rail.mjs"; import { createPlaceInboxWatch } from "./place-inbox-watch.mjs"; import { homeLook, otherOwnClouds, withoutOldCloudHome } from "./cloud-list.mjs"; import { installPlaceLook } from "./place-look.mjs"; import { CHROME_RAIL_PATH, createChromeRail } from "./chrome-rail.mjs"; import { openComputerSettings } from "./open-computer-settings.mjs"; import { createPlacesTogether, installPlacesTogether, PLACES_TOGETHER_FILE } from "./places-together.mjs"; import { createBotLinkMain } from "./bot-link-main.mjs";
-import { createWindowStateFile } from "./window-state-file.mjs"; import { createSystemProxyCache } from "./system-proxy.mjs"; import { PERSONAL_APP_NAME, personalWindowUi } from "./personal-ui.mjs";
+import { createWindowStateFile } from "./window-state-file.mjs"; import { createSystemProxyCache } from "./system-proxy.mjs"; import { PERSONAL_APP_NAME, personalWindowUi } from "./personal-ui.mjs"; import { blockLocalServer, personalClient, personalMenu, personalPageFailed } from "./personal-client.mjs";
 import { createEnvironmentsFile, ENVIRONMENTS_SAVE_FAILED } from "./environments-file.mjs";
 import { createOrgLibrary } from "./org-library.mjs";
 import { createCompanyBackups } from "./company-backups.mjs";
@@ -1501,7 +1501,7 @@ function activeOrigin() {
 }
 
 function refreshApplicationMenu() {
-  Menu.setApplicationMenu(
+  Menu.setApplicationMenu(personalMenu(app,
     buildApplicationMenu({
       environments: environmentsState.environments,
       activeId: environmentsState.activeId,
@@ -1514,7 +1514,7 @@ function refreshApplicationMenu() {
       openAtLogin: loginItem.available() ? { checked: loginItem.chosen(), onToggle: on => { loginItem.choose(on); refreshApplicationMenu(); } } : null,
       ...cloudMenuOptions(),
       home: homeWindow.cloudOrigin() ? { origin: homeWindow.cloudOrigin(), onBack: () => void showHome({ place: "cloud" }) } : null, t: nativeT,
-    }),
+    }), nativeT),
   );
 }
 
@@ -1552,7 +1552,7 @@ function acquireDataDirLeaseFor(dir) {
 
 /** Pause the supervisor first, or its recovery forks on the wrong data dir; resume() stays in the finally. */
 async function switchLocalEnvironmentTo(targetDir, targetId, quiet = false) {
-  if (!app.isPackaged) return { ok: false, error: "dev" };
+  if (!app.isPackaged || personalClient(app)) return { ok: false, error: "dev" };
   // A second switch would be un-paused by the first's finally mid-handoff.
   if (localSwitchInFlight) return { ok: false, error: "busy" };
   const previousDir = runningDataDir ?? startupEnvironmentDir(environmentsState, desktopDataDir()), asked = placeSwitch.turn(), windowFollows = () => placeSwitch.turn() === asked || (mainWindow && !mainWindow.isDestroyed() && senderIsLocal({ sender: mainWindow.webContents }));
@@ -2021,6 +2021,7 @@ function createWindow({ deferNavigation = false } = {}) {
   });
   win.webContents.on("did-fail-load", (_event, errorCode, errorDescription, validatedURL, isMainFrame) => {
     if (!isMainFrame || errorCode === -3) return; // -3: aborted by a newer navigation
+    if (personalClient(app)) return void personalPageFailed({ win, failedUrl: validatedURL, reason: errorDescription, state: environmentsState, activate: id => persistEnvironments(withActive(environmentsState, id)) });
     const remote = activeRemote(environmentsState);
     if (!remote) return;
     let origin = null;
@@ -2164,7 +2165,7 @@ function createWindow({ deferNavigation = false } = {}) {
   } else if (remote) {
     void Promise.resolve(personalUi).then(() => win.loadURL(remote.origin)).catch(() => {});
   } else if (app.isPackaged) {
-    win.loadURL(serverReady ? `http://127.0.0.1:${SERVER_PORT}` : buildErrorPage({ allPortsOccupied: serverStartConflictOnly, logDir: LOG_DIR }, nativeText));
+    win.loadURL(serverReady || personalClient(app) ? `http://127.0.0.1:${SERVER_PORT}` : buildErrorPage({ allPortsOccupied: serverStartConflictOnly, logDir: LOG_DIR }, nativeText));
   } else {
     win.loadURL(DEV_URL);
   }
@@ -2682,13 +2683,13 @@ ipcMain.handle("workspaces:menu", workspaceOnly(async (event, from) => {
   workspaceMenuOpen = true;
   try {
     await cloudOffersReady();
-    const menu = Menu.buildFromTemplate(workspaceMenuTemplate(environmentsState, {
+    const menu = personalMenu(app, Menu.buildFromTemplate(workspaceMenuTemplate(environmentsState, {
       onSwitch: (id) => void workspaceMenuAction(() => switchEnvironment(id)),
       onConnect: () => void workspaceMenuAction(openWorkspaceSettings),
       onForget: (id) => void workspaceMenuAction(() => forgetEnvironment(id)),
       ...cloudMenuOptions(from === "howto" ? "app_howto" : "app_menu"),
       ...(await placesMenuOptions({ homeOrigin: homeWindow.cloudOrigin(), cloud: cloudHomeEntry(), home: oneHome.away() || ownHome?.away() === true, platform: process.platform, port: SERVER_PORT, text: nativeText })), text: nativeText, locals: localProfiles.places({ activeLocal: environmentsState.activeId === LOCAL_ID }).map(local => ({ id: local.id, label: local.name ?? nativeT(process.platform === "darwin" ? "rail.thisMac" : "rail.thisPc"), shown: local.active === true })), onLocal: id => void workspaceMenuAction(async () => { if ((await localProfiles.open(id)) === false) throw new Error(nativeT("native.places.profileFailed")); }), ...(localProfiles.creatable() && senderIsLocal(event) ? { onNewLocal: () => event.sender.send("workspaces:new-local") } : {}),
-    }));
+    })), nativeT);
     await new Promise((resolve) => menu.popup({ window: mainWindow, callback: resolve }));
   } finally {
     workspaceMenuOpen = false;
@@ -2848,6 +2849,7 @@ app.whenReady().then(async () => {
   }
   installServerSessions({ app, defaultSession: session.defaultSession, serverPort: () => SERVER_PORT,
     ownerToken: () => (app.isPackaged && serverReady ? desktopMutationToken : null) });
+  if (personalClient(app)) blockLocalServer(session.defaultSession);
   if (app.isPackaged) app.setAsDefaultProtocolClient("openmausbot");
   if (process.platform === "darwin") app.dock.setIcon(APP_ICON);
   secureCredentials = await loadSecureCredentials();
@@ -2958,7 +2960,7 @@ app.whenReady().then(async () => {
       serverReady = false;
       slog(`desktop companion relay failed: ${error?.message ?? error}`);
     }
-  } else if (app.isPackaged) {
+  } else if (app.isPackaged && !personalClient(app)) {
     const booted = await startServerPackaged();
     if (!booted && !desktopShutdownStarted && bootDataDir !== desktopDataDir()) {
       slog(`boot environment ${bootDataDir} did not start; falling back to the default data dir`);
@@ -3045,7 +3047,7 @@ app.whenReady().then(async () => {
     slog("skipping connected-apps registration: the credential store was unreadable this launch");
   }
   checkInManagedComposio();
-  startUpdater(quietSignals({ powerMonitor, window: () => mainWindow, lastInput: oneHome.lastInput, local: localServerRequest, place: () => homeWindow.placeOrigin(), cloudFetch: (...args) => session.defaultSession.fetch(...args), asleep: origin => homeWindow.asleepAt(origin), busy: () => ((oneHome.oneHome.busy() || ownHome?.busy()) && "move") || (computerSharing?.busy() && "lending") || (talk.busy() && "talk") || (companyBackupController || companyRestoreCommitting ? "backup" : null) }));
+  if (!personalClient(app)) startUpdater(quietSignals({ powerMonitor, window: () => mainWindow, lastInput: oneHome.lastInput, local: localServerRequest, place: () => homeWindow.placeOrigin(), cloudFetch: (...args) => session.defaultSession.fetch(...args), asleep: origin => homeWindow.asleepAt(origin), busy: () => ((oneHome.oneHome.busy() || ownHome?.busy()) && "move") || (computerSharing?.busy() && "lending") || (talk.busy() && "talk") || (companyBackupController || companyRestoreCommitting ? "backup" : null) }));
   refreshApplicationMenu();
   openWindowForLink = () => {
     if (!mainWindow || mainWindow.isDestroyed()) createWindow({ deferNavigation: homeWindow.current().kind !== "computer" });
