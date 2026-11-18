@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { initialState, type Bot } from "@/state/store";
 import { forgetSidebarShowAllForTests, SIDEBAR_SHOW_ALL_KEY } from "@/lib/sidebar-preferences";
 
+vi.mock("@/lib/one-chat", () => ({ ONE_CHAT: false, hiddenWork: () => false }));
 vi.mock("./DesktopCapabilities", () => ({ useDesktopCapabilities: () => ({}) }));
 vi.mock("@/lib/interface-mode", async (original) => ({ ...await original<typeof import("@/lib/interface-mode")>(), useAdvancedMode: () => true }));
 

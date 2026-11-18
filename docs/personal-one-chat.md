@@ -197,7 +197,9 @@ Inbox closes.
 - Nothing starts or switches threads: the chat ⋯ menu has no New thread and
   no thread list, the sidebar's bot menu has no thread items, the + menu has
   no "New conversation with", ⌘⇧N does nothing, a message has no Fork, and
-  hovering a Simple bot row opens no list of its threads.
+  hovering a Simple bot row opens no list of its threads. A bot row lists
+  nothing under it: its face and line show a running automation or side job,
+  and a side job's question reaches the Inbox's Needs you tab.
 - A compaction is one line across the chat with a rule on each side,
   "Context compacted", as T3 Code draws it. The engine's own compaction and
   OpenMausBot's summary draw the same line, with no hint, no summary and no
@@ -243,7 +245,7 @@ Inbox closes.
 | `src/components/ChatView.tsx` | no message box and no note for hidden work in the fork panel; no Fork on a message; `AutomationHead` inside an automation's post, or above its copied card, in place of `AutomationCaption`; no run details bar; no model chip |
 | `src/components/ChatMoreMenu.tsx` | no `new-thread`, `threads` and `start-fresh` items |
 | `src/components/SidebarBotMenu.tsx` | no thread items in Simple's bot menu |
-| `src/components/Sidebar.tsx` | no "New conversation with" in the + menu |
+| `src/components/Sidebar.tsx` | no "New conversation with" in the + menu; no activity rows under a bot row, because a row switched the chat to a hidden thread (`Sidebar.one-chat.test.ts`) |
 | `src/App.tsx` | ⌘⇧N starts no thread; `WorkModal` in place of `ForkPanel`, which neither collapses the sidebar nor closes on a narrow window |
 | `src/components/bot-panel/PanelHome.tsx` | no `BotConversations` and no Start fresh row |
 | `src/components/DigestChip.tsx` | `CompactionChip` draws the "Context compacted" line |
@@ -270,6 +272,6 @@ that fails on a missing thread item.
 2. If upstream adds a place that calls `store.createTask` for a bot, decide
    where it leads: the main chat, or a hidden thread with `hideWorkSession`.
    List it here.
-3. Run `corepack pnpm exec vitest run server/one-chat src/lib/bot-exchange ThreadChip thread-navigation ChatMoreMenu ApprovalCard TriggerCard panel-link ChatView.controls ChatView.automation ChatView.one-chat-automation RoutineResultsNavigation DigestChip ContextCard ComposerContextMeter context-warning ModelPicker simple-model-menu FirstReplyRescueRow FailedTurnRow CompactionChip Sidebar.advanced-back server/store server/automation-reports SidebarBotRead Sidebar.simple-mode Sidebar.plus-menu Sidebar.working-folder server/inbox-mutes server/host/place-inbox src/components/inbox simple-side-panel file-size-ratchet`,
+3. Run `corepack pnpm exec vitest run server/one-chat src/lib/bot-exchange ThreadChip thread-navigation ChatMoreMenu ApprovalCard TriggerCard panel-link ChatView.controls ChatView.automation ChatView.one-chat-automation RoutineResultsNavigation DigestChip ContextCard ComposerContextMeter context-warning ModelPicker simple-model-menu FirstReplyRescueRow FailedTurnRow CompactionChip Sidebar.advanced-back server/store server/automation-reports SidebarBotRead Sidebar.simple-mode Sidebar.one-chat Sidebar.plus-menu Sidebar.working-folder server/inbox-mutes server/host/place-inbox src/components/inbox simple-side-panel file-size-ratchet`,
    then upstream's tests named after each server file above, with the
    setting off.
