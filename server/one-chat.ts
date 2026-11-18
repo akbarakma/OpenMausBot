@@ -43,6 +43,11 @@ export function automatedThread(routines: RunLookup | null | undefined, store: P
 
 type WorkStore = Pick<Store, "patchTask" | "taskByThread" | "appendMessage" | "bot" | "botByThread">;
 
+/** The skill review reads a main chat only from its last review on: the chat never ends, and its old turns hold rules the person has since replaced. */
+export function reviewWindow<T extends { at: number }>(messages: readonly T[], since: number | undefined): readonly T[] {
+  return oneChatOn() && since !== undefined ? messages.filter((message) => message.at > since) : messages;
+}
+
 export function hideWorkSession(store: Pick<WorkStore, "patchTask" | "taskByThread" | "botByThread">, threadId: string | undefined): void {
   const bot = oneChatOn() && threadId ? store.botByThread(threadId) : undefined;
   if (!bot || !threadId || store.taskByThread(bot.id, threadId)?.routineRunId) return;

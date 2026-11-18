@@ -5,8 +5,9 @@ import { afterEach, beforeEach, expect, it } from "vitest";
 
 import {
   automatedThread, hideWorkSession, isWorkSession, loadOneChat, mainChatPosts, markPairExchange, sideJobLine, sideJobQuote, MAIN_THREAD_ALIAS, ONE_CHAT_ENV, oneChatOn, oneChatTools,
-  pairMarkerLine, pairThread, threadsPrompt, withMainThread, workSessionRecalls,
+  pairMarkerLine, pairThread, reviewWindow, threadsPrompt, withMainThread, workSessionRecalls,
 } from "./one-chat.ts";
+import { createSkillReview, type SkillReviewDeps } from "./skill-review.ts";
 
 const saved = process.env[ONE_CHAT_ENV];
 beforeEach(() => { process.env[ONE_CHAT_ENV] = "1"; });
@@ -159,4 +160,50 @@ it("counts a chat as an automation's only while a run works in it, and a run's o
   active.clear();
   delete process.env[ONE_CHAT_ENV];
   expect(automatedThread(routines, store, "main")).toBe(true);
+});
+
+it("gives the skill review a main chat's messages from its last review on, and every message while off", () => {
+  const messages = [{ at: 100, text: "old" }, { at: 200, text: "new" }];
+  expect(reviewWindow(messages, 100)).toEqual([{ at: 200, text: "new" }]);
+  expect(reviewWindow(messages, undefined)).toEqual(messages);
+  delete process.env[ONE_CHAT_ENV];
+  expect(reviewWindow(messages, 100)).toEqual(messages);
+});
+
+it("marks a chat reviewed from when a review that answered started, never from a failed one, across restarts", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "omb-one-chat-review-"));
+  let now = 1_000;
+  let fail = false;
+  const since: Array<number | undefined> = [];
+  const deps = (): SkillReviewDeps => ({
+    enabled: () => true,
+    threshold: () => 1,
+    bot: () => ({ id: "bot", name: "Scout" }),
+    engine: () => ({ generateText: async () => { now += 50; if (fail) throw new Error("not logged in"); return '{"changes": []}'; } }),
+    busy: () => false,
+    transcript: (_botId, _threadId, from) => { since.push(from); return { messages: [], room: false }; },
+    skills: () => [],
+    currentSha: () => null,
+    apply: () => ({ ok: true }),
+    statePath: join(dir, "skill-review.json"),
+    now: () => now,
+  });
+  try {
+    const review = createSkillReview(deps());
+    review.noteTurn("bot", "main", 1);
+    expect(await review.run("bot", "main")).toMatchObject({ state: "nothing" });
+    now = 2_000;
+    fail = true;
+    review.noteTurn("bot", "main", 1);
+    expect(await review.run("bot", "main")).toMatchObject({ state: "failed" });
+    review.stop();
+
+    fail = false;
+    const restarted = createSkillReview(deps());
+    expect(await restarted.run("bot", "main")).toMatchObject({ state: "nothing" });
+    restarted.stop();
+    expect(since).toEqual([undefined, 1_000, 1_000]);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });

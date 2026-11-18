@@ -314,7 +314,7 @@ export interface SkillReviewDeps {
   bot: (botId: string) => { id: string; name: string } | undefined;
   engine: (botId: string) => ReviewEngine | null;
   busy: (botId: string) => boolean;
-  transcript: (botId: string, threadId: string) => { messages: readonly ReviewMessage[]; room: boolean } | null;
+  transcript: (botId: string, threadId: string, since?: number) => { messages: readonly ReviewMessage[]; room: boolean } | null;
   skills: (botId: string) => ReviewSkill[];
   currentSha: (botId: string, name: string) => string | null;
   apply: (botId: string, threadId: string, change: ReviewChange) => { ok: true } | { ok: false; error: string };
@@ -335,6 +335,7 @@ interface Counter {
   threadId: string;
   steps: number;
   at: number;
+  reviewedAt?: number;
   failedAt?: number;
   failures?: number;
 }
@@ -344,6 +345,7 @@ interface PendingApply {
   changes: ReviewChange[];
   steps: number;
   note: string;
+  startedAt: number;
 }
 
 export interface SkillReview {
@@ -379,6 +381,7 @@ export function createSkillReview(deps: SkillReviewDeps): SkillReview {
           threadId: raw.threadId,
           steps: Math.max(0, Math.floor(raw.steps)),
           at: typeof raw.at === "number" ? raw.at : 0,
+          ...(typeof raw.reviewedAt === "number" ? { reviewedAt: raw.reviewedAt } : {}),
           ...(typeof raw.failedAt === "number" ? { failedAt: raw.failedAt } : {}),
           ...(typeof raw.failures === "number" && raw.failures > 0 ? { failures: Math.floor(raw.failures) } : {}),
         });
@@ -408,10 +411,11 @@ export function createSkillReview(deps: SkillReviewDeps): SkillReview {
       .sort((a, b) => b.at - a.at)[0];
   };
 
-  const settleCounter = (botId: string, threadId: string, steps: number) => {
+  const settleCounter = (botId: string, threadId: string, steps: number, reviewedAt?: number) => {
     const counter = counters.get(key(botId, threadId));
     if (!counter) return;
     counter.steps = Math.max(0, counter.steps - steps);
+    if (reviewedAt !== undefined) counter.reviewedAt = reviewedAt;
     delete counter.failedAt;
     delete counter.failures;
     save();
@@ -450,7 +454,7 @@ export function createSkillReview(deps: SkillReviewDeps): SkillReview {
       if (result.ok) applied.push(change.name);
       else log(`${botId}: could not ${change.action} "${change.name}": ${result.error}`);
     }
-    settleCounter(botId, pending.threadId, pending.steps);
+    settleCounter(botId, pending.threadId, pending.steps, pending.startedAt);
     log(`${botId}: ${applied.length ? `changed ${applied.join(", ")}` : pending.note || "Nothing to save."}`);
     return { state: applied.length ? "applied" : "nothing", applied, ...(pending.note ? { note: pending.note } : {}) };
   };
@@ -460,7 +464,8 @@ export function createSkillReview(deps: SkillReviewDeps): SkillReview {
     if (!bot || !deps.enabled()) return { state: "skipped", applied: [], note: "switched off" };
     const counter = counters.get(key(botId, threadId));
     const steps = counter?.steps ?? 0;
-    const conversation = deps.transcript(botId, threadId);
+    const startedAt = now();
+    const conversation = deps.transcript(botId, threadId, counter?.reviewedAt);
     if (!conversation) {
       counters.delete(key(botId, threadId));
       save();
@@ -485,9 +490,9 @@ export function createSkillReview(deps: SkillReviewDeps): SkillReview {
     }
     if (controller.signal.aborted) return { state: "cancelled", applied: [] };
     const { changes, note } = parseSkillReview(typeof answer === "string" ? answer : "", skills, shown);
-    const pending: PendingApply = { threadId, changes, steps, note };
+    const pending: PendingApply = { threadId, changes, steps, note, startedAt };
     if (!changes.length) {
-      settleCounter(botId, threadId, steps);
+      settleCounter(botId, threadId, steps, startedAt);
       log(`${botId}: ${note || "Nothing to save."}`);
       return { state: "nothing", applied: [], ...(note ? { note } : {}) };
     }

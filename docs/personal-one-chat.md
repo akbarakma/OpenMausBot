@@ -53,6 +53,11 @@ below.
   chat. Upstream treats a chat as an automation's for good once any run used it, which would stop skill
   review, memory capture and cache keep-warm for the bot's only chat. `automatedThread` counts a chat as
   an automation's only while a run works in it, and a run's own thread always.
+- **Skill review.** Upstream's review reads a thread's last 40 entries and a digest of everything older,
+  up to 40,000 characters. A main chat never ends, so that digest reaches back weeks, and a review wrote a
+  replaced rule back into a skill from it. A review that answered stores `reviewedAt`, the time it started,
+  on its counter in `skill-review.json`, and `reviewWindow` gives the next review only the messages after
+  it. A failed review leaves it as it was. A counter without `reviewedAt` reads the whole chat once.
 
 A hidden thread is a thread whose `routineRunId` starts with `work:`. Every
 client already hides a thread that has a `routineRunId`, and a person who
@@ -72,7 +77,8 @@ behaves as upstream's. Tests turn it on with the launcher's `oneChat` option.
 `server/one-chat.ts` holds the logic, and `server/one-chat-exchange.ts` the
 exchange route. The rows' words are `server.oneChat.*` in `en.json`,
 `de.json` and `pt-br.json`. `server/one-chat.test.ts` and
-`server/one-chat.e2e.test.ts` cover it. Upstream's files only call it:
+`server/one-chat.e2e.test.ts` cover it, with `server/one-chat-automated.e2e.test.ts` and
+`server/one-chat-review.e2e.test.ts` for the skill review. Upstream's files only call it:
 
 | File | Line the fork adds |
 |---|---|
@@ -88,6 +94,8 @@ exchange route. The rows' words are `server.oneChat.*` in `en.json`,
 | `server/index.ts` | `mainChatPosts(store, …)` as the store `leaveThreadPost` writes to: a bot's own post into its main chat is stored as its text, so every client shows it |
 | `server/index.ts` | `workSessionRecalls` in the direct turn's `autoRecallPrompt` call |
 | `server/index.ts` | `automatedThread(routines, store, …)` in place of `routines?.runForThread(…)` in the skill review, memory capture, memory restore, dream and cache keep-warm checks |
+| `server/index.ts` | `reviewWindow(store.activePath(…), since)` in the skill review's `transcript` dep |
+| `server/skill-review.ts` | `Counter.reviewedAt`, set by `settleCounter` from a review's `startedAt` when it answered, and passed to `deps.transcript` as `since` |
 | `server/index.ts` | `exchangeRoute` from `server/one-chat-exchange.ts`, before the bot overview route |
 | `server/index.ts` | `threadsPrompt(THREADS_PROMPT)` in the direct turn's prompt |
 | `server/index.ts` | a person's message reveals a run thread only when `!isWorkSession(task)` |
