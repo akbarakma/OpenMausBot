@@ -102,6 +102,12 @@ final class Session: ObservableObject {
     /// A chat a deep link asked for, consumed by the roster's
     /// NavigationStack the same way a notification response is.
     @Published private(set) var pendingChat: Chat?
+    /// A chat link that came before the first hydrate, when the roster is
+    /// still empty: a tap on an ntfy alert that cold-launched the app.
+    private var pendingLinkThread: String?
+    /// The newest sequence the open stream's `hello` named. Frames at or
+    /// below it are a replay, and their alerts already came through ntfy.
+    private var helloCursor: String?
 
     private var client: CompanionClient?
     /// Only receipt-changing runtime events, not token deltas.
@@ -668,7 +674,11 @@ final class Session: ObservableObject {
     /// stale widget row, a thread deleted since — lands on the roster
     /// silently: it is not the person's mistake, so it is not worth a banner.
     func openChat(threadId: String) {
-        guard let chat = state.chat(forThread: threadId) else { return }
+        guard let chat = state.chat(forThread: threadId) else {
+            if status != .live { pendingLinkThread = threadId }
+            return
+        }
+        pendingLinkThread = nil
         pendingChat = chat
     }
 
@@ -789,6 +799,7 @@ final class Session: ObservableObject {
         endpointRefreshTask = nil
         restorePending = false
         pendingNotification = nil
+        pendingLinkThread = nil
         pairingInvite = CompanionPairingInvitePolicy.nextInvite(
             current: pairingInvite,
             after: .signedOut
@@ -830,6 +841,7 @@ final class Session: ObservableObject {
         restorePending = false
         endLinger()
         pendingNotification = nil
+        pendingLinkThread = nil
         client = nil
         token = nil
         state = CompanionState()
@@ -998,6 +1010,7 @@ final class Session: ObservableObject {
 
                     if let first = batch.first, case let .hello(cursor, resumed) = first.frame {
                         receivedHello = true
+                        helloCursor = cursor
                         log.info("stream live, resumed=\(resumed, privacy: .public)")
                         // false means the server could not replay the gap —
                         // the one case that costs a full hydrate. Commit the
@@ -1062,7 +1075,7 @@ final class Session: ObservableObject {
                ["turn.completed", "runtime.error", "request.opened", "request.resolved", "item.completed"].contains(event.type) {
                 activityUpdates.send(event.threadId)
             }
-            if case let .notify(notification) = frame.frame {
+            if case let .notify(notification) = frame.frame, !frame.isReplay(helloCursor: helloCursor) {
                 NotificationCoordinator.shared.deliver(notification, sequence: frame.seq)
             }
         }
@@ -1084,6 +1097,10 @@ final class Session: ObservableObject {
                                 ifCursorMatches: expectedCursor) else { continue }
             log.info("hydrated \(snapshot.fleet.bots.count, privacy: .public) bots, \(snapshot.fleet.groups.count, privacy: .public) rooms")
             NotificationCoordinator.shared.setBadge(state.unreadCount)
+            if let threadId = pendingLinkThread {
+                pendingLinkThread = nil
+                if let chat = state.chat(forThread: threadId) { pendingChat = chat }
+            }
             // Wording must not delay hydration or the stream's cursor commit.
             let runtime = runtimeGeneration
             Task { [weak self] in

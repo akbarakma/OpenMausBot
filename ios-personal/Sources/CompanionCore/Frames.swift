@@ -199,4 +199,14 @@ public struct StreamFrame: Decodable, Sendable {
         self.frame = frame
         self.seq = seq
     }
+
+    /// Whether the server replayed this frame after `hello`. The hello cursor
+    /// is `<stream>:<seq>`, the newest sequence when the stream opened, and
+    /// every replayed frame is at or below it.
+    public func isReplay(helloCursor: String?) -> Bool {
+        guard let seq, let helloCursor, let colon = helloCursor.lastIndex(of: ":"),
+              let newest = Int(helloCursor[helloCursor.index(after: colon)...])
+        else { return false }
+        return seq <= newest
+    }
 }
