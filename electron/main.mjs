@@ -2020,8 +2020,7 @@ function createWindow({ deferNavigation = false } = {}) {
     }
   });
   win.webContents.on("did-fail-load", (_event, errorCode, errorDescription, validatedURL, isMainFrame) => {
-    if (!isMainFrame || errorCode === -3) return; // -3: aborted by a newer navigation
-    if (personalClient(app)) return void personalPageFailed({ win, failedUrl: validatedURL, reason: errorDescription, state: environmentsState, activate: id => persistEnvironments(withActive(environmentsState, id)) });
+    if (!isMainFrame || errorCode === -3) return; if (personalClient(app)) return void personalPageFailed({ win, failedUrl: validatedURL, reason: errorDescription, state: environmentsState, activate: id => persistEnvironments(withActive(environmentsState, id)) }); // -3: aborted by a newer navigation
     const remote = activeRemote(environmentsState);
     if (!remote) return;
     let origin = null;
@@ -2848,8 +2847,7 @@ app.whenReady().then(async () => {
     }
   }
   installServerSessions({ app, defaultSession: session.defaultSession, serverPort: () => SERVER_PORT,
-    ownerToken: () => (app.isPackaged && serverReady ? desktopMutationToken : null) });
-  if (personalClient(app)) blockLocalServer(session.defaultSession);
+    ownerToken: () => (app.isPackaged && serverReady ? desktopMutationToken : null) }); if (personalClient(app)) blockLocalServer(session.defaultSession);
   if (app.isPackaged) app.setAsDefaultProtocolClient("openmausbot");
   if (process.platform === "darwin") app.dock.setIcon(APP_ICON);
   secureCredentials = await loadSecureCredentials();
