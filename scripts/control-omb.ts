@@ -195,6 +195,10 @@ export function verificationServerEnvironment(parentEnv: NodeJS.ProcessEnv, data
   // A loopback stand-in for Postiz Cloud only (server/testing/fake-postiz.ts): no test signs in to the real one.
   const postizUrl = parentEnv.OMB_POSTIZ_CLOUD_URL?.trim() ?? "";
   if (/^http:\/\/127\.0\.0\.1:\d{1,5}$/.test(postizUrl)) childEnv.OMB_POSTIZ_CLOUD_URL = postizUrl;
+  // ntfy alerts (server/personal-ntfy.ts) against a loopback stand-in only: the topic crosses only with it, so no fixture alert reaches ntfy.sh.
+  const ntfyUrl = parentEnv.OMB_NTFY_URL?.trim() ?? "";
+  if (/^http:\/\/127\.0\.0\.1:\d{1,5}$/.test(ntfyUrl) && parentEnv.OMB_NTFY_TOPIC) Object.assign(childEnv, { OMB_NTFY_URL: ntfyUrl, OMB_NTFY_TOPIC: parentEnv.OMB_NTFY_TOPIC });
+  if (parentEnv.OMB_ONE_CHAT === "1") childEnv.OMB_ONE_CHAT = "1";
   // A loopback stand-in for Netlify only (server/testing/fake-netlify.ts): the Published apps page then lists and
   // deletes sites there, never on Netlify.
   const netlifyUrl = parentEnv.OMB_NETLIFY_API_URL?.trim() ?? "";

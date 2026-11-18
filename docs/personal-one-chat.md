@@ -116,10 +116,24 @@ exchange route. The rows' words are `server.oneChat.*` in `en.json`,
 | `server/automation-reports.ts` | the optional `dotted` dep: a report it allows also marks its chat unread |
 | `server/host/place-inbox.ts` | the optional `shape` dep, applied to the list `view` returns, so `count` follows it |
 | `packages/phone-protocol/src/inbox.ts` | `InboxRow.automation` and `InboxView.mutedAutomations` |
+| `server/index.ts` | `sendNtfy` from `server/personal-ntfy.ts`, after `phonePush.offer` in `broadcast` |
+| `scripts/control-omb.ts` | `OMB_NTFY_URL` (loopback only) with `OMB_NTFY_TOPIC`, and `OMB_ONE_CHAT`, cross into the fixture |
 
 `server/index.ts` and `server/store.ts` are at their size limit in
 `scripts/testing/file-size-ratchet.test.ts`, so each line above joins an
 existing line.
+
+## Phone alerts through ntfy
+
+The iPhone app is signed with a free Apple ID, which cannot receive Apple push,
+so upstream's phone push never reaches it. With `OMB_NTFY_TOPIC` set, each
+approval, question, sign-in and finished reply is posted to that topic on
+ntfy.sh, and the ntfy app shows it. The alert holds the notification's title,
+the first 200 characters of its text, and `openmausbot://chat/<threadId>` as
+its click link, so a tap opens the chat in MausBot. The server sends none while
+the iPhone app holds a live stream: a stream with a phone key and without the
+desktop's `window=1`. `OMB_NTFY_URL` replaces `https://ntfy.sh`. On bb-1 both
+are set in the drop-in `~/.config/systemd/user/openmausbot.service.d/ntfy.conf`.
 
 ## Inbox
 
