@@ -293,20 +293,14 @@ describe("header name", () => {
     expect(button(pinned)).toContain('data-testid="computer-button-live"');
   });
 
-  it("offers a Watch button only while a running tool uses the bot's screen", () => {
-    const working = (tool: string, busy = true, computer: Bot["computer"] | "auto" = "cloud", ok?: boolean) => renderToStaticMarkup(createElement(ChatView, {
-      bot: { ...bot, computer: computer === "auto" ? undefined : computer, busy, turnStartedAt: 1, tasks: (bot.tasks ?? []).map((task) => ({ ...task, busy, turnStartedAt: 1 })), messages: [
+  it("offers no Watch button while a running tool uses the bot's screen", () => {
+    const markup = renderToStaticMarkup(createElement(ChatView, {
+      bot: { ...bot, computer: "cloud", busy: true, turnStartedAt: 1, tasks: (bot.tasks ?? []).map((task) => ({ ...task, busy: true, turnStartedAt: 1 })), messages: [
         { id: "ask", role: "user", kind: "text", at: 1, text: "Check the site" },
-        { id: "tool", role: "bot", kind: "activity", at: 2, tool: { name: tool, ok } },
+        { id: "tool", role: "bot", kind: "activity", at: 2, tool: { name: "mcp__computer__click" } },
       ] } as Bot,
     }));
-    const watch = (markup: string) => markup.match(/<button[^>]*data-testid="watch-screen"[^>]*>[\s\S]*?<\/button>/)?.[0] ?? "";
-    expect(watch(working("mcp__computer__click"))).toContain(">Watch<");
-    expect(watch(working("mcp__browser__browser_snapshot", true, "auto"))).toContain(">Watch<");
-    expect(watch(working("mcp__computer__click", false))).toBe("");
-    expect(watch(working("Bash"))).toBe("");
-    expect(watch(working("screenshot", true, "auto"))).toBe("");
-    expect(watch(working("mcp__browser__browser_snapshot", true, "cloud", true))).toBe("");
+    expect(markup).not.toContain('data-testid="watch-screen"');
   });
 
   it("centres the bot in the header's middle column, with the controls in the last", () => {

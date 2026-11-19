@@ -274,6 +274,7 @@ the same state, motion beat and working ring.
 | `src/components/mascot-motion.ts` | `startMotion`, `mixTransform`, `retargetBody`: blended body motion on the page clock, replacing `bodyTransform`; `REST_HOP_MS`, `REST_CYCLE_MS` and `nextRestBlink` |
 | `src/components/CursorAvatar.tsx` | Draws the body from the motion mix; a paused face eases to rest first; `still` holds the body and stops expression changes but keeps blinks; `blinkScale` moved to `mascot-motion.ts` and no `MOTION` re-export, to stay at its size limit; with `restClock` it blinks on `nextRestBlink`, not a random timer |
 | `src/components/ChatView.tsx` | Header avatars take `useBotFace` with `sidebarBotStatus`'s `running`; no monitor button in Simple; the pill's close records it |
+| `src/components/WatchScreenButton.tsx` | Deleted, with its call in `ChatView.tsx`: its Watch pill in the header opened the screen the panel's Browser card and the Advanced monitor button already open |
 | `src/components/PinnedCircleThreads.tsx` | Avatar takes `useBotFace` |
 | `src/components/bot-panel/page-registry.ts` | `backups`, `botapi`, `data`, `files` and `activity` Simple pages; the `routines` page is titled Automations; no tabs, a section lands on a page or a first-page card |
 | `src/components/bot-panel/panel-link.ts` | `linkTarget` returns a page or a card, no tab |
