@@ -25,6 +25,14 @@ export function loadOneChat(dataDir: string, env: Env = process.env): boolean {
   return oneChatOn(env);
 }
 
+// 60 minutes is CLAUDE_CODE_PROMPT_CACHE_TTL on bb-1: a warm engine past the cache saves the start, not the tokens.
+export const MAIN_CHAT_IDLE_MS = 60 * 60_000;
+
+export function oneChatIdleMs(policy: { idleMs: number; minimumMs: number }, watched: boolean, unwatchedMs: number): number | undefined {
+  if (!oneChatOn()) return undefined;
+  return watched ? Math.max(policy.idleMs, MAIN_CHAT_IDLE_MS) : Math.max(policy.minimumMs, Math.min(policy.idleMs, unwatchedMs));
+}
+
 // A work session hides behind routineRunId, the field every client already hides a routine's run by.
 export function isWorkSession(task: Pick<TaskRecord, "routineRunId"> | null | undefined): boolean {
   return task?.routineRunId?.startsWith(WORK_SESSION) === true;

@@ -8,6 +8,8 @@ import {
   pairMarkerLine, pairThread, reviewWindow, threadsPrompt, withMainThread, workSessionRecalls,
 } from "./one-chat.ts";
 import { createSkillReview, type SkillReviewDeps } from "./skill-review.ts";
+import { engineIdleMs } from "./drivers/session-idle.ts";
+import { personAsks } from "./thread-presence.ts";
 
 const saved = process.env[ONE_CHAT_ENV];
 beforeEach(() => { process.env[ONE_CHAT_ENV] = "1"; });
@@ -206,4 +208,13 @@ it("marks a chat reviewed from when a review that answered started, never from a
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+it("keeps a watched chat's engine for the prompt cache's hour and gives back hidden work's after 30 s", () => {
+  const policy = { idleMs: 10 * 60_000, minimumMs: 10_000 }, unrationed = { enabled: false, headroom: () => 1 }, now = Date.now();
+  personAsks.set("mira-main", now);
+  expect(engineIdleMs("mira-main", policy, unrationed, now)).toBe(60 * 60_000);
+  expect(engineIdleMs("work:side-job", policy, unrationed, now)).toBe(30_000);
+  delete process.env[ONE_CHAT_ENV];
+  expect(engineIdleMs("mira-main", policy, unrationed, now), "upstream's ten minutes with the setting off").toBe(10 * 60_000);
 });

@@ -113,12 +113,15 @@ holds the logic, and `electron/main.mjs` calls it from these lines:
 | Line in `main.mjs` | What it does in Personal |
 |---|---|
 | `else if (app.isPackaged && !personalClient(app))` before `startServerPackaged()` | skips the server at launch |
-| `if (!personalClient(app)) startUpdater(...)` | skips the hourly update check, which has no feed |
+| `if (!personalClient(app)) { startUpdater(...); alwaysOnHome.start(powerMonitor); }` | skips the hourly update check, which has no feed, and Always-on home, which keeps a local server awake |
 | `if (personalClient(app)) blockLocalServer(...)` at the end of the `installServerSessions` line | cancels requests to ports 8799, 18799 and 28799, which the official app can own |
 | `if (personalClient(app)) return void personalPageFailed(...)` on the first line of `did-fail-load` | sends a failed local page to the saved server, and shows a retrying page when the server is unreachable |
 | `serverReady \|\| personalClient(app)` in `createWindow` | with no saved server, loads the blocked local page, so the window shows "No server saved" |
 | `personalMenu(app, ...)` around both server menus | hides This computer, Connect to a server and local workspaces |
 | `!app.isPackaged \|\| personalClient(app)` in `switchLocalEnvironmentTo` | refuses to start a server for a local workspace |
+
+`electron/launch-analytics.mjs` passes `packaged: app.isPackaged && !personalClient(app)`, so Personal
+sends no launch stages to PostHog.
 
 `electron/personal-client.node-test.mjs` checks the logic. After a merge,
 confirm that no `NodeService` helper runs and nothing listens on 8799 or 18800:

@@ -59,6 +59,14 @@ below.
   on its counter in `skill-review.json`, and `reviewWindow` gives the next review only the messages after
   it. A failed review leaves it as it was. A counter without `reviewedAt` reads the whole chat once.
 
+- **Warm engines.** On a server that does not ration memory, such as bb-1, upstream keeps every idle engine 10
+  minutes. With one chat, the chat a person saw in the last 30 minutes keeps it 60 minutes, the prompt cache's
+  time on bb-1, and a run or side job nobody watches gives it back after 30 s. Upstream's "Claude starts before you
+  send" only starts an engine for a new conversation without a browser or connected apps, so it never fires for
+  a bot's one chat.
+- **Check-backs.** Upstream's `check_back` is refused unless a person started the turn, so a bot sets one only in
+  its main chat, and it wakes there.
+
 A hidden thread is a thread whose `routineRunId` starts with `work:`. Every
 client already hides a thread that has a `routineRunId`, and a person who
 writes in a routine's run thread reveals it; a `work:` thread stays hidden.
@@ -118,6 +126,8 @@ exchange route. The rows' words are `server.oneChat.*` in `en.json`,
 | `packages/phone-protocol/src/inbox.ts` | `InboxRow.automation` and `InboxView.mutedAutomations` |
 | `server/index.ts` | `sendNtfy` from `server/personal-ntfy.ts`, after `phonePush.offer` in `broadcast` |
 | `scripts/control-omb.ts` | `OMB_NTFY_URL` (loopback only) with `OMB_NTFY_TOPIC`, and `OMB_ONE_CHAT`, cross into the fixture |
+| `server/host/place-inbox.ts` | `readWork` only without one chat: a report the person read stays listed until Mark done |
+| `server/drivers/session-idle.ts` | `oneChatIdleMs` in `engineIdleMs` where memory is not rationed: a chat a person saw in the last 30 minutes keeps its idle engine 60 minutes, and other threads 30 s |
 
 `server/index.ts` and `server/store.ts` are at their size limit in
 `scripts/testing/file-size-ratchet.test.ts`, so each line above joins an
@@ -147,6 +157,12 @@ question or needs review. One chat also marks the bot's Main Chat unread for
 any other report the Inbox lists, so the sidebar shows a dot. A muted
 automation's report and a "Nothing new" post leave it read. `inboxMutes.dots`
 decides this through `createAutomationReports`'s `dotted` dep.
+
+Upstream moves a report the person has read to Done. One chat keeps it listed until Mark done, so a report read
+in the reading view is still there on return. Upstream's Pinned and Finished lists opened old threads and are
+left out, and "Active Threads" leaves out a chat that is only unread, because each report already marks the
+bot's Main Chat unread and the sidebar dot shows it. The Inbox count stays the asks only. A collapsed "Done" foot
+lists what was marked done or answered.
 
 `server/inbox-mutes.ts` keeps the muted automation ids in `inbox-mutes.json`
 in the data folder. A report's line in `place-inbox.json` names no
@@ -188,6 +204,9 @@ Inbox closes.
   and an app setting are plain text. A running wait shows its follow-up on
   hover; a person stops it by asking the bot, which has `cancel_wait`.
 - No centered line has a chevron.
+- A check-back is a centered line: "Will check back Fri 9:00 AM · Cancel", then "Checked back Fri 9:00 AM".
+  Hovering shows the bot's note.
+- "Messaged Kara" shows no hand-off status chip.
 - A run's post starts with the automation's line inside the post: an icon
   for what started it (webhook, clock, plug for an app event, hourglass for
   a wait, play for Run now), its name and its time. The whole line opens the
@@ -274,6 +293,11 @@ Inbox closes.
 | `src/components/inbox/inbox-view.ts` | `textOf` drops the automation's name a report starts with |
 | `src/components/bot-panel/AutomationsPage.tsx` | the Mute in Inbox bell beside each switch |
 | `src/components/bot-panel/simple-side-panel.ts` | `slotGivesWay`: the Inbox and the bot panel share one slot |
+| `src/components/inbox/InboxActive.tsx` | `!ONE_CHAT` before the unread-only test in `inboxAttentionEntries` |
+| `src/components/inbox/InboxPanel.tsx` | the fork's list with day headers, then upstream's Done foot and `InboxActive` with the open chat marked; no `PinnedThreads` or `FinishedThreads`, and a finished notice opens the reading view, not the chat |
+| `src/components/CheckBackLine.tsx` | a centered 28px line like `OneChatLine`, with Cancel |
+| `src/components/ThreadChip.tsx` | `OneChatLine` gets no `HandoffStatusChip`: Akbar keeps "Messaged Kara" as it is |
+| `src/components/ChatView.tsx` | in the fork panel, upstream's Chat activity filter and unread card stay off, so hidden work shows every row |
 
 Upstream's tests for those menus, the applied-change line, the run details bar, the compaction rows, the context meter, the model picker, the model menu and the rescue row mock `@/lib/one-chat` with `ONE_CHAT: false`,
 so they still test upstream's paths. Add that mock to a new upstream test
@@ -286,6 +310,6 @@ that fails on a missing thread item.
 2. If upstream adds a place that calls `store.createTask` for a bot, decide
    where it leads: the main chat, or a hidden thread with `hideWorkSession`.
    List it here.
-3. Run `corepack pnpm exec vitest run server/one-chat src/lib/bot-exchange ThreadChip thread-navigation ChatMoreMenu ApprovalCard TriggerCard panel-link ChatView.controls ChatView.automation ChatView.one-chat-automation RoutineResultsNavigation DigestChip ContextCard ComposerContextMeter context-warning ModelPicker simple-model-menu FirstReplyRescueRow FailedTurnRow CompactionChip Sidebar.advanced-back server/store server/automation-reports SidebarBotRead Sidebar.simple-mode Sidebar.one-chat Sidebar.plus-menu Sidebar.working-folder server/inbox-mutes server/host/place-inbox src/components/inbox simple-side-panel file-size-ratchet`,
+3. Run `corepack pnpm exec vitest run server/one-chat src/lib/bot-exchange ThreadChip thread-navigation ChatMoreMenu ApprovalCard TriggerCard panel-link ChatView.controls ChatView.automation ChatView.one-chat-automation RoutineResultsNavigation DigestChip ContextCard ComposerContextMeter context-warning ModelPicker simple-model-menu FirstReplyRescueRow FailedTurnRow CompactionChip Sidebar.advanced-back server/store server/automation-reports SidebarBotRead Sidebar.simple-mode Sidebar.one-chat Sidebar.plus-menu Sidebar.working-folder server/inbox-mutes server/host/place-inbox src/components/inbox simple-side-panel CheckBackLine server/drivers/session-idle file-size-ratchet`,
    then upstream's tests named after each server file above, with the
    setting off.

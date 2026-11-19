@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent } from "react";
 import { createPortal } from "react-dom";
-import { BellOff, ChevronDown, ChevronLeft, ChevronUp, Inbox, Maximize2, Minimize2, Search, X } from "lucide-react";
+import { BellOff, Check, ChevronDown, ChevronLeft, ChevronUp, Inbox, Maximize2, Minimize2, Search, X } from "lucide-react";
 import type { InboxRow } from "../../../shared/inbox";
 import { cn } from "@/lib/cn";
 import { useAdvancedMode } from "@/lib/interface-mode";
@@ -8,11 +8,12 @@ import { t } from "@/lib/i18n";
 import { PHONE_LAYOUT, useMediaQuery } from "@/lib/use-media-query";
 import { dayLabel, localDay } from "@/lib/transcript-derivations";
 import { closeInbox, markAllInboxRead, muteInboxAutomation, readInboxLine, readInboxRow, useInboxMarkingAll, useInboxPanel, useInboxView, widenInbox } from "@/state/inbox";
-import { InboxActive } from "./InboxActive";
+import { InboxActive, inboxOpenThread } from "./InboxActive";
+import { useStore } from "@/state/store";
 import { InboxReading } from "./InboxReading";
 import { InboxRowItem } from "./InboxRow";
 import { matchesSearch, nextAfter } from "./inbox-answer";
-import { listedRows, waitingCount } from "./inbox-view";
+import { listedRows, rowsIn, waitingCount } from "./inbox-view";
 import { useInboxActions } from "./use-inbox-actions";
 import { roundButtonCls } from "../bot-panel/rows";
 
@@ -21,6 +22,7 @@ const NAV_BUTTON = "relative flex size-[34px] shrink-0 cursor-pointer items-cent
 
 export function InboxPanel() {
   const view = useInboxView();
+  const { state } = useStore();
   const panel = useInboxPanel();
   const markingAll = useInboxMarkingAll();
   const phone = useMediaQuery(PHONE_LAYOUT);
@@ -28,6 +30,7 @@ export function InboxPanel() {
   const { run } = useInboxActions(view);
   const [now, setNow] = useState(() => Date.now());
   const [query, setQuery] = useState("");
+  const [showDone, setShowDone] = useState(false);
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 30_000);
     return () => clearInterval(timer);
@@ -62,6 +65,7 @@ export function InboxPanel() {
   };
   const unmute = (id: string) => { setToast(null); void muteInboxAutomation(id, false); };
   const rows = listedRows(view).filter((row) => matchesSearch(row, query));
+  const done = rowsIn(view, "done").filter((row) => matchesSearch(row, query)).sort((x, y) => y.at - x.at);
   const ids = rows.map((row) => row.id);
   const at = reading ? ids.indexOf(reading.id) : -1;
 
@@ -161,7 +165,18 @@ export function InboxPanel() {
                   );
                 })}
             </div>
-            {!query.trim() && <InboxActive view={view} />}
+            {done.length > 0 && (
+              <section data-inbox-done className="px-1.5 pb-1.5">
+                <button type="button" data-inbox-done-toggle aria-expanded={showDone} onClick={() => setShowDone(!showDone)}
+                  className="flex w-full cursor-pointer items-center gap-1.5 rounded-lg px-2 py-1.5 text-[12px] text-ink-tertiary hover:bg-raised/70 hover:text-ink-secondary">
+                  <Check size={13} aria-hidden="true" className="shrink-0" />
+                  <span className="font-medium">{t("common.done")}</span>
+                  <span className="tabular-nums">{done.length}</span>
+                </button>
+                {showDone && done.map((row) => <InboxRowItem key={row.id} row={row} now={now} onOpen={open} onAction={run} />)}
+              </section>
+            )}
+            {!query.trim() && <InboxActive view={view} current={inboxOpenThread(state)} />}
           </div>
         )}
         {toast && (
