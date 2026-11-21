@@ -209,3 +209,11 @@ loads unless the page offers a way back, so without that call the Settings
 switch could not keep the rail hidden. `Sidebar.header.test.ts` fails if a
 merge puts the button back in the sidebar, and `WindowFrameBar.test.ts` fails
 if it drops the offer.
+
+## Chat changes
+
+The chat shows no "Previous message" card. Upstream shows it over the chat
+when the person's last message sits above the unread line, and Akbar has no
+use for it. The fork removes the `UnreadContextOverlay` line and its import
+from `src/components/ChatView.tsx` and keeps upstream's card files and tests.
+If a merge brings that line back, delete it again.
