@@ -11,6 +11,7 @@ import { DialogWatch, localDevToolsUrl } from "./browser-dialogs.ts";
 import type { Cdp, CdpListeners } from "./browser-sites.ts";
 import { relay } from "./browser-relay.ts";
 import { HOLD_LIMITS, HoldClock, type HoldLimits } from "./browser/hold.ts";
+import { streamPortWhileWorking } from "./personal-browser-stream.ts";
 import { BROWSER_HELD_ELSEWHERE } from "../shared/browser-held.ts";
 
 const execute = promisify(execFile);
@@ -612,6 +613,7 @@ export class BrowserLive {
     await this.runtime.launchReady(viewer.spec).catch((error: unknown) => {
       throw new BrowserLiveError(error instanceof Error ? error.message : "The browser is not ready yet.", 503);
     });
+    const streaming = streamPortWhileWorking(viewer.session, viewer.spec.env, this.runtime.working(viewer.session)); if (streaming !== null) return streaming;
     let status: ObjectValue;
     try { status = await this.command(viewer, ["stream", "status"], STATUS_PROBE_MS); }
     catch (error) {

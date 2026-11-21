@@ -66,6 +66,12 @@ below.
   a bot's one chat.
 - **Check-backs.** Upstream's `check_back` is refused unless a person started the turn, so a bot sets one only in
   its main chat, and it wakes there.
+- **Live browser.** agent-browser 0.37 runs one command per browser at a time, so upstream's live view waits behind
+  a bot's slow command, such as a Google sign-in step. While a bot or person works in the browser,
+  `streamPortWhileWorking` in `server/personal-browser-stream.ts` reads the daemon's stream port from its `.stream`
+  file and opens the view at once. Its stream server sends frames during the command. It takes that port only when
+  the `.pid` process is alive and the `.stream` file is no older than `.pid`, so a dead daemon's port, which may
+  now be another bot's browser, is never used.
 
 A hidden thread is a thread whose `routineRunId` starts with `work:`. Every
 client already hides a thread that has a `routineRunId`, and a person who
@@ -128,6 +134,7 @@ exchange route. The rows' words are `server.oneChat.*` in `en.json`,
 | `scripts/control-omb.ts` | `OMB_NTFY_URL` (loopback only) with `OMB_NTFY_TOPIC`, and `OMB_ONE_CHAT`, cross into the fixture |
 | `server/host/place-inbox.ts` | `readWork` only without one chat: a report the person read stays listed until Mark done |
 | `server/drivers/session-idle.ts` | `oneChatIdleMs` in `engineIdleMs` where memory is not rationed: a chat a person saw in the last 30 minutes keeps its idle engine 60 minutes, and other threads 30 s |
+| `server/browser-live.ts` | `streamPortWhileWorking` in `connect`, after `launchReady` and before the status check |
 
 `server/index.ts` and `server/store.ts` are at their size limit in
 `scripts/testing/file-size-ratchet.test.ts`, so each line above joins an
