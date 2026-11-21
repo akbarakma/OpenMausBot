@@ -13,6 +13,7 @@ import { BrowserRuntime, TransportError, attachesToChrome, browserRuntimeEnv, fo
 import { RelayTimeout, relay, relayCommand, relayInput } from "../browser-relay.ts";
 import { browserSteps } from "../browser-steps.ts";
 import { BrowserLive } from "../browser-live.ts";
+import { devToolsUrlWhileWorking } from "../personal-browser-stream.ts";
 import { browserEgress, type EgressSetup } from "../browser/egress/registry.ts";
 import { releaseEndedGates } from "../browser/egress/release-ended.ts";
 import {
@@ -153,7 +154,7 @@ export function createBrowserHost(deps: BrowserHostDeps) {
   const boxed = Boolean(browserBox?.(LAUNCHER_SECCOMP_FD, []));
   if (browserBox) chromeLauncher.boxWith(() => browserBox(LAUNCHER_SECCOMP_FD, []));
   const agentBrowserLive = new BrowserLive({ runtime: agentBrowserRuntime, devTools: {
-    url: (port) => relay(port, { action: "cdp_url" }, { timeoutMs: 5_000, maxBytes: 65_536 }).then((answer) => answer.data?.cdpUrl),
+    url: async (port) => devToolsUrlWhileWorking(port) ?? relay(port, { action: "cdp_url" }, { timeoutMs: 5_000, maxBytes: 65_536 }).then((answer) => answer.data?.cdpUrl),
   } });
   const host: HostKind = DESKTOP_MANAGED ? "desktop" : CLOUD_HOME || existsSync("/.dockerenv") ? "container" : "server";
   // per-bot: a bot's browser, kept for any of its conversations; shorter as the server runs short of room (session-idle.ts).

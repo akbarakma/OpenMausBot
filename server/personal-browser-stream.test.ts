@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { BrowserLive } from "./browser-live.ts";
 import type { BrowserRuntime } from "./browser-runtime.ts";
-import { streamPortWhileWorking } from "./personal-browser-stream.ts";
+import { devToolsUrlWhileWorking, streamPortWhileWorking } from "./personal-browser-stream.ts";
 
 const execute = vi.hoisted(() => vi.fn());
 vi.mock("node:child_process", async (original) => {
@@ -62,6 +62,33 @@ describe("streamPortWhileWorking", () => {
     expect(streamPortWhileWorking(SESSION, env(), true, alive)).toBeNull();
     daemon({ pid: "abc" });
     expect(streamPortWhileWorking(SESSION, env(), true, alive)).toBeNull();
+  });
+});
+
+describe("devToolsUrlWhileWorking", () => {
+  const BROWSER = "ws://127.0.0.1:39027/devtools/browser/86be4ade-0cb6-4d2a-b263-99c89bcb1866";
+  const chrome = (age = 0) => {
+    const file = join(socketDir, "DevToolsActivePort");
+    writeFileSync(file, "39027\n/devtools/browser/86be4ade-0cb6-4d2a-b263-99c89bcb1866\n");
+    if (age) { const then = new Date(Date.now() - age); utimesSync(file, then, then); }
+  };
+  const profiled = () => ({ ...env(), AGENT_BROWSER_PROFILE: socketDir });
+
+  it("reads the running Chrome's DevTools address for the port just handed out, once", () => {
+    daemon(); chrome();
+    expect(streamPortWhileWorking(SESSION, profiled(), true, alive)).toBe(43210);
+    expect(devToolsUrlWhileWorking(43210)).toBe(BROWSER);
+    expect(devToolsUrlWhileWorking(43210)).toBeNull();
+  });
+
+  it("refuses a DevTools file a Chrome closed before this daemon started, and ports it never handed out", () => {
+    daemon(); chrome(60_000);
+    expect(streamPortWhileWorking(SESSION, profiled(), true, alive)).toBe(43210);
+    expect(devToolsUrlWhileWorking(43210)).toBeNull();
+    expect(devToolsUrlWhileWorking(5555)).toBeNull();
+    daemon(); chrome();
+    expect(streamPortWhileWorking(SESSION, env(), true, alive)).toBe(43210);
+    expect(devToolsUrlWhileWorking(43210)).toBeNull();
   });
 });
 

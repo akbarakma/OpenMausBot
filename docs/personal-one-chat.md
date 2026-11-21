@@ -71,7 +71,8 @@ below.
   `streamPortWhileWorking` in `server/personal-browser-stream.ts` reads the daemon's stream port from its `.stream`
   file and opens the view at once. Its stream server sends frames during the command. It takes that port only when
   the `.pid` process is alive and the `.stream` file is no older than `.pid`, so a dead daemon's port, which may
-  now be another bot's browser, is never used.
+  now be another bot's browser, is never used. The page-dialog watch then reads Chrome's DevTools address from
+  `DevToolsActivePort` in the profile (`devToolsUrlWhileWorking`), since the daemon's `cdp_url` waits too.
 
 A hidden thread is a thread whose `routineRunId` starts with `work:`. Every
 client already hides a thread that has a `routineRunId`, and a person who
@@ -135,6 +136,7 @@ exchange route. The rows' words are `server.oneChat.*` in `en.json`,
 | `server/host/place-inbox.ts` | `readWork` only without one chat: a report the person read stays listed until Mark done |
 | `server/drivers/session-idle.ts` | `oneChatIdleMs` in `engineIdleMs` where memory is not rationed: a chat a person saw in the last 30 minutes keeps its idle engine 60 minutes, and other threads 30 s |
 | `server/browser-live.ts` | `streamPortWhileWorking` in `connect`, after `launchReady` and before the status check |
+| `server/host/browser.ts` | `devToolsUrlWhileWorking(port)` before the `cdp_url` relay in the live view's `devTools.url` |
 
 `server/index.ts` and `server/store.ts` are at their size limit in
 `scripts/testing/file-size-ratchet.test.ts`, so each line above joins an
