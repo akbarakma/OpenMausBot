@@ -4,7 +4,7 @@
 // required on first use, and only when a token exists.
 import type { LoginBots, LoginPlace, LoginSummary, OnePasswordItemRef, OnePasswordStatus, OnePasswordVault } from "../shared/logins.ts";
 import { loginSite, normalizeLoginHost } from "../shared/logins.ts";
-import { cardFields, cardMainTitle, readsCards } from "./personal-onepassword-cards.ts";
+import { cardFields, cardMainTitle, fillCardExpiry, readsCards } from "./personal-onepassword-cards.ts";
 import { parseTotpKey } from "./totp.ts";
 import type { LinkedSecret } from "../shared/vault.ts";
 import type { LinkedItem, LinkedValue, VaultProvider } from "./vault/providers.ts";
@@ -145,6 +145,7 @@ export async function sdkOnePasswordClient(sdk: OnePasswordSdk, token: string, v
       for (const { content } of individualResponses) if (content) found.set(content.id, { fields: content.fields, ...(content.notes ? { notes: content.notes } : {}) });
       // An error answer names no item, so every item the batch did not return may be the one 1Password could not read.
       if (individualResponses.some(({ error }) => error?.type === "internal")) for (const id of itemIds) if (!found.has(id)) found.set(id, null);
+      await fillCardExpiry({ found, vaultId, token });
       return found;
     },
   };
