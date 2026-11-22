@@ -4,6 +4,7 @@
 // required on first use, and only when a token exists.
 import type { LoginBots, LoginPlace, LoginSummary, OnePasswordItemRef, OnePasswordStatus, OnePasswordVault } from "../shared/logins.ts";
 import { loginSite, normalizeLoginHost } from "../shared/logins.ts";
+import { cardFields, cardMainTitle, readsCards } from "./personal-onepassword-cards.ts";
 import { parseTotpKey } from "./totp.ts";
 import type { LinkedSecret } from "../shared/vault.ts";
 import type { LinkedItem, LinkedValue, VaultProvider } from "./vault/providers.ts";
@@ -99,11 +100,13 @@ export function loginExtraFields(content: OnePasswordItemContent): Map<string, s
 
 /** What a bot may read from an item as a secret: a Login's extra fields, or a secret item's fields. */
 function secretValues(category: string, content: OnePasswordItemContent): Map<string, string> {
+  if (readsCards(category)) return cardFields(content);
   return category === "Login" ? loginExtraFields(content) : secretFields(category, content);
 }
 
 /** The title of the field an item's name alone reads, which a reference may also name. */
 function mainTitle(category: string, content: OnePasswordItemContent): string | undefined {
+  if (readsCards(category)) return cardMainTitle(content);
   return (category === "Login" ? loginExtras(content).main : secretMain(category, content))?.title.trim() || undefined;
 }
 
@@ -321,7 +324,7 @@ export class OnePasswordLogins implements VaultProvider {
         let items = 0;
         const listed = await client.items(vault.id);
         // Website logins and secret items come first, so Logins without a website never push one out of MAX_ITEMS.
-        const wanted = [...listed.filter((item) => isLogin(item) || SECRET_CATEGORIES.has(item.category)),
+        const wanted = [...listed.filter((item) => isLogin(item) || SECRET_CATEGORIES.has(item.category) || readsCards(item.category)),
           ...listed.filter((item) => item.category === "Login" && !isLogin(item))].slice(0, MAX_ITEMS);
         for (let start = 0; start < wanted.length; start += FIELDS_BATCH) {
           const batch = wanted.slice(start, start + FIELDS_BATCH);

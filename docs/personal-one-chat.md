@@ -74,6 +74,11 @@ below.
   now be another bot's browser, is never used. The page-dialog watch then reads Chrome's DevTools address from
   `DevToolsActivePort` in the profile (`devToolsUrlWhileWorking`), since the daemon's `cdp_url` waits too.
 
+- **1Password cards.** Upstream skips 1Password Credit Card items. With one chat, each one is a Vault secret whose
+  name reads the card number and whose fields read the cardholder name, type, CVV and any custom text field.
+  `@1password/sdk` 0.5.0 returns a card's built-in expiry as `Unsupported` with no value, so an expiry reaches a
+  bot only from a custom text field on the item.
+
 A hidden thread is a thread whose `routineRunId` starts with `work:`. Every
 client already hides a thread that has a `routineRunId`, and a person who
 writes in a routine's run thread reveals it; a `work:` thread stays hidden.
@@ -137,6 +142,7 @@ exchange route. The rows' words are `server.oneChat.*` in `en.json`,
 | `server/drivers/session-idle.ts` | `oneChatIdleMs` in `engineIdleMs` where memory is not rationed: a chat a person saw in the last 30 minutes keeps its idle engine 60 minutes, and other threads 30 s |
 | `server/browser-live.ts` | `streamPortWhileWorking` in `connect`, after `launchReady` and before the status check |
 | `server/host/browser.ts` | `devToolsUrlWhileWorking(port)` before the `cdp_url` relay in the live view's `devTools.url` |
+| `server/onepassword.ts` | `readsCards` from `server/personal-onepassword-cards.ts` in the `wanted` filter of `load`, and `cardFields` and `cardMainTitle` at the top of `secretValues` and `mainTitle` |
 
 `server/index.ts` and `server/store.ts` are at their size limit in
 `scripts/testing/file-size-ratchet.test.ts`, so each line above joins an
