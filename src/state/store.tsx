@@ -1029,6 +1029,8 @@ export function reducer(state: AppState, action: Action): AppState {
         config: { ...state.config, profile: { name: "", email: "", ...state.config.profile, ...action.profile } },
       } : state;
     case "select": {
+      // A named settings link was for the bot it named: after a switch the Simple panel stops following it.
+      const settingsLinkDone = action.id !== state.selectedId || state.botSettingsExpandRemembered;
       const room = state.groups.find((g) => g.id === action.id);
       if (room) {
         return {
@@ -1039,6 +1041,7 @@ export function reducer(state: AppState, action: Action): AppState {
           activeView: "chat",
           selectedId: action.id,
           forkPanel: null,
+          botSettingsExpandRemembered: settingsLinkDone,
           groups: state.groups.map((g) => {
             if (g.id !== action.id) return g;
             const tasks = g.tasks?.map((task) => task.threadId === g.threadId ? { ...task, unread: false } : task);
@@ -1057,6 +1060,7 @@ export function reducer(state: AppState, action: Action): AppState {
             activeView: "chat",
             selectedId: action.id,
             forkPanel: null,
+            botSettingsExpandRemembered: settingsLinkDone,
           },
           action.id,
           "switch",

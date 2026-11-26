@@ -2527,6 +2527,15 @@ describe("bot settings section", () => {
     expect(reducer(state, { type: "select", id: "bot-a" })).toMatchObject(kept);
     expect(reducer(state, { type: "select", id: room.id })).toMatchObject(kept);
   });
+
+  it("a named open stops being a link once another bot is selected, but not on a reselect of the same bot", () => {
+    const other = { ...bot, id: "other-bot", threadId: "thread-other" };
+    const linked = reducer({ ...initialState, selectedId: bot.id, bots: [bot, other] }, { type: "toggleSettings", open: true, section: "skills" });
+    expect(linked.botSettingsExpandRemembered).toBe(false);
+    expect(reducer(linked, { type: "select", id: bot.id }).botSettingsExpandRemembered).toBe(false);
+    const back = reducer(reducer(linked, { type: "select", id: other.id }), { type: "select", id: bot.id });
+    expect(back).toMatchObject({ settingsOpen: true, botSettingsSection: "skills", botSettingsExpandAccordion: true, botSettingsExpandRemembered: true });
+  });
 });
 
 describe("activity panel", () => {
