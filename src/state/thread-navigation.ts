@@ -148,6 +148,13 @@ export function closeUnpinnedTray<T extends NotificationTray>(state: T): T {
   return state.notificationsOpen && !state.notificationsPinned ? { ...state, notificationsOpen: false } : state;
 }
 
+/** Where a `select` of `id` starts. Leaving the open chat closes an unpinned tray. A switch to another bot or room
+ * also ends a named settings link, so the Simple bot panel that mounts next does not land on that link's page again. */
+export function selectFrom(state: AppState, id: string): AppState {
+  if (id === state.selectedId) return state.activeView === "chat" ? state : closeUnpinnedTray(state);
+  return { ...closeUnpinnedTray(state), botSettingsExpandRemembered: true };
+}
+
 /** Opening the chat already on screen is not leaving it. */
 export function closeTrayUnlessShown(state: AppState, id: string, threadId: string): AppState {
   const chat = [...state.bots, ...state.groups].find((candidate) => candidate.id === id);

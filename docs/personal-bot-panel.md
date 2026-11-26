@@ -151,8 +151,9 @@ to where the list was; a newly opened page starts at the top.
 
 A named open (`openBotSettings`, such as a chat line for a changed skill) is
 followed only by the panel that was showing when it came. `select` of another
-bot or room sets `botSettingsExpandRemembered` in `store.tsx`, so the next
-panel does not land on that link's page again. Advanced mode's accordion does
+bot or room sets `botSettingsExpandRemembered` (`selectFrom` in
+`thread-navigation.ts`), so the next panel does not land on that link's page
+again. Advanced mode's accordion does
 not read that flag.
 
 The panel body always keeps its 8 px scrollbar gutter (`[scrollbar-gutter:stable]`
@@ -290,7 +291,7 @@ the same state, motion beat and working ring.
 | `src/components/ModelTrigger.tsx` | New: the Simple-mode trigger's contents, moved out of `ModelPicker.tsx` to keep it under its size limit in `scripts/testing/file-size-ratchet.test.ts` |
 | `src/components/bot-settings/BotApiCard.tsx` | `titled` prop, false on the Bot API page |
 | `src/components/DefaultBotControls.tsx` | `HideFromSidebarRow`, the row without its card |
-| `src/state/store.tsx` | `openDataResult` takes an optional `cardId`; without one it opens the Data tab; `showRoutines` takes `compose`; `select` of another bot or room sets `botSettingsExpandRemembered` |
+| `src/state/store.tsx` | `openDataResult` takes an optional `cardId`; without one it opens the Data tab; `showRoutines` takes `compose`; `select` starts from `selectFrom` (`thread-navigation.ts`), which ends a named settings link on a switch |
 | `src/components/TriggersPage.tsx` | Each row shows its bot's avatar with the status mark on it and the bot's name first in the status line; the name and the sentence keep one line each, in full on hover; `compose` focus opens the New box |
 | `src/components/SidebarTiles.tsx` | A tile is 100×112 with an 8px corner: the face, the name, and the job title in `TITLE_CHIP` under it. 100px keeps two tiles across the 240px minimum sidebar, scrollbar included. A tile has no fill at rest, `bg-ink/[0.06]` on hover and `bg-ink/[0.10]` when open; badges ring in `panel`; avatar takes `useBotFace` |
 | `src/components/ComputerPanel.tsx` | A data request without a card opens Data and focuses no card |

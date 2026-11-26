@@ -14,7 +14,7 @@ import { DATA_ROUTES, type DataSheet, type DataTable } from "../../shared/data-s
 import type { NotificationLogEntry } from "../../shared/notification";
 import { isNotificationFeedAction, reduceNotificationFeed, type NotificationFeedAction } from "./notification-feed";
 import { bumpThreadUpdatedAt, mergeTaskStamps, rewindThreadUpdatedAt } from "./thread-stamps";
-import { botOpensTo, closeTrayUnlessShown, closeUnpinnedTray, openBot, openThread, visibleNotificationThread, withRememberedTrayPin } from "./thread-navigation";
+import { botOpensTo, closeTrayUnlessShown, closeUnpinnedTray, openBot, openThread, selectFrom, visibleNotificationThread, withRememberedTrayPin } from "./thread-navigation";
 import { patchGroupTask } from "./thread-edits"; import { unreadBeyondFrame, wholeBotFrame } from "./bot-thread-frame";
 import type { EngineInstall } from "./engine-install";
 import { optimisticMessageId, optimisticUserMessage, sendArrived, sendReconciled } from "./optimistic-send";
@@ -1029,19 +1029,16 @@ export function reducer(state: AppState, action: Action): AppState {
         config: { ...state.config, profile: { name: "", email: "", ...state.config.profile, ...action.profile } },
       } : state;
     case "select": {
-      // A named settings link was for the bot it named: after a switch the Simple panel stops following it.
-      const settingsLinkDone = action.id !== state.selectedId || state.botSettingsExpandRemembered;
       const room = state.groups.find((g) => g.id === action.id);
       if (room) {
         return {
-          ...(action.id === state.selectedId && state.activeView === "chat" ? state : closeUnpinnedTray(state)),
+          ...selectFrom(state, action.id),
           unreadDivider: openedUnreadDivider(state, room.threadId,
             room.tasks?.find((task) => task.threadId === room.threadId)?.unread ?? room.unread,
             room.messages, room.lastReadMessageId, room.hasMore),
           activeView: "chat",
           selectedId: action.id,
           forkPanel: null,
-          botSettingsExpandRemembered: settingsLinkDone,
           groups: state.groups.map((g) => {
             if (g.id !== action.id) return g;
             const tasks = g.tasks?.map((task) => task.threadId === g.threadId ? { ...task, unread: false } : task);
@@ -1053,14 +1050,13 @@ export function reducer(state: AppState, action: Action): AppState {
       return updateBot(
         withMascotMotion(
           {
-            ...(action.id === state.selectedId && state.activeView === "chat" ? state : closeUnpinnedTray(state)),
+            ...selectFrom(state, action.id),
             unreadDivider: opened
               ? openedUnreadDivider(state, opened.threadId, threadOpensUnread(opened), visibleMessages(opened), threadReadCursor(opened), opened.hasMore)
               : state.unreadDivider,
             activeView: "chat",
             selectedId: action.id,
             forkPanel: null,
-            botSettingsExpandRemembered: settingsLinkDone,
           },
           action.id,
           "switch",
