@@ -139,13 +139,21 @@ In Simple mode the panel stays open until its ✕ or the header pill closes it;
 Escape no longer closes it. `simple-side-panel.ts` stores that choice in
 `localStorage` (`omb-personal-bot-panel`). When whatever covered the panel
 goes (a full page, the Inbox, App settings, another side panel, the browser),
-the panel opens again without taking focus, on the page each bot last showed
-(`lastStack` in `PanelShell.tsx`). In a window narrower than 768 px, where the
-sidebar is not inline, it does not reopen by itself.
+the panel opens again without taking focus, on the page it last showed. In a
+window narrower than 768 px, where the sidebar is not inline, it does not
+reopen by itself.
 
-Each page and gear page keeps its scroll position per bot (`lastScroll` in
-`PanelShell.tsx`). Back returns to where the list was; a newly opened page
-starts at the top.
+That memory (`panelPlace` in `simple-side-panel.ts`) holds one bot: its page
+stack and each page's scroll position. Another bot, or the same bot after
+another was shown, opens on the first page at the top, and so does a reopen
+after ✕ or the header pill (`setBotPanelWanted(false)` clears it). Back returns
+to where the list was; a newly opened page starts at the top.
+
+A named open (`openBotSettings`, such as a chat line for a changed skill) is
+followed only by the panel that was showing when it came. `select` of another
+bot or room sets `botSettingsExpandRemembered` in `store.tsx`, so the next
+panel does not land on that link's page again. Advanced mode's accordion does
+not read that flag.
 
 The panel body always keeps its 8 px scrollbar gutter (`[scrollbar-gutter:stable]`
 with `pl-4 pr-2`), so a page that scrolls is as wide as one that does not. A
@@ -250,7 +258,7 @@ the same state, motion beat and working ring.
 |---|---|
 | `src/components/bot-panel/rows.tsx` | `RowIcon` is a plain 16px icon; `CardSurface`; `PageHeader` title is optional; a `NavRow` with a value keeps its title on one line, truncates the value and puts both on one baseline; on a row with a hint, the value centers on the row like the chevron; its value keeps that layout over upstream's 45% split, and `rows.test.ts` checks the same two behaviours (the title keeps its room, the ellipsis sits on the value) against it |
 | `src/components/bot-panel/PanelHome.tsx` | New, from upstream's `DetailsTab.tsx`: the one first page |
-| `src/components/bot-panel/simple-side-panel.ts` | New: the open state, the quiet reopen, and the popup and Activity redirects |
+| `src/components/bot-panel/simple-side-panel.ts` | New: the open state, the quiet reopen, the one-bot page memory (`panelPlace`), and the popup and Activity redirects |
 | `src/components/bot-panel/browser-window.ts` | New: which bot's browser fills the window; `browserWindowClosed` and `useHoldGrace` |
 | `src/components/bot-panel/SimpleBrowserWindow.tsx` | New: the full-window browser |
 | `src/components/bot-panel/LiveBrowserCard.tsx` | New: the watch-only browser in the Computer card |
@@ -266,7 +274,7 @@ the same state, motion beat and working ring.
 | `src/components/bot-panel/PanelHero.tsx` | Avatar takes its props from `useBotFace`, with `hops` while it is on screen; no `activeState` prop |
 | `src/components/bot-panel/HeavyBotRow.tsx` | The bare row, with no card, so it sits inside the What {name} knows card |
 | `src/components/bot-panel/ContextCard.tsx` | New: the Context card on the first page; Compact now waits only on the open conversation, not the bot's other work |
-| `src/components/bot-panel/PanelShell.tsx` | No `activeState` passed to `PanelHero`; no tabs, `PanelHome` under the hero; `lastStack` per bot; Back at the root names the bot |
+| `src/components/bot-panel/PanelShell.tsx` | No `activeState` passed to `PanelHero`; no tabs, `PanelHome` under the hero; one-bot page memory (`panelPlace`); Back at the root names the bot |
 | `src/components/bot-face.ts` | New: `useBotFace` (`hops` for the sidebar copies and the panel hero), `botFaceState` and `restOrigin` |
 | `src/components/Avatar.tsx` | `BotAvatar` takes `restingSince`, wraps the face in the hop and starts its animation at that moment; `MausAvatar` passes `still` and `restClock` |
 | `src/components/ChatHeadPill.tsx` | `avatar` is only a state; the face never animates |
@@ -282,7 +290,7 @@ the same state, motion beat and working ring.
 | `src/components/ModelTrigger.tsx` | New: the Simple-mode trigger's contents, moved out of `ModelPicker.tsx` to keep it under its size limit in `scripts/testing/file-size-ratchet.test.ts` |
 | `src/components/bot-settings/BotApiCard.tsx` | `titled` prop, false on the Bot API page |
 | `src/components/DefaultBotControls.tsx` | `HideFromSidebarRow`, the row without its card |
-| `src/state/store.tsx` | `openDataResult` takes an optional `cardId`; without one it opens the Data tab; `showRoutines` takes `compose` |
+| `src/state/store.tsx` | `openDataResult` takes an optional `cardId`; without one it opens the Data tab; `showRoutines` takes `compose`; `select` of another bot or room sets `botSettingsExpandRemembered` |
 | `src/components/TriggersPage.tsx` | Each row shows its bot's avatar with the status mark on it and the bot's name first in the status line; the name and the sentence keep one line each, in full on hover; `compose` focus opens the New box |
 | `src/components/SidebarTiles.tsx` | A tile is 100×112 with an 8px corner: the face, the name, and the job title in `TITLE_CHIP` under it. 100px keeps two tiles across the 240px minimum sidebar, scrollbar included. A tile has no fill at rest, `bg-ink/[0.06]` on hover and `bg-ink/[0.10]` when open; badges ring in `panel`; avatar takes `useBotFace` |
 | `src/components/ComputerPanel.tsx` | A data request without a card opens Data and focuses no card |

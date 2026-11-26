@@ -6,9 +6,25 @@ import { closeInbox, useInboxPanel } from "@/state/inbox";
 import { toolSurfaceKind } from "../../../shared/tool-surface";
 import type { Surface } from "../../../shared/wire";
 import { openBrowserWindow, useBrowserWindow } from "./browser-window";
+import type { SimplePageId } from "./page-registry";
 import { openBotSettings } from "./panel-link";
 
 const WANTED_KEY = "omb-personal-bot-panel";
+
+/** Where the panel last was: its page stack and each page's scroll. One slot, so the panel comes back there only
+ * for the same bot after something covered it; another bot, or a deliberate close, starts on the first page. */
+export interface PanelPlace {
+  botId: string;
+  stack: SimplePageId[];
+  scrolls: Map<string, number>;
+}
+
+let lastPlace: PanelPlace | null = null;
+
+export function panelPlace(botId: string): PanelPlace {
+  if (lastPlace?.botId !== botId) lastPlace = { botId, stack: [], scrolls: new Map() };
+  return lastPlace;
+}
 
 /** Whether the person last left the bot panel open; only its ✕ or the header pill says no. */
 export function botPanelWanted(storage: Pick<Storage, "getItem"> = localStorage): boolean {
@@ -20,6 +36,7 @@ export function botPanelWanted(storage: Pick<Storage, "getItem"> = localStorage)
 }
 
 export function setBotPanelWanted(open: boolean, storage: Pick<Storage, "setItem"> = localStorage): void {
+  if (!open) lastPlace = null;
   try {
     storage.setItem(WANTED_KEY, open ? "open" : "closed");
   } catch {

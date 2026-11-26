@@ -39,6 +39,7 @@ vi.mock("./pages", () => ({
 
 const { BotPanel } = await import("./PanelShell");
 const { openBotSettings } = await import("./panel-link");
+const { setBotPanelWanted } = await import("./simple-side-panel");
 const { ChatHeadPill } = await import("../ChatHeadPill");
 
 const scout: Bot = {
@@ -172,19 +173,67 @@ describe("named links into the bot panel", () => {
 });
 
 describe("the panel's first page", () => {
-  it("opens on the one page, with no tabs, and comes back on the page it showed after the panel closed", async () => {
+  const remount = async (linkedSection: BotSettingsSection | null = null) => {
+    flushSync(() => root.unmount());
+    root = createRoot(host);
+    render(linkedSection);
+    await settle();
+  };
+  const openGear = async () => {
+    click(host.querySelector("[data-panel-gear]"));
+    expect(page()).toBe("settings");
+    await settle();
+  };
+
+  it("opens on the one page, with no tabs, and comes back on the page it showed after something covered it", async () => {
     render(null);
     await settle();
     expect(home()).toBe(true);
     expect(host.querySelector('[role="tablist"]')).toBeNull();
-    click(host.querySelector("[data-panel-gear]"));
+    await openGear();
+    await remount();
     expect(page()).toBe("settings");
-    await settle();
-    flushSync(() => root.unmount());
-    root = createRoot(host);
+  });
+
+  it("opens on the first page when its bot comes back after another bot was shown", async () => {
+    const kara = bot;
     render(null);
     await settle();
-    expect(page()).toBe("settings");
+    await openGear();
+    bot = { ...scout, id: `scout-${++botCount}` };
+    await remount();
+    expect(home()).toBe(true);
+    bot = kara;
+    await remount();
+    expect(home()).toBe(true);
+  });
+
+  it("opens at the top when its bot comes back after another bot was shown", async () => {
+    const kara = bot;
+    render(null);
+    await settle();
+    const body = host.querySelector<HTMLElement>("[data-panel-body]")!;
+    body.scrollTop = 300;
+    flushSync(() => body.dispatchEvent(new Event("scroll")));
+    const scrollTo = vi.spyOn(HTMLElement.prototype, "scrollTo");
+    await remount();
+    expect(scrollTo).toHaveBeenCalledWith({ top: 300 });
+    scrollTo.mockClear();
+    bot = { ...scout, id: `scout-${++botCount}` };
+    await remount();
+    bot = kara;
+    await remount();
+    expect(scrollTo).not.toHaveBeenCalledWith({ top: 300 });
+    scrollTo.mockRestore();
+  });
+
+  it("opens on the first page after its ✕ closed it", async () => {
+    render(null);
+    await settle();
+    await openGear();
+    setBotPanelWanted(false);
+    await remount();
+    expect(home()).toBe(true);
   });
 });
 

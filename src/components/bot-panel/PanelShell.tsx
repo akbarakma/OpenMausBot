@@ -13,12 +13,8 @@ import { PanelHome } from "./PanelHome";
 import { PageBody, pageSurfaceCls } from "./pages";
 import { linkTarget, usePanelLink, type PanelLink } from "./panel-link";
 import { PanelHero } from "./PanelHero";
+import { panelPlace } from "./simple-side-panel";
 import { buttonCls, PageHeader, roundButtonCls } from "./rows";
-
-/** The page stack each bot's panel last showed, and how far each of its pages was scrolled, so the panel comes back
- * where it was after something covered it, and Back returns to the same spot. */
-const lastStack = new Map<string, SimplePageId[]>();
-const lastScroll = new Map<string, Map<string, number>>();
 
 const scrollKey = (page: SimplePageId | null, detail: string | null) => `${page ?? ""}\n${detail ?? ""}`;
 
@@ -36,7 +32,7 @@ export function BotPanel({ bot, derived, linkedSection, onClose }: {
   const link = usePanelLink();
   const [stack, setStack] = useState<SimplePageId[]>(() => {
     const target = initialTarget(linkedSection, link);
-    return target ? (target.page ? [target.page] : []) : lastStack.get(bot.id) ?? [];
+    return target ? (target.page ? [target.page] : []) : panelPlace(bot.id).stack;
   });
   const [anchor, setAnchor] = useState<string | null>(() => initialTarget(linkedSection, link)?.anchor ?? null);
   const [editorOpen, setEditorOpen] = useState(false);
@@ -46,8 +42,7 @@ export function BotPanel({ bot, derived, linkedSection, onClose }: {
   const bodyRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<HTMLDivElement>(null);
   const page = stack.at(-1) ?? null;
-  const scrolls = lastScroll.get(bot.id) ?? new Map<string, number>();
-  lastScroll.set(bot.id, scrolls);
+  const scrolls = panelPlace(bot.id).scrolls;
   const restoreTo = useRef<number | null>(scrolls.get(scrollKey(page, detail)) ?? null);
 
   const scrollTop = () => { restoreTo.current = 0; };
@@ -93,7 +88,7 @@ export function BotPanel({ bot, derived, linkedSection, onClose }: {
   }, [linkedSection, link]);
 
   useEffect(() => {
-    lastStack.set(bot.id, stack);
+    panelPlace(bot.id).stack = stack;
   }, [bot.id, stack]);
 
   useEffect(() => {
